@@ -421,10 +421,10 @@ CREATE TABLE resources (
   name TEXT NOT NULL,
   description TEXT,
   mime_type TEXT,
-  metadata TEXT, -- JSON
+  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 ```
 
@@ -435,11 +435,11 @@ CREATE TABLE prompts (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  arguments TEXT, -- JSON (JSONSchema)
-  metadata TEXT, -- JSON
+  arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
+  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 ```
 
@@ -450,11 +450,11 @@ CREATE TABLE tools (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  input_schema TEXT NOT NULL, -- JSON (JSONSchema)
+  input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 ```sql
 -- Bitwarden統合テーブル（外部キー参照の整合性確保）
@@ -556,10 +556,10 @@ CREATE TABLE resources (
   name TEXT NOT NULL,
   description TEXT,
   mime_type TEXT,
-  metadata TEXT, -- JSON
+  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 
 -- Create prompts table
@@ -568,11 +568,11 @@ CREATE TABLE prompts (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  arguments TEXT, -- JSON (JSONSchema)
-  metadata TEXT, -- JSON
+  arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
+  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 
 -- Create tools table
@@ -581,11 +581,11 @@ CREATE TABLE tools (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  input_schema TEXT NOT NULL, -- JSON (JSONSchema)
+  input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 
 -- Create indexes for better performance
@@ -643,7 +643,7 @@ CREATE TABLE test_results (
   error TEXT,
   execution_time INTEGER,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
 ```
 
