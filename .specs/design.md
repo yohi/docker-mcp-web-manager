@@ -757,26 +757,48 @@ services:
       - app-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
-      db-init:
+      db-migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-  
-  db-init:
-    image: alpine:latest
+      start_period: 40s
+
+  db-migrate:
+    build: .
     volumes:
-      - app-data:/data
-    command: sh -c "mkdir -p /data && chmod 755 /data"
+      - app-data:/app/data
+    command: sh -c "mkdir -p /data && chmod 755 /data && npx prisma migrate deploy"
     restart: "no"
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   app-data:
     driver: local
 ```
+### Security Improvements
+- **Non-root execution**: All services run as user 1000:1000 instead of root
+- **Capability restrictions**: Dropped ALL capabilities and only added NET_BIND_SERVICE for web service
+- **No new privileges**: Prevented privilege escalation attacks
+- **Database migrations**: db-migrate service handles both directory creation and database migrations
+- **Internal health check**: Uses Node.js built-in HTTP module instead of external curl dependency
+- **Read-only Docker socket**: Docker socket remains read-only for security
+- **Service readiness**: Health check includes start_period to ensure service is ready before checking
+
 
 ### Environment Configuration
 - Development: Hot reload, debug logging
