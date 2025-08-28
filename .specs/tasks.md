@@ -176,9 +176,56 @@
 
 - [ ] 6. Implement secrets management system
   - [ ] 6.1 Create encryption utilities
-    - Implement AES-256 encryption for sensitive data
-    - Create secure key management system
-    - Add encryption/decryption utilities with proper error handling
+    - **AES-256-GCM Encryption Requirements (MANDATORY for acceptance):**
+      - [ ] **Algorithm**: Implement AES-256-GCM (AEAD mode) for all sensitive data encryption
+        - [ ] **Authenticated Encryption**: Use GCM mode for both confidentiality and authenticity
+        - [ ] **Key Size**: Strictly enforce 256-bit (32-byte) encryption keys
+        - [ ] **Block Size**: Standard 128-bit block size with GCM authentication
+      - [ ] **IV/Nonce Generation**: Cryptographically secure random IV/nonce per encryption operation
+        - [ ] **Random Source**: Use cryptographically secure random number generator (CSPRNG)
+        - [ ] **IV Size**: 96-bit (12-byte) IV/nonce for GCM mode (RFC 5116 compliant)
+        - [ ] **Uniqueness**: Guarantee IV/nonce uniqueness per encryption key (never reuse)
+        - [ ] **Generation**: Generate new IV/nonce for every encryption operation
+      - [ ] **Authentication Tag Management**: Persistent storage of authentication tags alongside ciphertext
+        - [ ] **Tag Size**: 128-bit (16-byte) authentication tag for integrity verification
+        - [ ] **Storage Format**: Store tag alongside ciphertext in structured format (e.g., JSON with separate fields)
+        - [ ] **Verification**: Mandatory tag verification during decryption with clear error messages
+        - [ ] **Metadata**: Include encryption metadata (algorithm, IV, tag) in encrypted data structure
+      - [ ] **Additional Authenticated Data (AAD)**: Optional but recommended for context binding
+        - [ ] **Context Binding**: Use AAD to bind encryption to specific context (user ID, timestamp, etc.)
+        - [ ] **Flexibility**: Support optional AAD parameter in encryption/decryption functions
+        - [ ] **Documentation**: Clear documentation on AAD usage patterns and best practices
+    - **Key Management & Provisioning (MANDATORY for acceptance):**
+      - [ ] **Runtime Key Provisioning**: Use Docker Secrets or file-mounted secrets (NO hardcoded keys)
+        - [ ] **Docker Secrets**: Primary method for production key provisioning via Docker Swarm/K8s secrets
+        - [ ] **File Mounting**: Alternative method for development/testing via secure file mounts
+        - [ ] **Environment Variables**: Support for development with clear security warnings
+        - [ ] **Key Validation**: Validate key format and strength at application startup
+      - [ ] **Key Derivation Function (KDF)**: Derive encryption keys from master secrets using secure KDF
+        - [ ] **HKDF Support**: Implement HKDF (RFC 5869) for key derivation from master secrets
+        - [ ] **Argon2id Support**: Implement Argon2id for password-based key derivation (when applicable)
+        - [ ] **Salt Management**: Generate and store cryptographically secure salts for KDF operations
+        - [ ] **Iteration Count**: Use appropriate iteration counts (HKDF: 1, Argon2id: configurable, min: 100,000)
+      - [ ] **Key Rotation Policy**: Implement comprehensive key rotation and management
+        - [ ] **Versioned Keys**: Support multiple key versions with backward compatibility
+        - [ ] **Backward Decryption**: Maintain ability to decrypt data encrypted with previous key versions
+        - [ ] **Automated Rotation**: Implement automated key rotation procedure with configurable intervals
+        - [ ] **Key Rollover**: Support staged key usage during rotation (old key for decryption, new key for encryption)
+        - [ ] **Re-encryption**: Provide utilities for re-encrypting existing data with new keys
+        - [ ] **Rotation Logging**: Comprehensive audit logging for all key rotation operations
+    - **Encryption/Decryption Utilities (MANDATORY for acceptance):**
+      - [ ] **Tag Validation**: Mandatory authentication tag validation with clear error handling
+        - [ ] **Integrity Check**: Verify authentication tag before attempting decryption
+        - [ ] **Error Messages**: Provide clear, actionable error messages for validation failures
+        - [ ] **Security Logging**: Log all validation failures for security monitoring
+      - [ ] **Error Handling**: Comprehensive error handling with security considerations
+        - [ ] **Exception Safety**: Ensure no sensitive data leakage in error messages or logs
+        - [ ] **Graceful Degradation**: Handle key unavailability without exposing system internals
+        - [ ] **Audit Trail**: Log all encryption/decryption operations for security auditing
+      - [ ] **Performance & Security**: Optimize for both performance and security
+        - [ ] **Memory Management**: Clear sensitive data from memory after use
+        - [ ] **Constant Time**: Use constant-time operations where applicable to prevent timing attacks
+        - [ ] **Resource Limits**: Implement reasonable limits on encryption/decryption operations
     - _Requirements: 7.1, 7.4_
 
   - [ ] 6.2 Implement Bitwarden CLI integration
