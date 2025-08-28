@@ -432,22 +432,34 @@ CREATE TABLE tools (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id)
 );
-```
 ```sql
-CREATE TABLE secrets (
+-- Bitwarden統合テーブル（外部キー参照の整合性確保）
+CREATE TABLE bitwarden_items (
   id TEXT PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  type TEXT NOT NULL,
-  -- AEAD暗号化コンポーネントを分離して格納
-  ciphertext BLOB NOT NULL, -- 暗号化されたデータ
-  iv BLOB NOT NULL,         -- 初期化ベクトル
-  tag BLOB NOT NULL,        -- 認証タグ
-  alg TEXT NOT NULL,        -- 使用した暗号化アルゴリズム
-  bitwarden_id TEXT,        -- 外部参照（Bitwardenテーブルが存在する場合の外部キー制約）
+  item_id TEXT NOT NULL UNIQUE, -- BitwardenのアイテムID
+  name TEXT NOT NULL,
+  type TEXT NOT NULL, -- 'login', 'secure_note', 'card', 'identity'
+  folder_id TEXT,
+  organization_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- セキュリティ強化されたsecretsテーブル
+CREATE TABLE secrets (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  type TEXT NOT NULL CHECK (type IN ('api_key', 'token', 'password', 'certificate')),
+  -- AEAD暗号化コンポーネントを分離して格納（セキュリティファースト設計）
+  ciphertext BLOB NOT NULL, -- 暗号化されたデータ
+  iv BLOB NOT NULL,         -- 初期化ベクトル（12-16バイト）
+  tag BLOB NOT NULL,        -- 認証タグ（16バイト）
+  alg TEXT NOT NULL DEFAULT 'AES-256-GCM', -- 使用した暗号化アルゴリズム
+  bitwarden_item_id TEXT,   -- 外部キー参照（Bitwardenテーブルへの適切な参照）
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (bitwarden_item_id) REFERENCES bitwarden_items(id) ON DELETE SET NULL
+);
 ### Database Initialization
 
 Before creating tables, ensure foreign key constraints are enabled:
@@ -528,8 +540,18 @@ CREATE TABLE tools (
 -- Create indexes for better performance
 CREATE INDEX idx_secret_references_configuration_id ON secret_references(configuration_id);
 CREATE INDEX idx_secret_references_secret_id ON secret_references(secret_id);
+
+-- Bitwarden統合テーブルのインデックス
+CREATE INDEX idx_bitwarden_items_item_id ON bitwarden_items(item_id);
+CREATE INDEX idx_bitwarden_items_name ON bitwarden_items(name);
+CREATE INDEX idx_bitwarden_items_type ON bitwarden_items(type);
+CREATE INDEX idx_bitwarden_items_folder_id ON bitwarden_items(folder_id);
+
+-- セキュリティ強化されたsecretsテーブルのインデックス
 CREATE INDEX idx_secrets_name ON secrets(name);
 CREATE INDEX idx_secrets_type ON secrets(type);
+CREATE INDEX idx_secrets_bitwarden_item_id ON secrets(bitwarden_item_id);
+CREATE INDEX idx_secrets_alg ON secrets(alg); -- 暗号化アルゴリズム別検索用
 
 -- セキュリティ改善: AEAD暗号化コンポーネントの分離
 -- 1. ciphertext, iv, tag, algを分離して格納することで、バイナリデータとアルゴリズムメタデータを適切に保持
@@ -540,12 +562,6 @@ CREATE INDEX idx_resources_server_id ON resources(server_id);
 CREATE INDEX idx_prompts_server_id ON prompts(server_id);
 CREATE INDEX idx_tools_server_id ON tools(server_id);
 CREATE INDEX idx_tools_enabled ON tools(enabled);
-```
-
-### Data Model Mapping
-
-#### Interface to Database Column Mapping
-
 | Interface Field | Database Table.Column | Notes |
 |----------------|---------------------|-------|
 | MCPServer.resources | resources.* | One-to-many relationship |
@@ -722,6 +738,46 @@ interface ErrorResponse {
 - Bitwarden integration for credential management
 
 ### Data Protection
+
+### Database Security Enhancements
+
+#### AEAD Encryption Component Separation
+- **Problem**: Storing AEAD ciphertext in a single TEXT column is unsafe and inefficient
+- **Solution**: Separated AEAD components into dedicated columns:
+  - `ciphertext BLOB`: Encrypted data (binary-safe)
+  - `iv BLOB`: Initialization vector (12-16 bytes)
+  - `tag BLOB`: Authentication tag (16 bytes)
+  - `alg TEXT`: Encryption algorithm metadata
+- **Benefits**:
+  - Preserves binary data integrity
+  - Enables proper decryption with algorithm metadata
+  - Prevents data corruption during storage/retrieval
+
+#### Referential Integrity for External References
+- **Problem**: Loose `bitwarden_id TEXT` without proper foreign key constraints
+- **Solution**: Created dedicated `bitwarden_items` table with proper foreign key relationships
+- **Implementation**:
+  - `bitwarden_items` table stores Bitwarden item metadata
+  - `secrets.bitwarden_item_id` references `bitwarden_items.id`
+  - `ON DELETE SET NULL` ensures graceful handling of deleted Bitwarden items
+
+#### Performance Optimization
+- **Search Indexes**: Added comprehensive indexes for efficient querying:
+  - `idx_secrets_name`: Fast name-based lookups
+  - `idx_secrets_type`: Type-based filtering
+  - `idx_secrets_bitwarden_item_id`: Foreign key relationship queries
+  - `idx_secrets_alg`: Algorithm-based searches
+- **Bitwarden Integration Indexes**:
+  - `idx_bitwarden_items_item_id`: Fast Bitwarden item lookups
+  - `idx_bitwarden_items_name`: Name-based searches
+  - `idx_bitwarden_items_type`: Type filtering
+  - `idx_bitwarden_items_folder_id`: Folder organization queries
+
+#### Data Validation and Constraints
+- **Type Validation**: `CHECK (type IN ('api_key', 'token', 'password', 'certificate'))`
+- **Algorithm Defaults**: `DEFAULT 'AES-256-GCM'` for consistent encryption
+- **Binary Data Integrity**: BLOB columns ensure proper handling of encrypted data
+
 - Encryption at rest for sensitive data
 - Secure secret storage with AES-256 encryption
 - Environment variable protection
