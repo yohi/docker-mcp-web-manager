@@ -1,0 +1,26 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+In .specs/design.md around lines 102–141, the API spec lacks versioning,
+standardized async handling for long-running operations, pagination/sort/filter
+for list endpoints, and a common error format; update the endpoints to be
+prefixed with /api/v1, change async operations (install/start/stop/test) to
+return 202 Accepted with a job ID and provide a /api/v1/jobs/[jobId] status
+endpoint (including job state/result), add pagination (page/limit or cursor),
+sort and filter query parameters to all list endpoints (e.g., /api/v1/servers
+and /api/v1/catalog) and document their defaults and limits, and define a single
+common error response schema (code, message, details, requestId) to be used by
+all endpoints.
+```

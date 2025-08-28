@@ -1,0 +1,28 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+In .specs/requirements.md around lines 20 to 30, the acceptance criteria list
+for Requirement 2 omits handling of the status value 'error' even though the
+design's state model includes status: 'running' | 'stopped' | 'error'; update
+the acceptance criteria to explicitly cover the 'error' state by adding: 1) WHEN
+the selected MCP server has status 'error' THEN the system SHALL display an
+error state indicator and detailed error information (message, timestamp,
+severity), 2) WHEN displaying the detail screen for an 'error' server THEN the
+system SHALL show suggested remediation steps and available recovery actions
+(retry, restart, view logs), and 3) WHEN an administrator performs a recovery
+action THEN the system SHALL provide clear success/failure feedback and state
+transition behavior (e.g., error→running or error→stopped) so the expected
+display/transition/recovery behavior for 'error' is fully specified.
+```

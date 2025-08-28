@@ -1,0 +1,27 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+.specs/tasks.md around lines 55-61 (also apply same changes to 74-79): the API
+task description lacks required non-functional and governance details; update
+the “Create API endpoints” and related bullets to explicitly require (1) API
+versioning (e.g., /api/v1) and include versioning policy, (2) authentication
+middleware on all endpoints and an RBAC extension point, (3) per-IP and per-user
+rate limiting configuration and enforcement, (4) mandatory audit logging for
+create/update/delete operations and admin actions, (5) standard paging and
+sorting parameters for list endpoints, and (6) a defined error-code and HTTP
+status convention; ensure the checklist items and requirements line reference
+these additions so implementers must include them in the server management API
+work.
+```

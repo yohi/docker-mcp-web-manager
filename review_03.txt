@@ -1,0 +1,25 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+In .specs/design.md around lines 249 to 276, the schema lacks JSON validity
+checks, useful indexes, and a cascading foreign-key behavior: add
+CHECK(JSON_VALID(...)) for JSON columns (environment, enabled_tools,
+resource_limits, network_config) to enforce JSON1 usage, add indexes on
+configurations.server_id and on any extracted JSON properties or create
+generated columns for frequently queried JSON fields and index those, and change
+the FOREIGN KEY on configurations(server_id) to include ON DELETE CASCADE (and
+ensure migrations/DB init enable PRAGMA foreign_keys=ON) so deletions in servers
+cascade to configurations.
+```

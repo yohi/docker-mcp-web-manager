@@ -1,0 +1,23 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+.specs/tasks.md around lines 24 to 29: the DockerMCPClient task lacks explicit
+safety/robustness requirements—update the spec to require (1) avoiding shell
+injection by using spawn/execFile with argument arrays and shell disabled, (2)
+enforcing timeouts, retries and cancellation via AbortController and surface
+structured errors containing exit code and stderr, and (3) strict JSON parsing
+plus schema validation (Zod) for all CLI outputs; add these as concrete
+checklist items and note they are mandatory for acceptance.
+```

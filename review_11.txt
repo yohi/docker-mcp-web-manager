@@ -1,0 +1,27 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+.specs/tasks.md around lines 30 to 35: the "Implement log retrieval and
+monitoring" task is missing detailed requirements for SSE/streaming backpressure
+and resource protection; update the task to enumerate concrete design and
+implementation requirements: add SSE heartbeat interval and client timeout,
+maximum concurrent connections and connection-accept backpressure behavior,
+per-connection line-length and events-per-second rate limits, memory caps for
+in-memory filtering/search and paging limits (or require streaming+pagination),
+explicit cleanup steps on client disconnect, and a log retention and rotation
+policy (retention period, rotation size/interval, and archival/cleanup rules);
+keep each item as a checklist sub-bullet with required knobs/thresholds and
+where to enforce them (server config vs infra).
+```

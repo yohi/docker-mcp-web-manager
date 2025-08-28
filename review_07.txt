@@ -1,0 +1,25 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+In .specs/requirements.md around lines 75 to 85, add explicit acceptance
+criteria for key/token rotation and auditing: include a criterion that specifies
+a documented update/rotation procedure for keys and tokens (how to rotate,
+timeline, and rollback), a criterion that requires verifiable secure deletion of
+old secrets (crypto-wipe or overwrite evidence and retained proof), and a
+criterion that mandates audit logging of all access/changes to sensitive
+information including user identity, timestamp, action (view/update/delete), and
+retention/retention-policy; update numbering and wording to match existing
+format and language.
+```

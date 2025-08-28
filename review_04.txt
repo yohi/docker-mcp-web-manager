@@ -1,0 +1,24 @@
+# レビュー指摘内容 のブロックの対応を行ってください。
+指摘が必ずしも正しいとは限りません。あなたは経験豊富なシニアソフトウェアエンジニアとして、セキュリティファーストの視点で技術的判断を行ってください。
+
+日本語で対応をお願いします。
+Gitのコミットは可ですがプッシュは禁止です。
+
+作業が終わったら
+`echo '====================== We Are SAPPORO ! ======================'`
+を実行したあと
+`notify-send --hint=int:resident:1 "{現在のディレクトリ}" "{対応内容を30文字程度で}"`
+を実行して、`exit 0`で終了してください。
+
+# レビュー指摘内容
+
+```
+In .specs/design.md around lines 278 to 289, the secrets table stores AEAD
+ciphertext in a single TEXT column which is unsafe and inefficient; change the
+schema to store AEAD components separately (ciphertext BLOB, iv BLOB, tag BLOB,
+alg TEXT) so binary data and algorithm metadata are preserved and decryptable;
+add an explicit index for searchable name (or confirm the UNIQUE creates one)
+and consider an index on type if queries filter by it; replace the loose
+bitwarden_id TEXT with a proper foreign-key reference to the Bitwarden table (or
+document the intended external reference) to enforce referential integrity.
+```
