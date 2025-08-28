@@ -113,7 +113,7 @@
       - [ ] **Memory Management & Pagination**
         - [ ] Implement memory caps for in-memory filtering/search (default: 50MB, configurable via SERVER_SSE_MEMORY_CAP)
           - [ ] **Application level**: Monitor memory usage per connection with real-time tracking
-          - [ ] **Memory pressure handling**: Trigger garbage collection and connection cleanup when 80% of limit reached
+          - [ ] **Memory pressure handling**: Apply backpressure strategies when 80% of SERVER_SSE_MEMORY_CAP (default: 50MB) is reached: drop oldest/low-priority in-memory items, close or reject new SSE/stream connections with appropriate error status or retry hints, and clean up resources rather than relying on global GC
         - [ ] Add mandatory pagination limits for large result sets (default: 1000 lines/page, configurable via SERVER_SSE_PAGE_SIZE)
           - [ ] **API level**: Enforce pagination for all log retrieval operations with cursor-based pagination
           - [ ] **Streaming requirement**: Mandatory for results exceeding memory cap with streaming indicators
