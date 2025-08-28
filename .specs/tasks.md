@@ -51,6 +51,44 @@
         - **Acceptance Criteria**: All CLI outputs must be validated against predefined Zod schemas, parsing failures must be logged and handled gracefully
     - _Requirements: 1.1, 1.2, 2.1, 3.4_
     - Add log file download functionality
+    - **Log File Download Path Traversal Protection (MANDATORY for acceptance):**
+      - [ ] **Path Normalization & Validation**
+        - [ ] Implement strict path normalization using `path.resolve()` and `path.normalize()`
+          - [ ] **Input validation**: Reject paths containing `../`, `..\\`, or any parent directory references
+          - [ ] **Path resolution**: Always resolve to absolute paths and validate against allowed directories
+          - [ ] **Character filtering**: Block null bytes, control characters, and Unicode normalization attacks
+          - [ ] **Acceptance Criteria**: All file paths must be normalized and validated before any file system access
+      - [ ] **Allowlist-Based File Access Control**
+        - [ ] Implement strict allowlist for downloadable files (log files only)
+          - [ ] **File extension restriction**: Only allow `.log`, `.txt` extensions for log files
+          - [ ] **Directory allowlist**: Restrict access to predefined log directories only (e.g., `/var/log/`, `./logs/`)
+          - [ ] **File naming pattern**: Enforce strict naming conventions (alphanumeric, hyphens, underscores only)
+          - [ ] **Size limits**: Implement maximum file size limits (default: 100MB, configurable)
+          - [ ] **Acceptance Criteria**: Only explicitly allowed files in allowed directories can be downloaded
+      - [ ] **Root Directory Access Prevention**
+        - [ ] Implement absolute path boundary enforcement
+          - [ ] **Base directory validation**: Ensure all file access is within designated log directories
+          - [ ] **Symlink protection**: Block symbolic links and resolve to actual paths before validation
+          - [ ] **Directory traversal blocking**: Explicitly reject any path that escapes the allowed directory tree
+          - [ ] **Real path resolution**: Use `fs.realpathSync()` to resolve actual file paths before validation
+          - [ ] **Acceptance Criteria**: No file access outside designated log directories is possible
+      - [ ] **File Extension & Type Restrictions**
+        - [ ] Implement strict file type validation
+          - [ ] **Extension allowlist**: Only `.log` and `.txt` files are downloadable
+          - [ ] **MIME type validation**: Verify file content matches expected log file format
+          - [ ] **Magic number checking**: Validate file headers to prevent extension spoofing
+          - [ ] **Content scanning**: Basic content validation to ensure file is actually a log file
+          - [ ] **Acceptance Criteria**: Only valid log files with correct extensions and content can be downloaded
+      - [ ] **Secure Response Headers Configuration**
+        - [ ] Implement comprehensive security headers for file downloads
+          - [ ] **Content-Type**: Explicitly set `text/plain` or `application/octet-stream` based on file type
+          - [ ] **Content-Disposition**: Set safe attachment filename with sanitized original name
+          - [ ] **X-Content-Type-Options**: Always set to `nosniff` to prevent MIME type sniffing
+          - [ ] **Cache-Control**: Set appropriate caching headers (`no-cache`, `no-store` for sensitive logs)
+          - [ ] **Content-Security-Policy**: Implement strict CSP for download endpoints
+          - [ ] **X-Frame-Options**: Set to `DENY` to prevent clickjacking
+          - [ ] **Strict-Transport-Security**: Enforce HTTPS for download endpoints
+          - [ ] **Acceptance Criteria**: All download responses must include comprehensive security headers
     - **SSE/Streaming Security & Resource Protection Requirements (MANDATORY for acceptance):**
       - [ ] **SSE Heartbeat & Client Timeout Management**
         - [ ] Implement configurable heartbeat interval (default: 30s, configurable via SERVER_SSE_HEARTBEAT_INTERVAL)
