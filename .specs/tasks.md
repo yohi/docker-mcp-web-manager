@@ -18,7 +18,7 @@
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
   - [ ] 2.2 Create TypeScript interfaces and data models
-    - Define MCPServer, ServerConfiguration, Tool, Secret, and TestResult interfaces
+    - Define MCPServer, ServerConfiguration, Tool, Secret, TestResult, Resource, Prompt, SecretReference, ResourceLimits, NetworkConfig, and JSONSchema interfaces
     - Implement database access layer with proper error handling
     - Create repository pattern for data operations
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
