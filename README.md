@@ -1,0 +1,1 @@
+# docker-mcp-web-manager
