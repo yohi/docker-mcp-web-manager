@@ -412,8 +412,8 @@ CREATE TABLE secret_references (
   required BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (configuration_id) REFERENCES configurations(id),
-  FOREIGN KEY (secret_id) REFERENCES secrets(id),
+  FOREIGN KEY (configuration_id) REFERENCES configurations(id) ON DELETE CASCADE,
+  FOREIGN KEY (secret_id) REFERENCES secrets(id) ON DELETE CASCADE,
   UNIQUE(configuration_id, environment_variable)
 );
 
@@ -605,8 +605,8 @@ CREATE TABLE secret_references (
   required BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (configuration_id) REFERENCES configurations(id),
-  FOREIGN KEY (secret_id) REFERENCES secrets(id),
+  FOREIGN KEY (configuration_id) REFERENCES configurations(id) ON DELETE CASCADE,
+  FOREIGN KEY (secret_id) REFERENCES secrets(id) ON DELETE CASCADE,
   UNIQUE(configuration_id, environment_variable)
 );
 
