@@ -111,15 +111,13 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 12. WHEN validation fails during import THEN the system SHALL provide detailed error messages indicating the specific validation failure, line number (if applicable), and suggested remediation steps
 13. WHEN dry-run mode is executed THEN the system SHALL return comprehensive validation results including success/failure status, warnings, and detailed change preview without applying any modifications
 
-
-1. WHEN accessing the system THEN the system SHALL display a login screen
-
 ### Requirement 9
 
 **User Story:** As a user, I want to authenticate with valid credentials so that I can access my dashboard and secure functionality.
 
 #### Acceptance Criteria
 
+1. WHEN accessing the system THEN the system SHALL display a login screen
 2. WHEN entering valid credentials THEN the system SHALL redirect to the dashboard
 3. WHEN entering invalid credentials THEN the system SHALL display an error message
 4. IF BitwardenCLI is available THEN the system SHALL be able to use Bitwarden credentials
