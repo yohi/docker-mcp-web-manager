@@ -117,7 +117,7 @@
         - [ ] Add mandatory pagination limits for large result sets (default: 1000 lines/page, configurable via SERVER_SSE_PAGE_SIZE)
           - [ ] **API level**: Enforce pagination for all log retrieval operations with cursor-based pagination
           - [ ] **Streaming requirement**: Mandatory for results exceeding memory cap with streaming indicators
-          - [ ] **Cursor-based pagination**: Use timestamp/offset for consistent pagination across concurrent requests
+          - [ ] **Cursor-based pagination**: Use timestamp/page for consistent pagination across concurrent requests
       - [ ] **Connection Lifecycle & Cleanup**
         - [ ] Implement explicit cleanup steps on client disconnect
           - [ ] **Application level**: Close file handles, clear buffers, release memory with cleanup callbacks
@@ -169,7 +169,7 @@
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
       - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (limit, offset) and sorting (sort_by, sort_order) parameters for all list endpoints
+      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., SERVER_001, CONFIG_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 1.1, 1.2, 2.1, 3.1, 3.2, 3.4_
 
@@ -182,7 +182,7 @@
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
       - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (limit, offset) and sorting (sort_by, sort_order) parameters for all list endpoints
+      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., CATALOG_001, INSTALL_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
@@ -195,7 +195,7 @@
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
       - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (limit, offset) and sorting (sort_by, sort_order) parameters for all list endpoints
+      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., TEST_001, LOG_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4_
 
@@ -208,7 +208,7 @@
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
       - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (limit, offset) and sorting (sort_by, sort_order) parameters for all list endpoints
+      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., CONFIG_001, SECRET_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3, 8.4_
 
