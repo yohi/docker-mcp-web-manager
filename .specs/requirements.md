@@ -27,6 +27,9 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 2. WHEN displaying the detail screen THEN the system SHALL show a list of available tools
 3. WHEN displaying the detail screen THEN the system SHALL show server configuration information
 4. WHEN displaying the detail screen THEN the system SHALL show server resource usage
+5. WHEN the selected MCP server has status 'error' THEN the system SHALL display an error state indicator and detailed error information (message, timestamp, severity)
+6. WHEN displaying the detail screen for an 'error' server THEN the system SHALL show suggested remediation steps and available recovery actions (retry, restart, view logs)
+7. WHEN an administrator performs a recovery action THEN the system SHALL provide clear success/failure feedback and state transition behavior (e.g., error→running or error→stopped)
 
 ### Requirement 3
 
