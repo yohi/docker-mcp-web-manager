@@ -174,8 +174,8 @@ graph TB
 class DockerMCPClient {
   async listServers(): Promise<MCPServer[]>
   async getServerDetails(id: string): Promise<MCPServerDetail>
-  async enableServer(name: string): Promise<void>
-  async disableServer(name: string): Promise<void>
+  async enableServer(name: string): Promise<JobResponse> // Returns job descriptor for async server enablement
+  async disableServer(name: string): Promise<JobResponse> // Returns job descriptor for async server disablement
   async startGateway(): Promise<JobResponse> // Returns job descriptor for async operation
   async stopGateway(): Promise<JobResponse> // Returns job descriptor for async operation
   async getServerLogs(id: string): Promise<string[]>
