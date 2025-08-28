@@ -391,10 +391,6 @@ CREATE INDEX idx_configurations_enabled_tools ON configurations(enabled_tools);
 CREATE INDEX idx_configurations_resource_limits ON configurations(resource_limits);
 CREATE INDEX idx_configurations_network_config ON configurations(network_config);
 ```
-);
-```
-
-#### secrets table
 
 #### secret_references table
 ```sql
