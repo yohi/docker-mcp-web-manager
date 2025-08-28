@@ -12,7 +12,7 @@
     - Create database initialization scripts
     - Implement database connection utilities
     - Define SQL schema for servers, configurations, secrets, test_results tables
-    - Add configuration_secrets table for many-to-many relationship (configuration_id TEXT, secret_id TEXT, scope TEXT, UNIQUE(configuration_id, secret_id))
+    - Add secret_references table for many-to-many relationship (id TEXT PRIMARY KEY, configuration_id TEXT, secret_id TEXT, environment_variable TEXT, required BOOLEAN, UNIQUE(configuration_id, secret_id))
     - Enable PRAGMA foreign_keys=ON and PRAGMA journal_mode=WAL for security and performance
     - Provide migration strategy (e.g., Drizzle/Prisma) and seed/init scripts
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
