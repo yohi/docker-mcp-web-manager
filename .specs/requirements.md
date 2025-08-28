@@ -111,6 +111,13 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 
 
 1. WHEN accessing the system THEN the system SHALL display a login screen
+
+### Requirement 9
+
+**User Story:** As a user, I want to authenticate with valid credentials so that I can access my dashboard and secure functionality.
+
+#### Acceptance Criteria
+
 2. WHEN entering valid credentials THEN the system SHALL redirect to the dashboard
 3. WHEN entering invalid credentials THEN the system SHALL display an error message
 4. IF BitwardenCLI is available THEN the system SHALL be able to use Bitwarden credentials
