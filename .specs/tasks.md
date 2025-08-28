@@ -243,7 +243,7 @@
         - [ ] **HKDF Support**: Implement HKDF (RFC 5869) for key derivation from master secrets
         - [ ] **Argon2id Support**: Implement Argon2id for password-based key derivation (when applicable)
         - [ ] **Salt Management**: Generate and store cryptographically secure salts for KDF operations
-        - [ ] **Iteration Count**: Use appropriate iteration counts (HKDF: 1, Argon2id: configurable, min: 100,000)
+        - [ ] **KDF Configuration**: Configure KDF parameters appropriately (HKDF: requires no iterations - uses extract/expand stages, Argon2id: configurable time cost [min: 3], memory cost [min: 65536 KB], and parallelism [min: 1] parameters with documented recommended defaults)
       - [ ] **Key Rotation Policy**: Implement comprehensive key rotation and management
         - [ ] **Versioned Keys**: Support multiple key versions with backward compatibility
         - [ ] **Backward Decryption**: Maintain ability to decrypt data encrypted with previous key versions
