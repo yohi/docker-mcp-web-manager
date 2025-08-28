@@ -1055,6 +1055,15 @@ interface Job {
   updatedAt: Date
   completedAt?: Date
 }
+
+#### JobResponse
+```typescript
+interface JobResponse {
+  jobId: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  message?: string
+  estimatedDuration?: number
+}
 ```
 
 
