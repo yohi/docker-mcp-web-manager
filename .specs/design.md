@@ -216,6 +216,92 @@ interface Tool {
 }
 ```
 
+
+#### Resource
+```typescript
+interface Resource {
+  uri: string
+  name: string
+  description?: string
+  mimeType?: string
+  metadata?: Record<string, any>
+}
+```
+
+#### Prompt
+```typescript
+interface Prompt {
+  name: string
+  description?: string
+  arguments?: JSONSchema
+  metadata?: Record<string, any>
+}
+```
+
+#### SecretReference
+```typescript
+interface SecretReference {
+  secretId: string
+  environmentVariable: string
+  required: boolean
+}
+```
+
+#### ResourceLimits
+```typescript
+interface ResourceLimits {
+  memory?: string // e.g., "512m", "1g"
+  cpu?: string // e.g., "0.5", "1"
+  disk?: string // e.g., "1g", "10g"
+  network?: {
+    bandwidth?: string // e.g., "100m", "1g"
+    connections?: number
+  }
+}
+```
+
+#### NetworkConfig
+```typescript
+interface NetworkConfig {
+  mode: 'bridge' | 'host' | 'none' | 'overlay'
+  ports?: Array<{
+    containerPort: number
+    hostPort?: number
+    protocol: 'tcp' | 'udp'
+  }>
+  networks?: string[]
+  dns?: string[]
+  extraHosts?: Array<{
+    hostname: string
+    ip: string
+  }>
+}
+```
+
+#### JSONSchema
+```typescript
+interface JSONSchema {
+  type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null'
+  properties?: Record<string, JSONSchema>
+  items?: JSONSchema | JSONSchema[]
+  required?: string[]
+  enum?: any[]
+  const?: any
+  format?: string
+  pattern?: string
+  minimum?: number
+  maximum?: number
+  minLength?: number
+  maxLength?: number
+  minItems?: number
+  maxItems?: number
+  additionalProperties?: boolean | JSONSchema
+  description?: string
+  title?: string
+  default?: any
+  examples?: any[]
+}
+```
 #### Secret
 ```typescript
 interface Secret {
@@ -276,6 +362,68 @@ CREATE TABLE configurations (
 ```
 
 #### secrets table
+
+#### secret_references table
+```sql
+CREATE TABLE secret_references (
+  id TEXT PRIMARY KEY,
+  configuration_id TEXT NOT NULL,
+  secret_id TEXT NOT NULL,
+  environment_variable TEXT NOT NULL,
+  required BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (configuration_id) REFERENCES configurations(id),
+  FOREIGN KEY (secret_id) REFERENCES secrets(id),
+  UNIQUE(configuration_id, environment_variable)
+);
+```
+
+#### resources table
+```sql
+CREATE TABLE resources (
+  id TEXT PRIMARY KEY,
+  server_id TEXT NOT NULL,
+  uri TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  mime_type TEXT,
+  metadata TEXT, -- JSON
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id)
+);
+```
+
+#### prompts table
+```sql
+CREATE TABLE prompts (
+  id TEXT PRIMARY KEY,
+  server_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  arguments TEXT, -- JSON (JSONSchema)
+  metadata TEXT, -- JSON
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id)
+);
+```
+
+#### tools table
+```sql
+CREATE TABLE tools (
+  id TEXT PRIMARY KEY,
+  server_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  input_schema TEXT NOT NULL, -- JSON (JSONSchema)
+  enabled BOOLEAN DEFAULT TRUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id)
+);
+```
 ```sql
 CREATE TABLE secrets (
   id TEXT PRIMARY KEY,
@@ -289,6 +437,107 @@ CREATE TABLE secrets (
 ```
 
 #### test_results table
+
+## Database Migration Requirements
+
+### New Tables to Create
+
+The following new tables need to be created to support the complete data model:
+
+1. **secret_references** - Links configurations to secrets with environment variable mapping
+2. **resources** - Stores MCP server resources (files, data sources, etc.)
+3. **prompts** - Stores MCP server prompts with argument schemas
+4. **tools** - Stores MCP server tools with input schemas
+
+### Migration Script
+
+```sql
+-- Create secret_references table
+CREATE TABLE secret_references (
+  id TEXT PRIMARY KEY,
+  configuration_id TEXT NOT NULL,
+  secret_id TEXT NOT NULL,
+  environment_variable TEXT NOT NULL,
+  required BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (configuration_id) REFERENCES configurations(id),
+  FOREIGN KEY (secret_id) REFERENCES secrets(id),
+  UNIQUE(configuration_id, environment_variable)
+);
+
+-- Create resources table
+CREATE TABLE resources (
+  id TEXT PRIMARY KEY,
+  server_id TEXT NOT NULL,
+  uri TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  mime_type TEXT,
+  metadata TEXT, -- JSON
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id)
+);
+
+-- Create prompts table
+CREATE TABLE prompts (
+  id TEXT PRIMARY KEY,
+  server_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  arguments TEXT, -- JSON (JSONSchema)
+  metadata TEXT, -- JSON
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id)
+);
+
+-- Create tools table
+CREATE TABLE tools (
+  id TEXT PRIMARY KEY,
+  server_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  input_schema TEXT NOT NULL, -- JSON (JSONSchema)
+  enabled BOOLEAN DEFAULT TRUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id)
+);
+
+-- Create indexes for better performance
+CREATE INDEX idx_secret_references_configuration_id ON secret_references(configuration_id);
+CREATE INDEX idx_secret_references_secret_id ON secret_references(secret_id);
+CREATE INDEX idx_resources_server_id ON resources(server_id);
+CREATE INDEX idx_prompts_server_id ON prompts(server_id);
+CREATE INDEX idx_tools_server_id ON tools(server_id);
+CREATE INDEX idx_tools_enabled ON tools(enabled);
+```
+
+### Data Model Mapping
+
+#### Interface to Database Column Mapping
+
+| Interface Field | Database Table.Column | Notes |
+|----------------|---------------------|-------|
+| MCPServer.resources | resources.* | One-to-many relationship |
+| MCPServer.prompts | prompts.* | One-to-many relationship |
+| MCPServer.tools | tools.* | One-to-many relationship |
+| ServerConfiguration.secrets | secret_references.* | Many-to-many via junction table |
+| ServerConfiguration.resourceLimits | configurations.resource_limits | JSON field |
+| ServerConfiguration.networkConfig | configurations.network_config | JSON field |
+| Tool.inputSchema | tools.input_schema | JSON field |
+| Prompt.arguments | prompts.arguments | JSON field |
+| Resource.metadata | resources.metadata | JSON field |
+| Prompt.metadata | prompts.metadata | JSON field |
+
+#### Embedded vs Normalized Data
+
+- **Embedded (JSON)**: ResourceLimits, NetworkConfig, JSONSchema objects
+- **Normalized (Separate Tables)**: Resources, Prompts, Tools, SecretReferences
+
+This approach balances query performance with data integrity and flexibility.
 ```sql
 CREATE TABLE test_results (
   id TEXT PRIMARY KEY,
