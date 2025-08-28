@@ -351,13 +351,22 @@ CREATE TABLE servers (
 CREATE TABLE configurations (
   id TEXT PRIMARY KEY,
   server_id TEXT NOT NULL,
-  environment TEXT, -- JSON
-  enabled_tools TEXT, -- JSON array
-  resource_limits TEXT, -- JSON
-  network_config TEXT, -- JSON
+  environment TEXT CHECK(JSON_VALID(environment)), -- JSON with validation
+  enabled_tools TEXT CHECK(JSON_VALID(enabled_tools)), -- JSON array with validation
+  resource_limits TEXT CHECK(JSON_VALID(resource_limits)), -- JSON with validation
+  network_config TEXT CHECK(JSON_VALID(network_config)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id)
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance optimization
+CREATE INDEX idx_configurations_server_id ON configurations(server_id);
+CREATE INDEX idx_configurations_environment ON configurations(environment);
+CREATE INDEX idx_configurations_enabled_tools ON configurations(enabled_tools);
+CREATE INDEX idx_configurations_resource_limits ON configurations(resource_limits);
+CREATE INDEX idx_configurations_network_config ON configurations(network_config);
+```
 );
 ```
 
@@ -439,6 +448,17 @@ CREATE TABLE secrets (
 #### test_results table
 
 ## Database Migration Requirements
+
+### Database Initialization
+
+Before creating tables, ensure foreign key constraints are enabled:
+
+```sql
+-- Enable foreign key constraints
+PRAGMA foreign_keys = ON;
+```
+
+This must be executed at the beginning of every database connection and migration script.
 
 ### New Tables to Create
 
