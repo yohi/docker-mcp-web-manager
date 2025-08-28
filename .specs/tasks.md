@@ -39,6 +39,34 @@
     - Create log streaming functionality for real-time updates
     - Implement log filtering and search capabilities
     - Add log file download functionality
+    - **SSE/Streaming Security & Resource Protection Requirements (MANDATORY for acceptance):**
+      - [ ] **SSE Heartbeat & Client Timeout Management**
+        - Implement configurable heartbeat interval (default: 30s, configurable via SERVER_SSE_HEARTBEAT_INTERVAL)
+        - Add client timeout detection and automatic connection cleanup (default: 60s, configurable via SERVER_SSE_CLIENT_TIMEOUT)
+        - Enforce heartbeat at server config level, timeout enforcement at application level
+      - [ ] **Connection Backpressure & Rate Limiting**
+        - Implement maximum concurrent SSE connections limit (default: 100, configurable via SERVER_SSE_MAX_CONNECTIONS)
+        - Add connection-accept backpressure behavior with graceful degradation (HTTP 503 when limit exceeded)
+        - Enforce connection limits at server config level, backpressure at application level
+      - [ ] **Per-Connection Resource Limits**
+        - Implement per-connection line length limit (default: 10KB, configurable via SERVER_SSE_MAX_LINE_LENGTH)
+        - Add events-per-second rate limit per connection (default: 100 events/s, configurable via SERVER_SSE_RATE_LIMIT)
+        - Enforce line length at application level, rate limiting at middleware level
+      - [ ] **Memory Management & Pagination**
+        - Implement memory caps for in-memory filtering/search (default: 50MB, configurable via SERVER_SSE_MEMORY_CAP)
+        - Add mandatory pagination limits for large result sets (default: 1000 lines/page, configurable via SERVER_SSE_PAGE_SIZE)
+        - Require streaming + pagination for results exceeding memory cap
+        - Enforce memory caps at application level, pagination at API level
+      - [ ] **Connection Lifecycle & Cleanup**
+        - Implement explicit cleanup steps on client disconnect (close file handles, clear buffers, release memory)
+        - Add connection state tracking and orphaned connection detection
+        - Implement graceful shutdown handling for active SSE connections
+        - Enforce cleanup at application level, state tracking at middleware level
+      - [ ] **Log Retention & Rotation Policy**
+        - Implement configurable log retention period (default: 30 days, configurable via SERVER_LOG_RETENTION_DAYS)
+        - Add log rotation based on size (default: 100MB, configurable via SERVER_LOG_ROTATION_SIZE) and time interval (default: daily, configurable via SERVER_LOG_ROTATION_INTERVAL)
+        - Implement archival and cleanup rules for rotated logs (compress old logs, delete after retention period)
+        - Enforce retention policy at infrastructure level, rotation at application level
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
   - [ ] 3.3 Create catalog integration
