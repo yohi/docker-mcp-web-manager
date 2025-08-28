@@ -72,8 +72,10 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 
 1. WHEN accessing the catalog screen THEN the system SHALL display a catalog of available MCP servers
 2. WHEN selecting an MCP server THEN the system SHALL display detailed server information
-3. WHEN clicking the install button THEN the system SHALL install the MCP server
-4. WHEN installation is complete THEN the system SHALL add it to the installed list
+3. WHEN clicking the install button THEN the system SHALL return HTTP 202 and start an asynchronous installation job
+4. WHEN installation job is running THEN the UI SHALL show installation progress through job status polling or websocket updates
+5. WHEN installation job completes successfully THEN the system SHALL add it to the installed list and display clear success state
+6. WHEN installation job fails THEN the UI SHALL provide failure handling and recovery options including retry, cancel, and display error details
 
 ### Requirement 7
 
