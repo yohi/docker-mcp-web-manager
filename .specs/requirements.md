@@ -2,9 +2,6 @@
 
 ## Introduction
 
-5. WHEN managing keys and tokens THEN the system SHALL provide documented update/rotation procedures including how to rotate, timeline, and rollback procedures
-6. WHEN rotating keys and tokens THEN the system SHALL provide verifiable secure deletion of old secrets with crypto-wipe or overwrite evidence and retained proof
-7. WHEN accessing or modifying sensitive information THEN the system SHALL maintain audit logging including user identity, timestamp, action (view/update/delete), and retention/retention-policy
 A web-based management tool for DockerMCPGateway that provides browser-based administration capabilities. The system offers MCP server listing, detailed inspection, configuration management, testing functionality, log monitoring, catalog-based installation, secure credential management, configuration import/export, BitwardenCLI integration, and authentication features.
 
 ## Requirements
