@@ -176,10 +176,10 @@ class DockerMCPClient {
   async getServerDetails(id: string): Promise<MCPServerDetail>
   async enableServer(name: string): Promise<void>
   async disableServer(name: string): Promise<void>
-  async startGateway(): Promise<void>
-  async stopGateway(): Promise<void>
+  async startGateway(): Promise<JobResponse> // Returns job descriptor for async operation
+  async stopGateway(): Promise<JobResponse> // Returns job descriptor for async operation
   async getServerLogs(id: string): Promise<string[]>
-  async testServerTool(id: string, tool: string, params: any): Promise<any>
+  async testServerTool(id: string, tool: string, params: any): Promise<JobResponse> // Returns job descriptor for async tool testing
 }
 ```
 
