@@ -1079,9 +1079,9 @@ interface JobResponse {
 ```sql
 CREATE TABLE jobs (
   id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
-  status TEXT NOT NULL,
-  target_type TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('install', 'start', 'stop', 'test', 'enable', 'disable')),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+  target_type TEXT NOT NULL CHECK (target_type IN ('server', 'catalog', 'gateway')),
   target_id TEXT NOT NULL,
   progress_current INTEGER DEFAULT 0,
   progress_total INTEGER DEFAULT 100,
@@ -1102,5 +1102,10 @@ CREATE TRIGGER jobs_updated_at
 BEGIN
   UPDATE jobs SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
+
+-- Operational indexes for runtime queries
+CREATE INDEX idx_jobs_target_latest ON jobs(target_type, target_id, created_at DESC); -- Latest job for a target
+CREATE INDEX idx_jobs_in_progress ON jobs(status, updated_at) WHERE status IN ('pending', 'running'); -- In-progress jobs
+CREATE INDEX idx_jobs_target_status ON jobs(target_type, target_id, status, created_at DESC); -- Target and status queries
 ```
 
