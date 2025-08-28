@@ -1062,10 +1062,10 @@ CREATE TABLE jobs (
   progress_current INTEGER DEFAULT 0,
   progress_total INTEGER DEFAULT 100,
   progress_message TEXT,
-  result TEXT, -- JSON
+  result TEXT CHECK (result IS NULL OR JSON_VALID(result)), -- JSON with validation
   error_code TEXT,
   error_message TEXT,
-  error_details TEXT, -- JSON
+  error_details TEXT CHECK (error_details IS NULL OR JSON_VALID(error_details)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   completed_at DATETIME
