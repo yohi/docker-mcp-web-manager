@@ -12,10 +12,11 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 
 #### Acceptance Criteria
 
-1. WHEN accessing the dashboard THEN the system SHALL display a list of installed MCP servers
+1. WHEN accessing the dashboard THEN the system SHALL display a list of installed MCP servers including servers with status "Error"
 2. WHEN MCP servers are added or removed THEN the system SHALL automatically update the list
 3. IF an MCP server is running THEN the system SHALL display its status as "Running"
 4. IF an MCP server is stopped THEN the system SHALL display its status as "Stopped"
+5. IF an MCP server is in an error state THEN the system SHALL display its status as "Error"
 
 ### Requirement 2
 
