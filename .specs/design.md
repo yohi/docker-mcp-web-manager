@@ -388,9 +388,9 @@ CREATE TABLE configurations (
 
 -- Trigger for updated_at field
 CREATE TRIGGER configurations_updated_at
-  AFTER UPDATE ON configurations
+  BEFORE UPDATE ON configurations
 BEGIN
-  UPDATE configurations SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 
 -- Indexes for performance optimization
@@ -418,9 +418,9 @@ CREATE TABLE secret_references (
 
 -- Trigger for updated_at field
 CREATE TRIGGER secret_references_updated_at
-  AFTER UPDATE ON secret_references
+  BEFORE UPDATE ON secret_references
 BEGIN
-  UPDATE secret_references SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 ```
 
@@ -441,9 +441,9 @@ CREATE TABLE resources (
 
 -- Trigger for updated_at field
 CREATE TRIGGER resources_updated_at
-  AFTER UPDATE ON resources
+  BEFORE UPDATE ON resources
 BEGIN
-  UPDATE resources SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 ```
 
@@ -463,9 +463,9 @@ CREATE TABLE prompts (
 
 -- Trigger for updated_at field
 CREATE TRIGGER prompts_updated_at
-  AFTER UPDATE ON prompts
+  BEFORE UPDATE ON prompts
 BEGIN
-  UPDATE prompts SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 ```
 
@@ -485,9 +485,9 @@ CREATE TABLE tools (
 
 -- Trigger for updated_at field
 CREATE TRIGGER tools_updated_at
-  AFTER UPDATE ON tools
+  BEFORE UPDATE ON tools
 BEGIN
-  UPDATE tools SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 ```
 
@@ -507,9 +507,9 @@ CREATE TABLE bitwarden_items (
 
 -- Trigger for updated_at field
 CREATE TRIGGER bitwarden_items_updated_at
-  AFTER UPDATE ON bitwarden_items
+  BEFORE UPDATE ON bitwarden_items
 BEGIN
-  UPDATE bitwarden_items SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 ```
 
@@ -533,9 +533,9 @@ CREATE TABLE secrets (
 
 -- Trigger for updated_at field
 CREATE TRIGGER secrets_updated_at
-  AFTER UPDATE ON secrets
+  BEFORE UPDATE ON secrets
 BEGIN
-  UPDATE secrets SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 ```
 
@@ -1073,9 +1073,9 @@ CREATE TABLE jobs (
 
 -- Trigger for updated_at field
 CREATE TRIGGER jobs_updated_at
-  AFTER UPDATE ON jobs
+  BEFORE UPDATE ON jobs
 BEGIN
-  UPDATE jobs SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  SET NEW.updated_at = CURRENT_TIMESTAMP;
 END;
 ```
 
