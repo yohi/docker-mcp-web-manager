@@ -380,9 +380,16 @@ CREATE TABLE configurations (
   resource_limits TEXT CHECK(JSON_VALID(resource_limits)), -- JSON with validation
   network_config TEXT CHECK(JSON_VALID(network_config)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER configurations_updated_at
+  AFTER UPDATE ON configurations
+BEGIN
+  UPDATE configurations SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 
 -- Indexes for performance optimization
 CREATE INDEX idx_configurations_server_id ON configurations(server_id);
@@ -401,11 +408,18 @@ CREATE TABLE secret_references (
   environment_variable TEXT NOT NULL,
   required BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (configuration_id) REFERENCES configurations(id),
   FOREIGN KEY (secret_id) REFERENCES secrets(id),
   UNIQUE(configuration_id, environment_variable)
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER secret_references_updated_at
+  AFTER UPDATE ON secret_references
+BEGIN
+  UPDATE secret_references SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 ```
 
 #### resources table
@@ -419,9 +433,16 @@ CREATE TABLE resources (
   mime_type TEXT,
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER resources_updated_at
+  AFTER UPDATE ON resources
+BEGIN
+  UPDATE resources SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 ```
 
 #### prompts table
@@ -434,9 +455,16 @@ CREATE TABLE prompts (
   arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER prompts_updated_at
+  AFTER UPDATE ON prompts
+BEGIN
+  UPDATE prompts SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 ```
 
 #### tools table
@@ -449,9 +477,16 @@ CREATE TABLE tools (
   input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER tools_updated_at
+  AFTER UPDATE ON tools
+BEGIN
+  UPDATE tools SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 ```
 
 #### bitwarden_items table
@@ -468,6 +503,13 @@ CREATE TABLE bitwarden_items (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Trigger for updated_at field
+CREATE TRIGGER bitwarden_items_updated_at
+  AFTER UPDATE ON bitwarden_items
+BEGIN
+  UPDATE bitwarden_items SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+```
 
 #### secrets table
 ```sql
@@ -483,9 +525,18 @@ CREATE TABLE secrets (
   alg TEXT NOT NULL DEFAULT 'AES-256-GCM', -- 使用した暗号化アルゴリズム
   bitwarden_item_id TEXT,   -- 外部キー参照（Bitwardenテーブルへの適切な参照）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (bitwarden_item_id) REFERENCES bitwarden_items(id) ON DELETE SET NULL
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER secrets_updated_at
+  AFTER UPDATE ON secrets
+BEGIN
+  UPDATE secrets SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+```
+
 ### Database Initialization
 
 Before creating tables, ensure foreign key constraints are enabled:
@@ -544,7 +595,7 @@ CREATE TABLE secret_references (
   environment_variable TEXT NOT NULL,
   required BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (configuration_id) REFERENCES configurations(id),
   FOREIGN KEY (secret_id) REFERENCES secrets(id),
   UNIQUE(configuration_id, environment_variable)
@@ -560,7 +611,7 @@ CREATE TABLE resources (
   mime_type TEXT,
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -573,7 +624,7 @@ CREATE TABLE prompts (
   arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -586,7 +637,7 @@ CREATE TABLE tools (
   input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -1014,8 +1065,15 @@ CREATE TABLE jobs (
   error_message TEXT,
   error_details TEXT, -- JSON
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   completed_at DATETIME
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER jobs_updated_at
+  AFTER UPDATE ON jobs
+BEGIN
+  UPDATE jobs SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 ```
 
