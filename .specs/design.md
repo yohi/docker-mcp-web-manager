@@ -103,47 +103,47 @@ graph TB
 
 #### 1. Server Management API
 ```typescript
-// GET /api/servers - List all MCP servers
-// GET /api/servers/[id] - Get server details
-// POST /api/servers/[id]/start - Start server
-// POST /api/servers/[id]/stop - Stop server
-// PUT /api/servers/[id]/config - Update server configuration
-// DELETE /api/servers/[id] - Remove server
+// GET /api/v1/servers - List all MCP servers
+// GET /api/v1/servers/[id] - Get server details
+// POST /api/v1/servers/[id]/start - Start server
+// POST /api/v1/servers/[id]/stop - Stop server
+// PUT /api/v1/servers/[id]/config - Update server configuration
+// DELETE /api/v1/servers/[id] - Remove server
 ```
 
 #### 2. Catalog API
 ```typescript
-// GET /api/catalog - Get available servers from catalog
-// GET /api/catalog/[id] - Get server details from catalog
-// POST /api/catalog/[id]/install - Install server from catalog
+// GET /api/v1/catalog - Get available servers from catalog
+// GET /api/v1/catalog/[id] - Get server details from catalog
+// POST /api/v1/catalog/[id]/install - Install server from catalog
 ```
 
 #### 3. Testing API
 ```typescript
-// POST /api/servers/[id]/test - Execute tool test
-// GET /api/servers/[id]/test-history - Get test history
+// POST /api/v1/servers/[id]/test - Execute tool test
+// GET /api/v1/servers/[id]/test-history - Get test history
 ```
 
 #### 4. Logs API
 ```typescript
-// GET /api/servers/[id]/logs - Get server logs
-// GET /api/servers/[id]/logs/stream - Stream logs (SSE)
+// GET /api/v1/servers/[id]/logs - Get server logs
+// GET /api/v1/servers/[id]/logs/stream - Stream logs (SSE)
 ```
 
 #### 5. Configuration API
 ```typescript
-// GET /api/config/export - Export configuration
-// POST /api/config/import - Import configuration
-// GET /api/secrets - List secrets (masked)
-// POST /api/secrets - Create/update secret
-// DELETE /api/secrets/[id] - Delete secret
+// GET /api/v1/config/export - Export configuration
+// POST /api/v1/config/import - Import configuration
+// GET /api/v1/secrets - List secrets (masked)
+// POST /api/v1/secrets - Create/update secret
+// DELETE /api/v1/secrets/[id] - Delete secret
 ```
 
 #### 6. Authentication API
 ```typescript
-// POST /api/auth/login - User login
-// POST /api/auth/logout - User logout
-// GET /api/auth/session - Get current session
+// POST /api/v1/auth/login - User login
+// POST /api/v1/auth/logout - User logout
+// GET /api/v1/auth/session - Get current session
 ```
 
 ### Docker Integration Layer
@@ -335,6 +335,59 @@ interface ErrorResponse {
     code: string
     message: string
     details?: any
+    requestId: string
+    timestamp: string
+  }
+}
+```
+
+#### Standard Error Codes
+- `VALIDATION_ERROR` (400) - Request validation failed
+- `AUTHENTICATION_REQUIRED` (401) - Authentication required
+- `AUTHORIZATION_DENIED` (403) - Insufficient permissions
+- `RESOURCE_NOT_FOUND` (404) - Requested resource not found
+- `CONFLICT` (409) - Resource conflict (e.g., duplicate name)
+- `RATE_LIMIT_EXCEEDED` (429) - Too many requests
+- `INTERNAL_ERROR` (500) - Internal server error
+- `SERVICE_UNAVAILABLE` (503) - External service unavailable
+- `DOCKER_ERROR` (502) - Docker operation failed
+- `BITWARDEN_ERROR` (502) - Bitwarden integration failed
+
+#### Error Response Examples
+```typescript
+// Validation Error (400)
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request parameters",
+    "details": {
+      "field": "name",
+      "reason": "Name is required and must be at least 3 characters"
+    },
+    "requestId": "req-123456789",
+    "timestamp": "2024-01-01T00:00:00Z"
+  }
+}
+
+// Resource Not Found (404)
+{
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "Server not found",
+    "details": {
+      "resource": "server",
+      "id": "server-123"
+    },
+    "requestId": "req-123456789",
+    "timestamp": "2024-01-01T00:00:00Z"
+  }
+}
+```
+interface ErrorResponse {
+  error: {
+    code: string
+    message: string
+    details?: any
     timestamp: string
   }
 }
@@ -454,3 +507,117 @@ volumes:
 - Production: Optimized builds, structured logging
 - Docker socket access for MCP Gateway integration
 - Persistent data storage for configuration and logs
+#### 7. Job Management API
+```typescript
+// GET /api/v1/jobs/[jobId] - Get job status and result
+// GET /api/v1/jobs - List jobs (with pagination, sort, filter)
+// DELETE /api/v1/jobs/[jobId] - Cancel job (if cancellable)
+```
+
+### API Request/Response Specifications
+
+#### Query Parameters for List Endpoints
+All list endpoints support the following query parameters:
+
+- `page` (number, default: 1) - Page number for pagination
+- `limit` (number, default: 20, max: 100) - Number of items per page
+- `sort` (string) - Sort field (e.g., "name", "-created_at" for descending)
+- `filter` (object) - Filter criteria as JSON object
+- `search` (string) - Search term for text fields
+
+Example:
+```
+GET /api/v1/servers?page=1&limit=10&sort=name&filter={"status":"running"}&search=docker
+```
+
+#### Async Operation Response Format
+For async operations (install, start, stop, test), the API returns:
+
+```typescript
+// HTTP 202 Accepted
+{
+  "jobId": "uuid-string",
+  "status": "pending",
+  "message": "Operation started successfully",
+  "estimatedDuration": 30000 // milliseconds
+}
+```
+
+#### Job Status Response Format
+```typescript
+// GET /api/v1/jobs/[jobId]
+{
+  "jobId": "uuid-string",
+  "status": "completed" | "pending" | "running" | "failed" | "cancelled",
+  "type": "install" | "start" | "stop" | "test",
+  "target": {
+    "type": "server" | "catalog",
+    "id": "server-id"
+  },
+  "progress": {
+    "current": 75,
+    "total": 100,
+    "message": "Installing dependencies..."
+  },
+  "result": any, // Only present when status is "completed"
+  "error": {
+    "code": "string",
+    "message": "string",
+    "details": any
+  }, // Only present when status is "failed"
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z",
+  "completedAt": "2024-01-01T00:00:00Z" // Only present when completed
+}
+```
+
+
+#### Job
+```typescript
+interface Job {
+  id: string
+  type: 'install' | 'start' | 'stop' | 'test'
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  target: {
+    type: 'server' | 'catalog'
+    id: string
+  }
+  progress: {
+    current: number
+    total: number
+    message: string
+  }
+  result?: any
+  error?: {
+    code: string
+    message: string
+    details: any
+  }
+  createdAt: Date
+  updatedAt: Date
+  completedAt?: Date
+}
+```
+
+
+#### jobs table
+```sql
+CREATE TABLE jobs (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  status TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  progress_current INTEGER DEFAULT 0,
+  progress_total INTEGER DEFAULT 100,
+  progress_message TEXT,
+  result TEXT, -- JSON
+  error_code TEXT,
+  error_message TEXT,
+  error_details TEXT, -- JSON
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME
+);
+```
+
