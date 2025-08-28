@@ -28,6 +28,11 @@
     - Implement methods to execute docker mcp CLI commands
     - Add server listing, details retrieval, and status management
     - Implement server enable/disable and gateway control functions
+    - **Security & Robustness Requirements (MANDATORY for acceptance):**
+      - [ ] **Shell Injection Prevention**: Use `spawn`/`execFile` with argument arrays and shell disabled to prevent command injection attacks
+      - [ ] **Timeout & Cancellation**: Implement AbortController for timeouts, retries, and cancellation of long-running operations
+      - [ ] **Structured Error Handling**: Surface structured errors containing exit code and stderr for proper error diagnosis
+      - [ ] **JSON Validation**: Implement strict JSON parsing with Zod schema validation for all CLI outputs to prevent parsing vulnerabilities
     - _Requirements: 1.1, 1.2, 2.1, 3.4_
 
   - [ ] 3.2 Implement log retrieval and monitoring
