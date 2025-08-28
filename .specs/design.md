@@ -380,8 +380,8 @@ CREATE TABLE configurations (
   resource_limits TEXT CHECK(JSON_VALID(resource_limits)), -- JSON with validation
   network_config TEXT CHECK(JSON_VALID(network_config)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Indexes for performance optimization
@@ -405,7 +405,7 @@ CREATE TABLE secret_references (
   environment_variable TEXT NOT NULL,
   required BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (configuration_id) REFERENCES configurations(id),
   FOREIGN KEY (secret_id) REFERENCES secrets(id),
   UNIQUE(configuration_id, environment_variable)
@@ -423,8 +423,8 @@ CREATE TABLE resources (
   mime_type TEXT,
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 ```
 
@@ -438,8 +438,8 @@ CREATE TABLE prompts (
   arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 ```
 
@@ -453,9 +453,12 @@ CREATE TABLE tools (
   input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+```
+
+#### bitwarden_items table
 ```sql
 -- Bitwarden統合テーブル（外部キー参照の整合性確保）
 CREATE TABLE bitwarden_items (
@@ -469,6 +472,9 @@ CREATE TABLE bitwarden_items (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+
+#### secrets table
+```sql
 -- セキュリティ強化されたsecretsテーブル
 CREATE TABLE secrets (
   id TEXT PRIMARY KEY,
@@ -481,7 +487,7 @@ CREATE TABLE secrets (
   alg TEXT NOT NULL DEFAULT 'AES-256-GCM', -- 使用した暗号化アルゴリズム
   bitwarden_item_id TEXT,   -- 外部キー参照（Bitwardenテーブルへの適切な参照）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (bitwarden_item_id) REFERENCES bitwarden_items(id) ON DELETE SET NULL
 );
 ### Database Initialization
@@ -542,7 +548,7 @@ CREATE TABLE secret_references (
   environment_variable TEXT NOT NULL,
   required BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (configuration_id) REFERENCES configurations(id),
   FOREIGN KEY (secret_id) REFERENCES secrets(id),
   UNIQUE(configuration_id, environment_variable)
@@ -558,8 +564,8 @@ CREATE TABLE resources (
   mime_type TEXT,
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Create prompts table
@@ -571,8 +577,8 @@ CREATE TABLE prompts (
   arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Create tools table
@@ -584,8 +590,8 @@ CREATE TABLE tools (
   input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Create indexes for better performance
@@ -643,7 +649,7 @@ CREATE TABLE test_results (
   error TEXT,
   execution_time INTEGER,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 ```
 
@@ -1012,7 +1018,7 @@ CREATE TABLE jobs (
   error_message TEXT,
   error_details TEXT, -- JSON
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   completed_at DATETIME
 );
 ```
