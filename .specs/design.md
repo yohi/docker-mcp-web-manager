@@ -364,7 +364,7 @@ CREATE TABLE servers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   image TEXT NOT NULL,
-  status TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('running', 'stopped', 'error')),
   version TEXT,
   description TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
