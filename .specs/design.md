@@ -189,10 +189,10 @@ class DockerMCPClient {
 ```typescript
 class CatalogClient {
   async getCatalog(): Promise<CatalogEntry[]>
-  async getServerInfo(name: string): Promise<CatalogServerInfo>
-  async installServer(name: string, config: ServerConfig): Promise<string> // Returns jobId
+  async getServerInfo(id: string): Promise<CatalogServerInfo>
+  async installServer(id: string, config: ServerConfig): Promise<JobResponse> // Returns job descriptor
 
-  async getJobStatus(jobId: string): Promise<Job> // Get job status and progress
+  async getJobStatus(jobId: string): Promise<JobResponse> // Get job status and progress
   async cancelJob(jobId: string): Promise<void> // Cancel job if cancellable
 }
 ```
