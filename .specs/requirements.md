@@ -102,12 +102,16 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 2. WHEN selecting an import file THEN the system SHALL validate the file contents
 3. WHEN importing a valid configuration file THEN the system SHALL apply the configuration and update MCP servers
 4. WHEN exporting configuration containing sensitive information THEN the system SHALL exclude or mask sensitive information
+5. WHEN exporting configuration files THEN the system SHALL include an explicit schemaVersion field in the exported JSON file
+6. WHEN importing configuration files THEN the system SHALL validate the schemaVersion field and enforce backward/forward compatibility rules as documented in the migration policy
+7. WHEN importing files with unsupported schemaVersion THEN the system SHALL reject the import with clear error messages indicating the supported version range and migration path
+8. WHEN performing import operations THEN the system SHALL provide a dry-run mode that validates the file fully and simulates applying changes without persisting them, returning detailed validation results
+9. WHEN importing configuration files THEN the system SHALL enforce file size limits (e.g., maximum 10MB) and maximum item/count limits (e.g., maximum 1000 MCP servers) with explicit rejection behavior for oversized files
+10. WHEN exporting configuration files THEN the system SHALL implement strict masking/exclusion policy for sensitive fields (API keys, tokens, passwords, certificates) and ensure they are never included in exported files
+11. WHEN importing configuration files THEN the system SHALL verify that imports do not reintroduce unmasked secrets and reject files containing sensitive information in plain text
+12. WHEN validation fails during import THEN the system SHALL provide detailed error messages indicating the specific validation failure, line number (if applicable), and suggested remediation steps
+13. WHEN dry-run mode is executed THEN the system SHALL return comprehensive validation results including success/failure status, warnings, and detailed change preview without applying any modifications
 
-### Requirement 9
-
-**User Story:** As an administrator, I want to log into the system, so that only authenticated users can access the system.
-
-#### Acceptance Criteria
 
 1. WHEN accessing the system THEN the system SHALL display a login screen
 2. WHEN entering valid credentials THEN the system SHALL redirect to the dashboard
