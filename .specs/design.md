@@ -692,8 +692,8 @@ CREATE TABLE test_results (
   id TEXT PRIMARY KEY,
   server_id TEXT NOT NULL,
   tool_name TEXT NOT NULL,
-  input TEXT, -- JSON
-  output TEXT, -- JSON
+  input TEXT CHECK (input IS NULL OR JSON_VALID(input)), -- JSON with validation
+  output TEXT CHECK (output IS NULL OR JSON_VALID(output)), -- JSON with validation
   success BOOLEAN NOT NULL,
   error TEXT,
   execution_time INTEGER,
