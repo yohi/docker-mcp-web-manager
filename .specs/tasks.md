@@ -101,7 +101,7 @@
           - [ ] **Server config**: Set global connection limit with validation (min: 10, max: 1000)
           - [ ] **Application level**: Track active connections and enforce limits with connection registry
           - [ ] **Backpressure behavior**: Return HTTP 503 with Retry-After header when limit exceeded
-          - [ ] **Graceful degradation**: Queue new connections with exponential backoff (max queue: 50)
+          - [ ] **Return HTTP 503 + Retry-After for new SSE connections when overloaded**
       - [ ] **Per-Connection Resource Limits**
         - [ ] Implement per-connection line length limit (default: 10KB, configurable via SERVER_SSE_MAX_LINE_LENGTH)
           - [ ] **Application level**: Validate and truncate lines exceeding limit with warning logs
