@@ -675,15 +675,6 @@ interface ErrorResponse {
   }
 }
 ```
-interface ErrorResponse {
-  error: {
-    code: string
-    message: string
-    details?: any
-    timestamp: string
-  }
-}
-```
 
 ### Error Handling Strategy
 
