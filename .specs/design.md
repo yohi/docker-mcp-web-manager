@@ -681,6 +681,8 @@ CREATE INDEX idx_resources_server_id ON resources(server_id);
 CREATE INDEX idx_prompts_server_id ON prompts(server_id);
 CREATE INDEX idx_tools_server_id ON tools(server_id);
 CREATE INDEX idx_tools_enabled ON tools(enabled);
+```
+
 | Interface Field | Database Table.Column | Notes |
 |----------------|---------------------|-------|
 | MCPServer.resources | resources.* | One-to-many relationship |
