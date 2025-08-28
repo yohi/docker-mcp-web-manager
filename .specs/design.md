@@ -112,6 +112,27 @@ graph TB
 ```
 
 #### 2. Catalog API
+
+#### Catalog Install API Details
+```typescript
+// POST /api/v1/catalog/[id]/install - Install server from catalog
+// Request Body:
+{
+  "config": ServerConfig
+}
+
+// Response (HTTP 202 Accepted):
+{
+  "jobId": "uuid-string",
+  "status": "pending",
+  "message": "Server installation started successfully",
+  "estimatedDuration": 60000 // milliseconds
+}
+
+// Job Status Endpoint:
+// GET /api/v1/jobs/[jobId] - Monitor installation progress
+// Job type will be "install" with target.type "catalog"
+```
 ```typescript
 // GET /api/v1/catalog - Get available servers from catalog
 // GET /api/v1/catalog/[id] - Get server details from catalog
@@ -167,7 +188,10 @@ class DockerMCPClient {
 class CatalogClient {
   async getCatalog(): Promise<CatalogEntry[]>
   async getServerInfo(name: string): Promise<CatalogServerInfo>
-  async installServer(name: string, config: ServerConfig): Promise<void>
+  async installServer(name: string, config: ServerConfig): Promise<string> // Returns jobId
+
+  async getJobStatus(jobId: string): Promise<Job> // Get job status and progress
+  async cancelJob(jobId: string): Promise<void> // Cancel job if cancellable
 }
 ```
 
