@@ -438,16 +438,15 @@ CREATE TABLE secrets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   type TEXT NOT NULL,
-  value TEXT NOT NULL, -- encrypted
-  bitwarden_id TEXT,
+  -- AEAD暗号化コンポーネントを分離して格納
+  ciphertext BLOB NOT NULL, -- 暗号化されたデータ
+  iv BLOB NOT NULL,         -- 初期化ベクトル
+  tag BLOB NOT NULL,        -- 認証タグ
+  alg TEXT NOT NULL,        -- 使用した暗号化アルゴリズム
+  bitwarden_id TEXT,        -- 外部参照（Bitwardenテーブルが存在する場合の外部キー制約）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-```
-
-#### test_results table
-
-## Database Migration Requirements
 
 ### Database Initialization
 
@@ -529,6 +528,14 @@ CREATE TABLE tools (
 -- Create indexes for better performance
 CREATE INDEX idx_secret_references_configuration_id ON secret_references(configuration_id);
 CREATE INDEX idx_secret_references_secret_id ON secret_references(secret_id);
+CREATE INDEX idx_secrets_name ON secrets(name);
+CREATE INDEX idx_secrets_type ON secrets(type);
+
+-- セキュリティ改善: AEAD暗号化コンポーネントの分離
+-- 1. ciphertext, iv, tag, algを分離して格納することで、バイナリデータとアルゴリズムメタデータを適切に保持
+-- 2. BLOB型を使用することで、暗号化データの整合性を保証
+-- 3. 検索用インデックスを追加してパフォーマンスを向上
+-- 4. 外部キー参照の整合性を文書化
 CREATE INDEX idx_resources_server_id ON resources(server_id);
 CREATE INDEX idx_prompts_server_id ON prompts(server_id);
 CREATE INDEX idx_tools_server_id ON tools(server_id);
