@@ -471,6 +471,33 @@ PRAGMA foreign_keys = ON;
 
 This must be executed at the beginning of every database connection and migration script.
 
+### Drizzle Configuration
+
+The following `drizzle.config.ts` configuration ensures consistent paths for migrations and database:
+
+```typescript
+import { defineConfig } from "drizzle-kit";
+
+export default defineConfig({
+  schema: "./src/db/schema.ts",
+  out: "/app/data/out/migrations",
+  driver: "better-sqlite",
+  dbCredentials: {
+    url: "file:./app.db"
+  },
+  verbose: true,
+  strict: true
+});
+```
+
+**Key Configuration Points:**
+- **Migrations Output**: `/app/data/out/migrations` (consistent with Docker volume mount)
+- **Database URL**: `file:./app.db` (relative to `/app/data` working directory)
+- **Schema Location**: `./src/db/schema.ts` (project schema definitions)
+- **Driver**: `better-sqlite` (SQLite with enhanced performance)
+
+This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount.
+
 ### New Tables to Create
 
 The following new tables need to be created to support the complete data model:
@@ -797,7 +824,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: file:./data/app.db
+      DATABASE_URL: file:./app.db
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     volumes:
@@ -825,7 +852,7 @@ services:
     build: .
     volumes:
       - app-data:/app/data
-    command: sh -c "mkdir -p /data && chmod 755 /data && npx prisma migrate deploy"
+    command: sh -c "mkdir -p /app/data && chmod 755 /app/data && npx drizzle-kit migrate"
     restart: "no"
     user: "1000:1000"
     security_opt:
