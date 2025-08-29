@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Docker MCP Web Manager is a Next.js-based web application that provides a comprehensive management interface for Docker MCP Gateway. The system integrates with Docker MCP CLI commands and provides a user-friendly web interface for managing MCP servers, configurations, and monitoring.
+The Docker MCP Web Manager is a Next.js-based web application that provides a comprehensive management interface for Docker MCP Gateway. The system integrates with Docker MCP CLI commands and provides a user-friendly web interface for managing MCP servers, configurations, and monitoring. Docker operations are performed exclusively via the MCP Gateway API, with the Gateway acting as a proxy for Docker commands. The web service communicates with the Gateway over its API and does not access the Docker socket directly.
 
 ## Architecture
 
@@ -1167,7 +1167,6 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     volumes:
       - app-data:/app/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
       db-migrate:
         condition: service_completed_successfully
@@ -1208,14 +1207,14 @@ volumes:
 - **No new privileges**: Prevented privilege escalation attacks
 - **Database migrations**: db-migrate service handles both directory creation and database migrations
 - **Internal health check**: Uses Node.js built-in HTTP module instead of external curl dependency
-- **Read-only Docker socket**: Docker socket remains read-only for security
+- **MCP Gateway API**: Docker operations performed via MCP Gateway API (web service does not access Docker socket directly)
 - **Service readiness**: Health check includes start_period to ensure service is ready before checking
 
 
 ### Environment Configuration
 - Development: Hot reload, debug logging
 - Production: Optimized builds, structured logging
-- Docker socket access for MCP Gateway integration
+- MCP Gateway handles Docker interactions over its API; web service communicates with Gateway instead
 - Persistent data storage for configuration and logs
 
 ### Deployment Commands
