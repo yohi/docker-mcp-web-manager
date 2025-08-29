@@ -147,8 +147,13 @@ graph TB
 
 #### 3. Testing API
 ```typescript
-// POST /api/v1/servers/[id]/test - Execute tool test
+// POST /api/v1/servers/[id]/test - Execute tool test (202 Accepted, returns { jobId })
+// Request Body: { "tool": "<toolName>", "params": {...} }
+// Response: { "jobId": "uuid", "status": "pending", "message": "Test started" }
+
 // GET /api/v1/servers/[id]/test-history - Get test history
+// Query params: ?tool=<toolName> (optional filter by tool)
+// Response: { "tests": [{ "id", "tool", "params", "result", "timestamp", "status" }] }
 ```
 
 #### 4. Logs API
