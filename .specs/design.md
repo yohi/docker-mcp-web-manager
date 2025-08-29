@@ -159,12 +159,12 @@ graph TB
 #### 3. Testing API
 ```typescript
 // POST /api/v1/servers/[id]/test - Execute tool test (202 Accepted, returns { jobId })
-// Request Body: { "tool": "<toolName>", "params": {...} }
+// Request Body: { "toolName": "<toolName>", "params": {...} }
 // Response: { "jobId": "uuid", "status": "pending", "message": "Test started" }
 
 // GET /api/v1/servers/[id]/test-history - Get test history
-// Query params: ?tool=<toolName> (optional filter by tool)
-// Response: { "tests": [{ "id", "tool", "params", "result", "timestamp", "status" }] }
+// Query params: ?toolName=<toolName> (optional filter by tool)
+// Response: { "tests": [{ "id", "toolName", "params", "result", "timestamp", "status" }] }
 ```
 
 **Idempotency**: The tool test endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new test job.
