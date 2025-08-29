@@ -918,8 +918,8 @@ interface ErrorResponse {
 - `RATE_LIMIT_EXCEEDED` (429) - Too many requests
 - `INTERNAL_ERROR` (500) - Internal server error
 - `SERVICE_UNAVAILABLE` (503) - External service unavailable
-- `DOCKER_ERROR` (502) - Docker operation failed
-- `BITWARDEN_ERROR` (502) - Bitwarden integration failed
+- `DOCKER_ERROR` (424) - Docker operation failed (dependency failure)
+- `BITWARDEN_ERROR` (424) - Bitwarden integration failed (dependency failure)
 
 #### Error Response Examples
 ```typescript
