@@ -158,25 +158,33 @@ graph TB
 
 **Security Requirements for Testing API:**
 
-- **Data Masking & Filtering**: 
-  - PII, credentials, tokens automatically redacted from stored/returned data
-  - Allowlist approach: only safe keys (tool, status, timestamp, duration) preserved
-  - Pattern-based redaction: emails, API keys, secrets automatically detected and masked
-  - Secret data: hashed with SHA-256 or fully redacted (never plain text)
+- **Data Masking & Filtering Policy**: 
+  - **Sensitive Data Redaction**: PII, credentials, tokens, API keys automatically redacted from stored/returned data
+  - **Allowlist Approach**: Only safe keys preserved (tool, status, timestamp, duration, error_type)
+  - **Pattern-based Redaction**: Automated detection and masking of:
+    - Email addresses: `user@domain.com` → `[MASKED-EMAIL]`
+    - API keys/tokens: `sk-xxx`, `Bearer xxx` → `[REDACTED-TOKEN]`
+    - Secrets patterns: passwords, private keys → `[REDACTED-SECRET]`
+  - **Credential Handling**: Secrets hashed with SHA-256 or fully redacted (never stored as plain text)
+  - **Redaction-by-Key**: Specific field names automatically masked (`password`, `token`, `secret`, `key`)
   
-- **Payload Size Limits**:
+- **Payload Size Limits & Truncation**:
   - Maximum 10KB stored per test result in database
-  - Maximum 1KB returned in API responses
-  - Truncation strategy: preserve first 512B + last 512B with "...[truncated]..." indicator
+  - Maximum 1KB returned in API responses  
+  - Truncation strategy: preserve first 512B + last 512B with "...[TRUNCATED Nkb]..." indicator
+  - Content-aware truncation: preserve JSON structure in truncated payloads
   
-- **Data Retention**:
-  - Default retention period: 90 days (configurable)
+- **Data Retention & Lifecycle**:
+  - Default retention period: 90 days (configurable via environment variable)
   - Automatic purging of test data beyond retention period
-  - Only non-sensitive metadata logged: tool name, execution status, timestamp, duration
+  - Metadata-only logging: tool name, execution status, timestamp, duration, result size
+  - Audit trail maintained for all data access and deletion operations
   
-- **API Response Masking**:
-  - Sensitive fields replaced with `"[REDACTED]"` or `"[MASKED-XXX]"` 
+- **API Response Security**:
+  - Sensitive fields replaced with structured masks: `"[REDACTED]"`, `"[MASKED-XXX]"`, `"[HASH-sha256:8chars]"`
   - Hash-based verification available for debugging without exposing original data
+  - Response headers include content filtering indicators
+  - Test result IDs sanitized to prevent enumeration attacks
 
 #### 4. Logs API
 ```typescript
