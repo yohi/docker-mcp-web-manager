@@ -390,7 +390,12 @@ CREATE TABLE configurations (
   node_env GENERATED ALWAYS AS (json_extract(environment, '$.NODE_ENV')) VIRTUAL,
   enabled_tools_count GENERATED ALWAYS AS (json_array_length(enabled_tools)) VIRTUAL,
   memory_limit GENERATED ALWAYS AS (json_extract(resource_limits, '$.memory')) VIRTUAL,
-  port GENERATED ALWAYS AS (json_extract(network_config, '$.port')) VIRTUAL,
+  representative_port GENERATED ALWAYS AS (
+    COALESCE(
+      json_extract(network_config, '$.ports[0].hostPort'),
+      json_extract(network_config, '$.ports[0].containerPort')
+    )
+  ) VIRTUAL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -410,7 +415,7 @@ CREATE INDEX idx_configurations_server_id ON configurations(server_id);
 CREATE INDEX idx_configurations_node_env ON configurations(node_env);
 CREATE INDEX idx_configurations_enabled_tools_count ON configurations(enabled_tools_count);
 CREATE INDEX idx_configurations_memory_limit ON configurations(memory_limit);
-CREATE INDEX idx_configurations_port ON configurations(port);
+CREATE INDEX idx_configurations_representative_port ON configurations(representative_port);
 ```
 
 #### secret_references table
