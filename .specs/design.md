@@ -1123,7 +1123,7 @@ services:
     build: .
     volumes:
       - app-data:/app/data
-    command: sh -c "mkdir -p /app/data && chmod 755 /app/data && npx drizzle-kit push --dialect=sqlite --schema=./src/db/schema.ts --url=file:/app/data/app.db"
+    command: sh -c "mkdir -p /app/data && chown -R 1000:1000 /app/data && chmod 750 /app/data && npx drizzle-kit push --dialect=sqlite --schema=./src/db/schema.ts --url=file:/app/data/app.db"
     restart: "no"
     user: "1000:1000"
     security_opt:
