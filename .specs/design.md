@@ -653,7 +653,7 @@ export default defineConfig({
   out: "/app/data/out/migrations",
   driver: "better-sqlite",
   dbCredentials: {
-    url: "file:./app.db"
+    url: process.env.DATABASE_URL || "file:./app.db"
   },
   verbose: true,
   strict: true
@@ -662,11 +662,11 @@ export default defineConfig({
 
 **Key Configuration Points:**
 - **Migrations Output**: `/app/data/out/migrations` (consistent with Docker volume mount)
-- **Database URL**: `file:./app.db` (relative to `/app/data` working directory)
+- **Database URL**: Uses `DATABASE_URL` environment variable if set, falls back to `file:./app.db`
 - **Schema Location**: `./src/db/schema.ts` (project schema definitions)
 - **Driver**: `better-sqlite` (SQLite with enhanced performance)
 
-This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount.
+This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount. Docker Compose should set `DATABASE_URL` environment variable to ensure consistency between runtime and migration paths.
 
 ### New Tables to Create
 
