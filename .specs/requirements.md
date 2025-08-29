@@ -65,7 +65,11 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 1. WHEN accessing the log screen THEN the system SHALL display logs in real-time
 2. WHEN selecting a log level THEN the system SHALL display only logs at or above the specified level
 3. WHEN searching logs THEN the system SHALL display logs matching the search criteria
-4. WHEN downloading logs THEN the system SHALL provide a log file
+4. WHEN downloading logs THEN the system SHALL provide a log file with security protections:
+   - Server-side path traversal protection (sanitize/normalize paths and restrict to allowed directories)
+   - Enforce allowed filename extensions and content-types (text/plain, application/gzip)
+   - Set secure response headers (Content-Disposition with sanitized filename, Content-Type, Content-Security-Policy)
+   - Validate download requests and reject unauthorized access attempts
 
 ### Requirement 6
 
