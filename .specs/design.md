@@ -175,7 +175,7 @@ graph TB
 
 - **Data Masking & Filtering Policy**: 
   - **Sensitive Data Redaction**: PII, credentials, tokens, API keys automatically redacted from stored/returned data
-  - **Allowlist Approach**: Only safe keys preserved (tool, status, timestamp, duration, error_type)
+  - **Allowlist Approach**: Only safe keys preserved (toolName, success, timestamp, duration, error_type)
   - **Pattern-based Redaction**: Automated detection and masking of:
     - Email addresses: `user@domain.com` → `[MASKED-EMAIL]`
     - API keys/tokens: `sk-xxx`, `Bearer xxx` → `[REDACTED-TOKEN]`
@@ -194,7 +194,7 @@ graph TB
 - **Data Retention & Lifecycle**:
   - Default retention period: 90 days (configurable via environment variable)
   - Automatic purging of test data beyond retention period
-  - Metadata-only logging: tool name, execution status, timestamp, duration, result size
+  - Metadata-only logging: toolName, success status, timestamp, duration, result size
   - Audit trail maintained for all data access and deletion operations
   
 - **API Response Security**:
