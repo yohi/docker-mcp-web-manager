@@ -117,6 +117,8 @@ graph TB
 
 **Note**: Server start/stop/enable/disable and gateway start/stop operations are asynchronous and return HTTP 202 with a jobId. See the Job Management API and Job data model below for response format and job status polling.
 
+**Idempotency**: All async POST endpoints (server enable/disable/start/stop/install/test and gateway start/stop) support the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new job. This ensures safe retries and prevents duplicate operations during network issues or client errors.
+
 #### 2. Catalog API
 
 #### Catalog Install API Details
@@ -139,6 +141,8 @@ graph TB
 // GET /api/v1/jobs/[jobId] - Monitor installation progress
 // Job type will be "install" with target.type "catalog"
 ```
+
+**Idempotency**: The catalog install endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new installation job.
 ```typescript
 // GET /api/v1/catalog - Get available servers from catalog
 // GET /api/v1/catalog/[id] - Get server details from catalog
@@ -155,6 +159,8 @@ graph TB
 // Query params: ?tool=<toolName> (optional filter by tool)
 // Response: { "tests": [{ "id", "tool", "params", "result", "timestamp", "status" }] }
 ```
+
+**Idempotency**: The tool test endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new test job.
 
 **Security Requirements for Testing API:**
 
