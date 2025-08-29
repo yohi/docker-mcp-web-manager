@@ -164,7 +164,7 @@ graph TB
 
 // GET /api/v1/servers/[id]/test-history - Get test history
 // Query params: ?toolName=<toolName> (optional filter by tool)
-// Response: { "tests": [{ "id", "toolName", "input", "output", "timestamp", "status" }] }
+// Response: { "tests": [{ "id", "toolName", "input", "output", "timestamp", "success" }] }
 ```
 
 **Idempotency**: The tool test endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new test job.
@@ -391,8 +391,7 @@ interface Secret {
   id: string
   name: string
   type: 'api_key' | 'token' | 'password' | 'certificate'
-  encrypted: boolean
-  bitwardenId?: string
+  bitwardenItemId?: string
   createdAt: Date
   updatedAt: Date
 }
