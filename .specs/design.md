@@ -1031,9 +1031,9 @@ For async operations (install, start, stop, test), the API returns:
 {
   "jobId": "uuid-string",
   "status": "completed" | "pending" | "running" | "failed" | "cancelled",
-  "type": "install" | "start" | "stop" | "test",
+  "type": "install" | "start" | "stop" | "test" | "enable" | "disable",
   "target": {
-    "type": "server" | "catalog",
+    "type": "server" | "catalog" | "gateway",
     "id": "server-id"
   },
   "progress": {
@@ -1058,10 +1058,10 @@ For async operations (install, start, stop, test), the API returns:
 ```typescript
 interface Job {
   id: string
-  type: 'install' | 'start' | 'stop' | 'test'
+  type: 'install' | 'start' | 'stop' | 'test' | 'enable' | 'disable'
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   target: {
-    type: 'server' | 'catalog'
+    type: 'server' | 'catalog' | 'gateway'
     id: string
   }
   progress: {
