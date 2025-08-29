@@ -1087,7 +1087,7 @@ interface ErrorResponse {
 - **Problem**: Storing AEAD ciphertext in a single TEXT column is unsafe and inefficient
 - **Solution**: Separated AEAD components into dedicated columns:
   - `ciphertext BLOB`: Encrypted data (binary-safe)
-  - `iv BLOB`: Initialization vector (12-16 bytes)
+  - `iv BLOB`: Initialization vector (12 bytes fixed for both AES-256-GCM and ChaCha20-Poly1305)
   - `tag BLOB`: Authentication tag (16 bytes)
   - `alg TEXT`: Encryption algorithm metadata
 - **Benefits**:
