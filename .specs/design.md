@@ -627,6 +627,13 @@ CREATE TABLE secrets (
   FOREIGN KEY (bitwarden_item_id) REFERENCES bitwarden_items(id) ON DELETE SET NULL
 );
 
+-- 運用クエリ最適化のためのインデックス
+CREATE INDEX idx_secrets_name ON secrets(name);
+CREATE INDEX idx_secrets_type ON secrets(type);
+CREATE INDEX idx_secrets_bitwarden_item_id ON secrets(bitwarden_item_id);
+CREATE INDEX idx_secrets_alg ON secrets(alg);
+CREATE INDEX idx_secrets_key_id ON secrets(key_id);
+
 -- Trigger for updated_at field
 CREATE TRIGGER secrets_updated_at
   AFTER UPDATE ON secrets
