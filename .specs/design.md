@@ -922,6 +922,32 @@ interface ErrorResponse {
 - Secure session storage
 - Bitwarden integration for credential management
 
+#### CSRF Protection
+- **Anti-CSRF Tokens**: Synchronizer token pattern implemented for all state-changing operations
+- **Cookie-based Sessions**: NextAuth sessions require CSRF validation for POST/PUT/DELETE endpoints
+- **Origin/Referer Validation**: Strict validation of Origin and Referer headers for sensitive operations
+- **HTTP Method Restrictions**: State-changing APIs restricted to POST/PUT/DELETE methods only
+- **Session Cookie Security**: 
+  - `Secure` flag enforced (HTTPS only)
+  - `HttpOnly` flag set (prevent XSS access)
+  - `SameSite=Strict` for maximum CSRF protection (with CSRF tokens as fallback for SameSite=Lax)
+
+#### Rate Limiting
+- **Per-IP Limits**: 100 requests per minute per IP address (general endpoints)
+- **Per-User Limits**: 200 requests per minute per authenticated user
+- **Login Endpoint**: 5 attempts per 15 minutes per IP (prevents brute force)
+- **Sensitive Operations**: 20 operations per hour per user (server management, installations)
+- **Burst Policy**: Allow 5 additional requests in 1-minute penalty window
+- **Storage**: Redis-based rate limiting with fallback to in-memory for development
+- **Error Responses**: HTTP 429 with Retry-After header and structured error format
+- **Monitoring & Alerting**: Automated alerts for suspicious activity patterns and rate limit violations
+
+#### Token Management
+- **Token Rotation**: Automatic JWT refresh every 15 minutes
+- **Token Expiry**: Access tokens expire in 1 hour, refresh tokens in 7 days
+- **Revocation**: Immediate token invalidation on logout or security events
+- **Monitoring**: Real-time monitoring for unusual token usage patterns
+
 ### Data Protection
 
 #### Key Management (KMS & Rotation)
