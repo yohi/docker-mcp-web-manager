@@ -539,7 +539,7 @@ CREATE TABLE bitwarden_items (
   id TEXT PRIMARY KEY,
   item_id TEXT NOT NULL UNIQUE, -- BitwardenのアイテムID
   name TEXT NOT NULL,
-  type TEXT NOT NULL, -- 'login', 'secure_note', 'card', 'identity'
+  type TEXT NOT NULL CHECK (type IN ('login', 'secure_note', 'card', 'identity')), -- Bitwardenアイテムタイプ制限
   folder_id TEXT,
   organization_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
