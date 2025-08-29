@@ -120,7 +120,7 @@ graph TB
 // POST /api/v1/catalog/[id]/install - Install server from catalog
 // Request Body:
 {
-  "config": ServerConfig
+  "config": ServerConfiguration
 }
 
 // Response (HTTP 202 Accepted):
@@ -180,7 +180,7 @@ graph TB
 ```typescript
 class DockerMCPClient {
   async listServers(): Promise<MCPServer[]>
-  async getServerDetails(id: string): Promise<MCPServerDetail>
+  async getServerDetails(id: string): Promise<MCPServer>
   async enableServer(id: string): Promise<JobResponse> // Returns job descriptor for async server enablement
   async disableServer(id: string): Promise<JobResponse> // Returns job descriptor for async server disablement
   async startGateway(): Promise<JobResponse> // Returns job descriptor for async operation
@@ -195,7 +195,7 @@ class DockerMCPClient {
 class CatalogClient {
   async getCatalog(): Promise<CatalogEntry[]>
   async getServerInfo(id: string): Promise<CatalogServerInfo>
-  async installServer(id: string, config: ServerConfig): Promise<JobResponse> // Returns job descriptor
+  async installServer(id: string, config: ServerConfiguration): Promise<JobResponse> // Returns job descriptor
 
   async getJobStatus(jobId: string): Promise<JobResponse> // Get job status and progress
   async cancelJob(jobId: string): Promise<void> // Cancel job if cancellable
