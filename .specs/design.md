@@ -653,7 +653,7 @@ export default defineConfig({
   out: "/app/data/out/migrations",
   driver: "better-sqlite",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "file:./app.db"
+    url: process.env.DATABASE_URL || "file:/app/data/app.db"
   },
   verbose: true,
   strict: true
@@ -662,7 +662,7 @@ export default defineConfig({
 
 **Key Configuration Points:**
 - **Migrations Output**: `/app/data/out/migrations` (consistent with Docker volume mount)
-- **Database URL**: Uses `DATABASE_URL` environment variable if set, falls back to `file:./app.db`
+- **Database URL**: Uses `DATABASE_URL` environment variable if set, falls back to `file:/app/data/app.db`
 - **Schema Location**: `./src/db/schema.ts` (project schema definitions)
 - **Driver**: `better-sqlite` (SQLite with enhanced performance)
 
@@ -1059,7 +1059,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      DATABASE_URL: file:./app.db
+      DATABASE_URL: file:/app/data/app.db
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     volumes:
