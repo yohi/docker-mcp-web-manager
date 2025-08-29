@@ -909,6 +909,27 @@ interface ErrorResponse {
 
 ### Data Protection
 
+#### Key Management (KMS & Rotation)
+- **Master Key Storage**: OS keyring / external KMS（Vault/Cloud KMS）。アプリ内保管は禁止。
+- **Key Identifiers**: Each secret row carries `key_id`; decrypt via KMS-resolved DEK (Data Encryption Key).
+- **Key Rotation**: 
+  - Generate new DEK automatically on schedule or manual trigger
+  - Re-encrypt ciphertext/tag with new `key_id`
+  - Keep N-1 previous keys until migration completes
+  - Zero-downtime rotation with backward compatibility
+- **Access Control**: 
+  - Least privilege for KMS operations (encrypt/decrypt only)
+  - Service account authentication with KMS
+  - Comprehensive audit logging enabled for all key operations
+- **Backup & Disaster Recovery**: 
+  - Export wrapped keys（KEK でラップ）separate from database backups
+  - Multiple backup locations with different access credentials
+  - Recovery procedures documented and tested regularly
+- **Key Lifecycle**: 
+  - Automated key generation with secure entropy sources
+  - Key retirement and secure deletion after retention period
+  - Compliance with cryptographic best practices (NIST, FIPS)
+
 ### Database Security Enhancements
 
 #### AEAD Encryption Component Separation
