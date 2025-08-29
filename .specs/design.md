@@ -119,6 +119,13 @@ graph TB
 
 **Idempotency**: All async POST endpoints (server enable/disable/start/stop/install/test and gateway start/stop) support the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new job. This ensures safe retries and prevents duplicate operations during network issues or client errors.
 
+**Idempotency Implementation**:
+- **Key Storage**: `idempotency_keys` table stores key-to-job mappings with TTL
+- **Scope Definition**: Endpoint path + normalized request hash for precise matching
+- **Conflict Resolution**: On key collision, return existing jobId with HTTP 202
+- **TTL Management**: 24-hour expiration with automated cleanup
+- **Request Normalization**: Hash request body/params for consistent scope matching
+
 #### 2. Catalog API
 
 #### Catalog Install API Details
@@ -756,6 +763,22 @@ CREATE INDEX idx_resources_server_id ON resources(server_id);
 CREATE INDEX idx_prompts_server_id ON prompts(server_id);
 CREATE INDEX idx_tools_server_id ON tools(server_id);
 CREATE INDEX idx_tools_enabled ON tools(enabled);
+
+-- Create idempotency_keys table for request deduplication
+CREATE TABLE idempotency_keys (
+  key TEXT NOT NULL,
+  scope TEXT NOT NULL,            -- e.g. "POST:/api/v1/servers/{id}/start"
+  request_hash TEXT NOT NULL,     -- normalized request body/params hash
+  job_id TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  PRIMARY KEY (key, scope),
+  FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);
+
+-- Index for efficient cleanup of expired keys
+CREATE INDEX idx_idem_scope_exp ON idempotency_keys(scope, expires_at);
+CREATE INDEX idx_idem_job_id ON idempotency_keys(job_id);
 ```
 
 | Interface Field | Database Table.Column | Notes |
