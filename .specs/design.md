@@ -197,7 +197,7 @@ class CatalogClient {
   async getServerInfo(id: string): Promise<CatalogServerInfo>
   async installServer(id: string, config: ServerConfiguration): Promise<JobResponse> // Returns job descriptor
 
-  async getJobStatus(jobId: string): Promise<JobResponse> // Get job status and progress
+  async getJobStatus(jobId: string): Promise<Job> // Get job status and progress
   async cancelJob(jobId: string): Promise<void> // Cancel job if cancellable
 }
 ```
