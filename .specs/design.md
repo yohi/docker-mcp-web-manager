@@ -986,12 +986,14 @@ interface ErrorResponse {
   - `connect-src 'self' https://api.bitwarden.com`: API calls to self and Bitwarden
   - `frame-ancestors 'none'`: Prevent embedding in iframes (clickjacking protection)
   - `upgrade-insecure-requests`: Force HTTPS in production
-  - `report-to /api/csp-report`: CSP violation reporting endpoint
+  - `report-to csp-reports`: CSP violation reporting (Reporting API group name)
+  - `report-uri /api/csp-report`: Legacy fallback for CSP violation reporting
 - **Additional Browser Security Headers**:
   - `X-Content-Type-Options: nosniff`: Prevent MIME type sniffing
   - `X-Frame-Options: DENY`: Additional iframe protection
   - `X-XSS-Protection: 1; mode=block`: XSS filtering in legacy browsers
   - `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer information
+  - `Reporting-Endpoints: csp-reports="/api/csp-report"`: Modern Reporting API endpoint definition
 - **HTTPS Enforcement**: 
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`: Force HTTPS for 1 year
   - Automatic HTTP to HTTPS redirects in production
