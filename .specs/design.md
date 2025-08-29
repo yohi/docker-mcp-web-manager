@@ -112,12 +112,14 @@ graph TB
 // POST /api/v1/gateway/start - Start MCP gateway (202 Accepted, returns { id })
 // POST /api/v1/gateway/stop - Stop MCP gateway (202 Accepted, returns { id })
 // PUT /api/v1/servers/[id]/config - Update server configuration
-// DELETE /api/v1/servers/[id] - Remove server
+// DELETE /api/v1/servers/[id] - Remove server (202 Accepted, returns { id })
 ```
 
-**Note**: Server start/stop/enable/disable and gateway start/stop operations are asynchronous and return HTTP 202 with an id. See the Job Management API and Job data model below for response format and job status polling.
+**Note**: Server start/stop/enable/disable/delete and gateway start/stop operations are asynchronous and return HTTP 202 with an id. See the Job Management API and Job data model below for response format and job status polling.
 
-**Idempotency**: All async POST endpoints (server enable/disable/start/stop/install/test and gateway start/stop) support the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new job. This ensures safe retries and prevents duplicate operations during network issues or client errors.
+**Delete Operation**: Server deletion includes container stop, cleanup, and resource deallocation which may be long-running. Idempotency prevents double-execution on retries - subsequent DELETE requests with same server ID return the original job ID if still processing.
+
+**Idempotency**: All async POST/DELETE endpoints (server enable/disable/start/stop/delete/install/test and gateway start/stop) support the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new job. This ensures safe retries and prevents duplicate operations during network issues or client errors.
 
 **Idempotency Implementation**:
 - **Key Storage**: `idempotency_keys` table stores key-to-job mappings with TTL
@@ -657,7 +659,7 @@ CREATE TABLE bitwarden_items (
 );
 
 -- パフォーマンス向上のためのインデックス
-CREATE INDEX idx_bitwarden_items_item_id ON bitwarden_items(item_id);
+-- item_id: UNIQUE制約により自動的にインデックスが作成されるため、明示的なインデックスは不要
 CREATE INDEX idx_bitwarden_items_name ON bitwarden_items(name);
 CREATE INDEX idx_bitwarden_items_type ON bitwarden_items(type);
 CREATE INDEX idx_bitwarden_items_folder_id ON bitwarden_items(folder_id);
@@ -1112,7 +1114,7 @@ interface ErrorResponse {
   - `idx_secrets_alg`: Algorithm-based searches
   - `idx_secrets_key_id`: KMS key identifier lookups for decryption operations
 - **Bitwarden Integration Indexes**:
-  - `idx_bitwarden_items_item_id`: Fast Bitwarden item lookups
+  - `item_id`: UNIQUE制約により自動インデックス作成（明示的なidx_bitwarden_items_item_idは不要）
   - `idx_bitwarden_items_name`: Name-based searches
   - `idx_bitwarden_items_type`: Type filtering
   - `idx_bitwarden_items_folder_id`: Folder organization queries
@@ -1269,7 +1271,7 @@ For async operations (install, start, stop, test, enable, disable), the API retu
 {
   "id": "uuid-string",
   "status": "completed" | "pending" | "running" | "failed" | "cancelled",
-  "type": "install" | "start" | "stop" | "test" | "enable" | "disable",
+  "type": "install" | "start" | "stop" | "test" | "enable" | "disable" | "delete",
   "target": {
     "type": "server" | "catalog" | "gateway",
     "id": "server-id"
@@ -1296,7 +1298,7 @@ For async operations (install, start, stop, test, enable, disable), the API retu
 ```typescript
 interface Job {
   id: string
-  type: 'install' | 'start' | 'stop' | 'test' | 'enable' | 'disable'
+  type: 'install' | 'start' | 'stop' | 'test' | 'enable' | 'disable' | 'delete'
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   target: {
     type: 'server' | 'catalog' | 'gateway'
@@ -1333,7 +1335,7 @@ interface JobResponse {
 ```sql
 CREATE TABLE jobs (
   id TEXT PRIMARY KEY,
-  type TEXT NOT NULL CHECK (type IN ('install', 'start', 'stop', 'test', 'enable', 'disable')),
+  type TEXT NOT NULL CHECK (type IN ('install', 'start', 'stop', 'test', 'enable', 'disable', 'delete')),
   status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
   target_type TEXT NOT NULL CHECK (target_type IN ('server', 'catalog', 'gateway')),
   target_id TEXT NOT NULL,
