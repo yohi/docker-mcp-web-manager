@@ -734,7 +734,7 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "/app/data/out/migrations",
-  driver: "better-sqlite",
+  driver: "better-sqlite3",
   dbCredentials: {
     url: process.env.DATABASE_URL || "file:/app/data/app.db"
   },
@@ -747,7 +747,7 @@ export default defineConfig({
 - **Migrations Output**: `/app/data/out/migrations` (consistent with Docker volume mount)
 - **Database URL**: Uses `DATABASE_URL` environment variable if set, falls back to `file:/app/data/app.db`
 - **Schema Location**: `./src/db/schema.ts` (project schema definitions)
-- **Driver**: `better-sqlite` (SQLite with enhanced performance)
+- **Driver**: `better-sqlite3` (SQLite with enhanced performance)
 
 This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount. Docker Compose should set `DATABASE_URL` environment variable to ensure consistency between runtime and migration paths.
 
@@ -1046,9 +1046,9 @@ interface ErrorResponse {
 - **Additional Browser Security Headers**:
   - `X-Content-Type-Options: nosniff`: Prevent MIME type sniffing
   - `X-Frame-Options: DENY`: Additional iframe protection
-  - `X-XSS-Protection: 1; mode=block`: XSS filtering in legacy browsers
   - `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer information
   - `Reporting-Endpoints: csp-reports="/api/csp-report"`: Modern Reporting API endpoint definition
+  - Note: `X-XSS-Protection` header is deprecated as modern browsers ignore it; CSP provides stronger XSS protection
 - **HTTPS Enforcement**: 
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`: Force HTTPS for 1 year
   - Automatic HTTP to HTTPS redirects in production
