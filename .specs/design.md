@@ -130,6 +130,7 @@ graph TB
 - **Conflict Resolution**: On key collision, return existing id with HTTP 202
 - **TTL Management**: 24-hour expiration with automated cleanup
 - **Request Normalization**: Hash request body/params for consistent scope matching
+- **Mismatch Handling**: If the same `Idempotency-Key` is reused with a different normalized request payload, return HTTP 409 with `IDEMPOTENCY_KEY_MISMATCH` (do not create a new job)
 
 #### 2. Catalog API
 
@@ -918,6 +919,7 @@ interface ErrorResponse {
 - `AUTHORIZATION_DENIED` (403) - Insufficient permissions
 - `RESOURCE_NOT_FOUND` (404) - Requested resource not found
 - `CONFLICT` (409) - Resource conflict (e.g., duplicate name)
+- `IDEMPOTENCY_KEY_MISMATCH` (409) - Idempotency key reused with different payload
 - `RATE_LIMIT_EXCEEDED` (429) - Too many requests
 - `INTERNAL_ERROR` (500) - Internal server error
 - `SERVICE_UNAVAILABLE` (503) - External service unavailable
@@ -1389,5 +1391,7 @@ CREATE TABLE idempotency_keys (
 -- Index for efficient cleanup of expired keys
 CREATE INDEX idx_idem_scope_exp ON idempotency_keys(scope, expires_at);
 CREATE INDEX idx_idem_job_id ON idempotency_keys(job_id);
+-- Fast mismatch check for idempotency key conflicts
+CREATE INDEX idx_idem_scope_hash ON idempotency_keys(scope, request_hash);
 ```
 
