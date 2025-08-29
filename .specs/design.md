@@ -549,9 +549,9 @@ CREATE TABLE secrets (
   type TEXT NOT NULL CHECK (type IN ('api_key', 'token', 'password', 'certificate')),
   -- AEAD暗号化コンポーネントを分離して格納（セキュリティファースト設計）
   ciphertext BLOB NOT NULL, -- 暗号化されたデータ
-  iv BLOB NOT NULL,         -- 初期化ベクトル（12-16バイト）
-  tag BLOB NOT NULL,        -- 認証タグ（16バイト）
-  alg TEXT NOT NULL DEFAULT 'AES-256-GCM', -- 使用した暗号化アルゴリズム
+  iv BLOB NOT NULL CHECK (LENGTH(iv) >= 12 AND LENGTH(iv) <= 16), -- 初期化ベクトル（12-16バイト）
+  tag BLOB NOT NULL CHECK (LENGTH(tag) = 16), -- 認証タグ（16バイト）
+  alg TEXT NOT NULL DEFAULT 'AES-256-GCM' CHECK (alg IN ('AES-256-GCM', 'ChaCha20-Poly1305')), -- 使用した暗号化アルゴリズム
   bitwarden_item_id TEXT,   -- 外部キー参照（Bitwardenテーブルへの適切な参照）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
