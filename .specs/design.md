@@ -478,7 +478,8 @@ CREATE TABLE prompts (
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE(server_id, name)
 );
 
 -- Trigger for updated_at field
@@ -652,7 +653,8 @@ CREATE TABLE prompts (
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE(server_id, name)
 );
 
 -- Create tools table
