@@ -384,6 +384,14 @@ CREATE TABLE servers (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Trigger for updated_at field
+CREATE TRIGGER servers_updated_at
+  AFTER UPDATE ON servers
+  FOR EACH ROW WHEN NEW.updated_at = OLD.updated_at
+BEGIN
+  UPDATE servers SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
 ```
 
 #### configurations table
