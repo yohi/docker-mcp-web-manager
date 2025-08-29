@@ -454,7 +454,8 @@ CREATE TABLE resources (
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE(server_id, uri)
 );
 
 -- Trigger for updated_at field
@@ -637,7 +638,8 @@ CREATE TABLE resources (
   metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE(server_id, uri)
 );
 
 -- Create prompts table
