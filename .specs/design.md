@@ -180,7 +180,9 @@ graph TB
     - Email addresses: `user@domain.com` → `[MASKED-EMAIL]`
     - API keys/tokens: `sk-xxx`, `Bearer xxx` → `[REDACTED-TOKEN]`
     - Secrets patterns: passwords, private keys → `[REDACTED-SECRET]`
-  - **Credential Handling**: Secrets hashed with SHA-256 or fully redacted (never stored as plain text)
+  - **Credential Handling**: Secrets protected via HMAC-SHA-256 with server-side secret key or fully redacted (never stored as plain text)
+    - **HMAC Key Management**: Server-side HMAC key never stored alongside data, regularly rotated, and access-controlled
+    - **No Raw Secret Storage**: Plain text secret values never persisted in any form
   - **Redaction-by-Key**: Specific field names automatically masked (`password`, `token`, `secret`, `key`)
   
 - **Payload Size Limits & Truncation**:
@@ -196,8 +198,8 @@ graph TB
   - Audit trail maintained for all data access and deletion operations
   
 - **API Response Security**:
-  - Sensitive fields replaced with structured masks: `"[REDACTED]"`, `"[MASKED-XXX]"`, `"[HASH-sha256:8chars]"`
-  - Hash-based verification available for debugging without exposing original data
+  - Sensitive fields replaced with structured masks: `"[REDACTED]"`, `"[MASKED-XXX]"`, `"[HMAC-sha256:8chars]"`
+  - HMAC-based verification available for debugging without exposing original data (using server-side secret key)
   - Response headers include content filtering indicators
   - Test result IDs sanitized to prevent enumeration attacks
 
