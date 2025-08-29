@@ -590,6 +590,12 @@ CREATE TABLE bitwarden_items (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- パフォーマンス向上のためのインデックス
+CREATE INDEX idx_bitwarden_items_item_id ON bitwarden_items(item_id);
+CREATE INDEX idx_bitwarden_items_name ON bitwarden_items(name);
+CREATE INDEX idx_bitwarden_items_type ON bitwarden_items(type);
+CREATE INDEX idx_bitwarden_items_folder_id ON bitwarden_items(folder_id);
+
 -- Trigger for updated_at field
 CREATE TRIGGER bitwarden_items_updated_at
   AFTER UPDATE ON bitwarden_items
