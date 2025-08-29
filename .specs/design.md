@@ -973,6 +973,28 @@ interface ErrorResponse {
 - **Revocation**: Immediate token invalidation on logout or security events
 - **Monitoring**: Real-time monitoring for unusual token usage patterns
 
+#### CORS & CSP (Cross-Origin Security)
+- **CORS Policy**: 
+  - Strict origin allowlist for production (only authenticated domains)
+  - Development: configurable `CORS_ORIGIN` environment variable
+  - Pre-flight request caching (24 hours max-age)
+  - Credentials support enabled with explicit origin matching
+- **Content Security Policy (CSP)**:
+  - `default-src 'self'`: All resources from same origin by default
+  - `script-src 'self' 'unsafe-inline'`: Allow inline scripts for React/Next.js hydration
+  - `style-src 'self' 'unsafe-inline'`: Allow inline styles for CSS-in-JS
+  - `connect-src 'self' https://api.bitwarden.com`: API calls to self and Bitwarden
+  - `frame-ancestors 'none'`: Prevent embedding in iframes (clickjacking protection)
+  - `upgrade-insecure-requests`: Force HTTPS in production
+- **Additional Browser Security Headers**:
+  - `X-Content-Type-Options: nosniff`: Prevent MIME type sniffing
+  - `X-Frame-Options: DENY`: Additional iframe protection
+  - `X-XSS-Protection: 1; mode=block`: XSS filtering in legacy browsers
+  - `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer information
+- **HTTPS Enforcement**: 
+  - `Strict-Transport-Security: max-age=31536000; includeSubDomains`: Force HTTPS for 1 year
+  - Automatic HTTP to HTTPS redirects in production
+
 ### Data Protection
 
 #### Key Management (KMS & Rotation)
