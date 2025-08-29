@@ -1123,7 +1123,7 @@ All list endpoints support the following query parameters:
 - `search` (string) - Search term for text fields
 
 Example:
-```
+```http
 GET /api/v1/servers?page=1&limit=10&sort=name&filter={"status":"running"}&search=docker
 ```
 
