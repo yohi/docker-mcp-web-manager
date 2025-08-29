@@ -981,11 +981,12 @@ interface ErrorResponse {
   - Credentials support enabled with explicit origin matching
 - **Content Security Policy (CSP)**:
   - `default-src 'self'`: All resources from same origin by default
-  - `script-src 'self' 'unsafe-inline'`: Allow inline scripts for React/Next.js hydration
-  - `style-src 'self' 'unsafe-inline'`: Allow inline styles for CSS-in-JS
+  - `script-src 'nonce-<nonce>' 'self' 'strict-dynamic'`: Nonce-based script execution with strict-dynamic fallback
+  - `style-src 'nonce-<nonce>' 'self'`: Nonce-based inline styles for CSS-in-JS
   - `connect-src 'self' https://api.bitwarden.com`: API calls to self and Bitwarden
   - `frame-ancestors 'none'`: Prevent embedding in iframes (clickjacking protection)
   - `upgrade-insecure-requests`: Force HTTPS in production
+  - `report-to /api/csp-report`: CSP violation reporting endpoint
 - **Additional Browser Security Headers**:
   - `X-Content-Type-Options: nosniff`: Prevent MIME type sniffing
   - `X-Frame-Options: DENY`: Additional iframe protection
