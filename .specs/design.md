@@ -442,10 +442,10 @@ END;
 CREATE TABLE configurations (
   id TEXT PRIMARY KEY,
   server_id TEXT NOT NULL,
-  environment TEXT CHECK(JSON_VALID(environment)), -- JSON with validation
-  enabled_tools TEXT CHECK(JSON_VALID(enabled_tools)), -- JSON array with validation
-  resource_limits TEXT CHECK(JSON_VALID(resource_limits)), -- JSON with validation
-  network_config TEXT CHECK(JSON_VALID(network_config)), -- JSON with validation
+  environment     TEXT CHECK (environment     IS NULL OR (JSON_VALID(environment)     AND json_type(environment,     '$') = 'object')), -- JSON object
+  enabled_tools   TEXT CHECK (enabled_tools   IS NULL OR (JSON_VALID(enabled_tools)   AND json_type(enabled_tools,   '$') = 'array'  )), -- JSON array
+  resource_limits TEXT CHECK (resource_limits IS NULL OR (JSON_VALID(resource_limits) AND json_type(resource_limits, '$') = 'object')), -- JSON object
+  network_config  TEXT CHECK (network_config  IS NULL OR (JSON_VALID(network_config)  AND json_type(network_config,  '$') = 'object')), -- JSON object
   -- Generated columns for indexing JSON paths
   node_env GENERATED ALWAYS AS (json_extract(environment, '$.NODE_ENV')) VIRTUAL,
   enabled_tools_count GENERATED ALWAYS AS (json_array_length(enabled_tools)) VIRTUAL,
@@ -535,8 +535,8 @@ CREATE TABLE prompts (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  arguments TEXT CHECK(arguments IS NULL OR JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
-  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
+  arguments TEXT CHECK (arguments IS NULL OR (JSON_VALID(arguments) AND json_type(arguments, '$') = 'object')), -- JSONSchema object
+  metadata  TEXT CHECK (metadata  IS NULL OR (JSON_VALID(metadata)  AND json_type(metadata,  '$') = 'object')), -- JSON object
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -559,7 +559,7 @@ CREATE TABLE tools (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
+  input_schema TEXT NOT NULL CHECK (JSON_VALID(input_schema) AND json_type(input_schema, '$') = 'object'), -- JSONSchema object
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -728,8 +728,8 @@ CREATE TABLE prompts (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  arguments TEXT CHECK(arguments IS NULL OR JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
-  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
+  arguments TEXT CHECK (arguments IS NULL OR (JSON_VALID(arguments) AND json_type(arguments, '$') = 'object')), -- JSONSchema object
+  metadata  TEXT CHECK (metadata  IS NULL OR (JSON_VALID(metadata)  AND json_type(metadata,  '$') = 'object')), -- JSON object
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -742,7 +742,7 @@ CREATE TABLE tools (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  input_schema TEXT NOT NULL CHECK(JSON_VALID(input_schema)), -- JSON (JSONSchema) with validation
+  input_schema TEXT NOT NULL CHECK (JSON_VALID(input_schema) AND json_type(input_schema, '$') = 'object'), -- JSONSchema object
   enabled BOOLEAN DEFAULT TRUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
