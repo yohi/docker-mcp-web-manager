@@ -1394,4 +1394,3 @@ CREATE INDEX idx_idem_job_id ON idempotency_keys(job_id);
 -- Fast mismatch check for idempotency key conflicts
 CREATE INDEX idx_idem_scope_hash ON idempotency_keys(scope, request_hash);
 ```
-
