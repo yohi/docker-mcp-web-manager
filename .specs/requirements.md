@@ -41,7 +41,9 @@ A web-based management tool for DockerMCPGateway that provides browser-based adm
 1. WHEN accessing the configuration screen THEN the system SHALL display current configuration values
 2. WHEN changing tool selection THEN the system SHALL save changes and apply them to the server
 3. WHEN entering sensitive information THEN the system SHALL encrypt and securely store it
-4. WHEN saving configuration THEN the system SHALL restart the MCP server to apply settings
+4. WHEN saving configuration THEN the system SHALL return HTTP 202 and start a restart job with progress
+5. WHEN restart job completes successfully THEN the system SHALL reflect the updated configuration and status
+6. WHEN restart job fails THEN the system SHALL display error details and recovery actions (retry/view logs)
 
 ### Requirement 4
 
