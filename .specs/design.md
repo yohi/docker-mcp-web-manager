@@ -1247,17 +1247,17 @@ All list endpoints support the following query parameters:
 - `limit` (number, default: 20, max: 100) - Number of items per page
 - `sort` (string) - Sort field (e.g., "name", "-created_at" for descending)
 - `filter[field]` (string) - Filter criteria using nested key syntax (canonical format)
-  - **Multi-field filters**: `filter[status]=running&filter[type]=docker`
+  - **Multi-field filters**: `filter[status]=running&filter[version]=1.0`
   - **Array values**: `filter[status][]=running&filter[status][]=stopped`
   - **Operators**: `filter[created_at][gte]=2024-01-01&filter[created_at][lte]=2024-12-31`
   - **Supported alternatives**: 
-    - Rison-encoded filters: `filter=(status:running,type:docker)`
-    - URL-safe key-value pairs: `status=running&type=docker`
+    - Rison-encoded filters: `filter=(status:running,version:1.0)`
+    - URL-safe key-value pairs: `status=running&version=1.0`
 - `search` (string) - Search term for text fields
 
 Example:
 ```http
-GET /api/v1/servers?page=1&limit=10&sort=name&filter[status]=running&filter[type]=docker&search=docker
+GET /api/v1/servers?page=1&limit=10&sort=name&filter[status]=running&search=docker
 ```
 
 #### Async Operation Response Format
