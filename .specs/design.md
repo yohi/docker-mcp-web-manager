@@ -1149,6 +1149,20 @@ volumes:
 - Production: Optimized builds, structured logging
 - Docker socket access for MCP Gateway integration
 - Persistent data storage for configuration and logs
+
+### Deployment Commands
+```bash
+# Setup data directory with proper ownership
+mkdir -p ./data
+sudo chown -R 1000:1000 ./data
+
+# Start services
+docker compose up -d
+
+# Verify deployment
+docker compose ps
+docker compose logs web
+```
 #### 7. Job Management API
 ```typescript
 // GET /api/v1/jobs/[jobId] - Get job status and result
