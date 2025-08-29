@@ -624,7 +624,9 @@ CREATE TABLE secrets (
   bitwarden_item_id TEXT,   -- 外部キー参照（Bitwardenテーブルへの適切な参照）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (bitwarden_item_id) REFERENCES bitwarden_items(id) ON DELETE SET NULL
+  FOREIGN KEY (bitwarden_item_id) REFERENCES bitwarden_items(id) ON DELETE SET NULL,
+  -- AEAD安全性: 同一key_id+IV+algの組み合わせを禁止（IV再利用攻撃防止）
+  UNIQUE(key_id, iv, alg)
 );
 
 -- 運用クエリ最適化のためのインデックス
@@ -1021,6 +1023,13 @@ interface ErrorResponse {
   - Key retirement and secure deletion after retention period
   - Compliance with cryptographic best practices (NIST, FIPS)
 
+#### AEAD Cryptographic Safety
+- **IV Uniqueness**: Database-level UNIQUE constraint on (key_id, iv, alg) prevents IV reuse attacks
+- **Nonce Management**: Each encryption operation generates cryptographically secure random IV/nonce
+- **Algorithm Support**: AES-256-GCM and ChaCha20-Poly1305 with proper authentication tag validation  
+- **Component Separation**: Ciphertext, IV, and authentication tag stored separately for security analysis
+- **Reuse Prevention**: Database enforces that no key_id+IV combination can be used twice
+
 ### Database Security Enhancements
 
 #### AEAD Encryption Component Separation
@@ -1046,6 +1055,7 @@ interface ErrorResponse {
 #### Performance Optimization
 - **Search Indexes**: Added comprehensive indexes for efficient querying:
   - name列: UNIQUE制約により自動インデックス作成（明示的なidx_secrets_nameは不要）
+  - `UNIQUE(key_id, iv, alg)`: AEAD安全性のためのIV再利用防止制約（自動インデックス作成）
   - `idx_secrets_type`: Type-based filtering
   - `idx_secrets_bitwarden_item_id`: Foreign key relationship queries
   - `idx_secrets_alg`: Algorithm-based searches
