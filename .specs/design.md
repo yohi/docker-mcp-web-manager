@@ -169,6 +169,11 @@ graph TB
 // GET /api/v1/auth/session - Get current session
 ```
 
+#### 7. Health API
+```typescript
+// GET /api/health - Liveness/Readiness probe (200 OK when healthy)
+```
+
 ### Docker Integration Layer
 
 #### DockerMCPClient
