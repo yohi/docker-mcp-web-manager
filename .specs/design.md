@@ -105,24 +105,24 @@ graph TB
 ```typescript
 // GET /api/v1/servers - List all MCP servers
 // GET /api/v1/servers/[id] - Get server details
-// POST /api/v1/servers/[id]/enable - Enable server (202 Accepted, returns { jobId })
-// POST /api/v1/servers/[id]/disable - Disable server (202 Accepted, returns { jobId })
-// POST /api/v1/servers/[id]/start - Start server (202 Accepted, returns { jobId })
-// POST /api/v1/servers/[id]/stop - Stop server (202 Accepted, returns { jobId })
-// POST /api/v1/gateway/start - Start MCP gateway (202 Accepted, returns { jobId })
-// POST /api/v1/gateway/stop - Stop MCP gateway (202 Accepted, returns { jobId })
+// POST /api/v1/servers/[id]/enable - Enable server (202 Accepted, returns { id })
+// POST /api/v1/servers/[id]/disable - Disable server (202 Accepted, returns { id })
+// POST /api/v1/servers/[id]/start - Start server (202 Accepted, returns { id })
+// POST /api/v1/servers/[id]/stop - Stop server (202 Accepted, returns { id })
+// POST /api/v1/gateway/start - Start MCP gateway (202 Accepted, returns { id })
+// POST /api/v1/gateway/stop - Stop MCP gateway (202 Accepted, returns { id })
 // PUT /api/v1/servers/[id]/config - Update server configuration
 // DELETE /api/v1/servers/[id] - Remove server
 ```
 
-**Note**: Server start/stop/enable/disable and gateway start/stop operations are asynchronous and return HTTP 202 with a jobId. See the Job Management API and Job data model below for response format and job status polling.
+**Note**: Server start/stop/enable/disable and gateway start/stop operations are asynchronous and return HTTP 202 with an id. See the Job Management API and Job data model below for response format and job status polling.
 
-**Idempotency**: All async POST endpoints (server enable/disable/start/stop/install/test and gateway start/stop) support the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new job. This ensures safe retries and prevents duplicate operations during network issues or client errors.
+**Idempotency**: All async POST endpoints (server enable/disable/start/stop/install/test and gateway start/stop) support the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new job. This ensures safe retries and prevents duplicate operations during network issues or client errors.
 
 **Idempotency Implementation**:
 - **Key Storage**: `idempotency_keys` table stores key-to-job mappings with TTL
 - **Scope Definition**: Endpoint path + normalized request hash for precise matching
-- **Conflict Resolution**: On key collision, return existing jobId with HTTP 202
+- **Conflict Resolution**: On key collision, return existing id with HTTP 202
 - **TTL Management**: 24-hour expiration with automated cleanup
 - **Request Normalization**: Hash request body/params for consistent scope matching
 
@@ -138,18 +138,18 @@ graph TB
 
 // Response (HTTP 202 Accepted):
 {
-  "jobId": "uuid-string",
+  "id": "uuid-string",
   "status": "pending",
   "message": "Server installation started successfully",
   "estimatedDuration": 60000 // milliseconds
 }
 
 // Job Status Endpoint:
-// GET /api/v1/jobs/[jobId] - Monitor installation progress
+// GET /api/v1/jobs/[id] - Monitor installation progress
 // Job type will be "install" with target.type "catalog"
 ```
 
-**Idempotency**: The catalog install endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new installation job.
+**Idempotency**: The catalog install endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new installation job.
 ```typescript
 // GET /api/v1/catalog - Get available servers from catalog
 // GET /api/v1/catalog/[id] - Get server details from catalog
@@ -158,16 +158,16 @@ graph TB
 
 #### 3. Testing API
 ```typescript
-// POST /api/v1/servers/[id]/test - Execute tool test (202 Accepted, returns { jobId })
+// POST /api/v1/servers/[id]/test - Execute tool test (202 Accepted, returns { id })
 // Request Body: { "toolName": "<toolName>", "input": {...} }
-// Response: { "jobId": "uuid", "status": "pending", "message": "Test started" }
+// Response: { "id": "uuid", "status": "pending", "message": "Test started" }
 
 // GET /api/v1/servers/[id]/test-history - Get test history
 // Query params: ?toolName=<toolName> (optional filter by tool)
 // Response: { "tests": [{ "id", "toolName", "input", "output", "timestamp", "status" }] }
 ```
 
-**Idempotency**: The tool test endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new test job.
+**Idempotency**: The tool test endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new test job.
 
 **Security Requirements for Testing API:**
 
@@ -249,8 +249,8 @@ class CatalogClient {
   async getServerInfo(id: string): Promise<CatalogServerInfo>
   async installServer(id: string, config: ServerConfiguration): Promise<JobResponse> // Returns job descriptor
 
-  async getJobStatus(jobId: string): Promise<Job> // Get job status and progress
-  async cancelJob(jobId: string): Promise<void> // Cancel job if cancellable
+  async getJobStatus(id: string): Promise<Job> // Get job status and progress
+  async cancelJob(id: string): Promise<void> // Cancel job if cancellable
 }
 ```
 
@@ -1230,9 +1230,9 @@ docker compose logs web
 ```
 #### 7. Job Management API
 ```typescript
-// GET /api/v1/jobs/[jobId] - Get job status and result
+// GET /api/v1/jobs/[id] - Get job status and result
 // GET /api/v1/jobs - List jobs (with pagination, sort, filter)
-// DELETE /api/v1/jobs/[jobId] - Cancel job (if cancellable)
+// DELETE /api/v1/jobs/[id] - Cancel job (if cancellable)
 ```
 
 ### API Request/Response Specifications
@@ -1257,7 +1257,7 @@ For async operations (install, start, stop, test, enable, disable), the API retu
 ```typescript
 // HTTP 202 Accepted
 {
-  "jobId": "uuid-string",
+  "id": "uuid-string",
   "status": "pending",
   "message": "Operation started successfully",
   "estimatedDuration": 30000 // milliseconds
@@ -1266,9 +1266,9 @@ For async operations (install, start, stop, test, enable, disable), the API retu
 
 #### Job Status Response Format
 ```typescript
-// GET /api/v1/jobs/[jobId]
+// GET /api/v1/jobs/[id]
 {
-  "jobId": "uuid-string",
+  "id": "uuid-string",
   "status": "completed" | "pending" | "running" | "failed" | "cancelled",
   "type": "install" | "start" | "stop" | "test" | "enable" | "disable",
   "target": {
@@ -1322,7 +1322,7 @@ interface Job {
 #### JobResponse
 ```typescript
 interface JobResponse {
-  jobId: string
+  id: string
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   message?: string
   estimatedDuration?: number
