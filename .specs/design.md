@@ -512,7 +512,7 @@ CREATE TABLE resources (
   name TEXT NOT NULL,
   description TEXT,
   mime_type TEXT,
-  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
+  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -535,8 +535,8 @@ CREATE TABLE prompts (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
-  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
+  arguments TEXT CHECK(arguments IS NULL OR JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
+  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -702,7 +702,7 @@ CREATE TABLE resources (
   name TEXT NOT NULL,
   description TEXT,
   mime_type TEXT,
-  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
+  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -715,8 +715,8 @@ CREATE TABLE prompts (
   server_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  arguments TEXT CHECK(JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
-  metadata TEXT CHECK(JSON_VALID(metadata)), -- JSON with validation
+  arguments TEXT CHECK(arguments IS NULL OR JSON_VALID(arguments)), -- JSON (JSONSchema) with validation
+  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
