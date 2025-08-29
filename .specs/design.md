@@ -741,24 +741,8 @@ CREATE TABLE tools (
 CREATE INDEX idx_secret_references_configuration_id ON secret_references(configuration_id);
 CREATE INDEX idx_secret_references_secret_id ON secret_references(secret_id);
 
--- Bitwarden統合テーブルのインデックス
-CREATE INDEX idx_bitwarden_items_item_id ON bitwarden_items(item_id);
-CREATE INDEX idx_bitwarden_items_name ON bitwarden_items(name);
-CREATE INDEX idx_bitwarden_items_type ON bitwarden_items(type);
-CREATE INDEX idx_bitwarden_items_folder_id ON bitwarden_items(folder_id);
-
--- セキュリティ強化されたsecretsテーブルのインデックス
-CREATE INDEX idx_secrets_name ON secrets(name);
-CREATE INDEX idx_secrets_type ON secrets(type);
-CREATE INDEX idx_secrets_bitwarden_item_id ON secrets(bitwarden_item_id);
-CREATE INDEX idx_secrets_alg ON secrets(alg); -- 暗号化アルゴリズム別検索用
-CREATE INDEX idx_secrets_key_id ON secrets(key_id); -- KMS key identifier lookup
-
--- セキュリティ改善: AEAD暗号化コンポーネントの分離
--- 1. ciphertext, iv, tag, algを分離して格納することで、バイナリデータとアルゴリズムメタデータを適切に保持
--- 2. BLOB型を使用することで、暗号化データの整合性を保証
--- 3. 検索用インデックスを追加してパフォーマンスを向上
--- 4. 外部キー参照の整合性を文書化
+-- Note: bitwarden_items and secrets table indexes are created in their respective schema definitions
+-- Only create indexes for tables defined in this migration script
 CREATE INDEX idx_resources_server_id ON resources(server_id);
 CREATE INDEX idx_prompts_server_id ON prompts(server_id);
 CREATE INDEX idx_tools_server_id ON tools(server_id);
