@@ -979,10 +979,10 @@ interface ErrorResponse {
   - Development: configurable `CORS_ORIGIN` environment variable
   - Pre-flight request caching (24 hours max-age)
   - Credentials support enabled with explicit origin matching
-- **Content Security Policy (CSP)**:
+- **Content Security Policy (CSP)** - セキュリティファースト設計:
   - `default-src 'self'`: All resources from same origin by default
-  - `script-src 'nonce-<nonce>' 'self' 'strict-dynamic'`: Nonce-based script execution with strict-dynamic fallback
-  - `style-src 'nonce-<nonce>' 'self'`: Nonce-based inline styles for CSS-in-JS
+  - `script-src 'nonce-<nonce>' 'self' 'strict-dynamic'`: Nonce-based script execution with strict-dynamic fallback (unsafe-inlineを排除)
+  - `style-src 'nonce-<nonce>' 'self'`: Nonce-based inline styles for CSS-in-JS (unsafe-inlineを排除)
   - `connect-src 'self' https://api.bitwarden.com`: API calls to self and Bitwarden
   - `frame-ancestors 'none'`: Prevent embedding in iframes (clickjacking protection)
   - `upgrade-insecure-requests`: Force HTTPS in production
