@@ -813,6 +813,9 @@ CREATE TABLE test_results (
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- Composite index for optimizing test history queries
+CREATE INDEX idx_test_results_server_tool_time ON test_results(server_id, tool_name, timestamp DESC);
 ```
 
 ## Error Handling
