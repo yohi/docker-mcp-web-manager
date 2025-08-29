@@ -607,6 +607,7 @@ CREATE TABLE secrets (
   ), -- 初期化ベクトル（アルゴリズム固有: 12バイト固定）
   tag BLOB NOT NULL CHECK (LENGTH(tag) = 16), -- 認証タグ（16バイト）
   alg TEXT NOT NULL DEFAULT 'AES-256-GCM' CHECK (alg IN ('AES-256-GCM', 'ChaCha20-Poly1305')), -- 使用した暗号化アルゴリズム
+  key_id TEXT NOT NULL, -- KMS key identifier for decryption (UUID format)
   bitwarden_item_id TEXT,   -- 外部キー参照（Bitwardenテーブルへの適切な参照）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -744,6 +745,7 @@ CREATE INDEX idx_secrets_name ON secrets(name);
 CREATE INDEX idx_secrets_type ON secrets(type);
 CREATE INDEX idx_secrets_bitwarden_item_id ON secrets(bitwarden_item_id);
 CREATE INDEX idx_secrets_alg ON secrets(alg); -- 暗号化アルゴリズム別検索用
+CREATE INDEX idx_secrets_key_id ON secrets(key_id); -- KMS key identifier lookup
 
 -- セキュリティ改善: AEAD暗号化コンポーネントの分離
 -- 1. ciphertext, iv, tag, algを分離して格納することで、バイナリデータとアルゴリズムメタデータを適切に保持
@@ -999,6 +1001,7 @@ interface ErrorResponse {
   - `idx_secrets_type`: Type-based filtering
   - `idx_secrets_bitwarden_item_id`: Foreign key relationship queries
   - `idx_secrets_alg`: Algorithm-based searches
+  - `idx_secrets_key_id`: KMS key identifier lookups for decryption operations
 - **Bitwarden Integration Indexes**:
   - `idx_bitwarden_items_item_id`: Fast Bitwarden item lookups
   - `idx_bitwarden_items_name`: Name-based searches
@@ -1009,6 +1012,14 @@ interface ErrorResponse {
 - **Type Validation**: `CHECK (type IN ('api_key', 'token', 'password', 'certificate'))`
 - **Algorithm Defaults**: `DEFAULT 'AES-256-GCM'` for consistent encryption
 - **Binary Data Integrity**: BLOB columns ensure proper handling of encrypted data
+- **Key ID Requirements**: `key_id TEXT NOT NULL` links each secret to its encryption key
+
+#### Key ID Migration Plan
+- **Schema Update**: Add `key_id TEXT` column (initially nullable for safe migration)
+- **Backfill Strategy**: Populate existing rows with current active master key identifier
+- **Index Creation**: Create performance index on `key_id` after backfill completion
+- **Constraint Addition**: Set `NOT NULL` constraint after all rows are populated
+- **Cleanup Schedule**: Retire old key identifiers based on retention policy (default: 90 days post-rotation)
 
 - Encryption at rest for sensitive data
 - Secure secret storage with AES-256 encryption
