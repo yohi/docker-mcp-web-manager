@@ -1058,7 +1058,7 @@ For async operations (install, start, stop, test), the API returns:
 ```typescript
 interface Job {
   id: string
-  type: 'install' | 'start' | 'stop' | 'test' | 'enable' | 'disable'
+  type: 'install' | 'start' | 'stop' | 'test' | 'enable' | 'disable' | 'gateway'
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   target: {
     type: 'server' | 'catalog' | 'gateway'
@@ -1095,7 +1095,7 @@ interface JobResponse {
 ```sql
 CREATE TABLE jobs (
   id TEXT PRIMARY KEY,
-  type TEXT NOT NULL CHECK (type IN ('install', 'start', 'stop', 'test', 'enable', 'disable')),
+  type TEXT NOT NULL CHECK (type IN ('install', 'start', 'stop', 'test', 'enable', 'disable', 'gateway')),
   status TEXT NOT NULL CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
   target_type TEXT NOT NULL CHECK (target_type IN ('server', 'catalog', 'gateway')),
   target_id TEXT NOT NULL,
