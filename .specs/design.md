@@ -50,9 +50,12 @@ graph TB
     Config --> SQLite
     Secrets --> SQLite
     Secrets --> BitwardenCLI
-    Docker --> DockerEngine
     Docker --> MCPGateway
+    MCPGateway --> DockerEngine
     API --> MCPCatalog
+    
+    %% Note: Docker operations via MCP Gateway only
+    %% Web service does not access Docker Engine directly
 ```
 
 ### Technology Stack
