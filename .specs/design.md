@@ -159,12 +159,12 @@ graph TB
 #### 3. Testing API
 ```typescript
 // POST /api/v1/servers/[id]/test - Execute tool test (202 Accepted, returns { jobId })
-// Request Body: { "toolName": "<toolName>", "params": {...} }
+// Request Body: { "toolName": "<toolName>", "input": {...} }
 // Response: { "jobId": "uuid", "status": "pending", "message": "Test started" }
 
 // GET /api/v1/servers/[id]/test-history - Get test history
 // Query params: ?toolName=<toolName> (optional filter by tool)
-// Response: { "tests": [{ "id", "toolName", "params", "result", "timestamp", "status" }] }
+// Response: { "tests": [{ "id", "toolName", "input", "output", "timestamp", "status" }] }
 ```
 
 **Idempotency**: The tool test endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original jobId with HTTP 202 instead of creating a new test job.
@@ -238,7 +238,7 @@ class DockerMCPClient {
   async startGateway(): Promise<JobResponse> // Returns job descriptor for async operation
   async stopGateway(): Promise<JobResponse> // Returns job descriptor for async operation
   async getServerLogs(id: string): Promise<string[]>
-  async testServerTool(id: string, tool: string, params: any): Promise<JobResponse> // Returns job descriptor for async tool testing
+  async testServerTool(id: string, toolName: string, input: any): Promise<JobResponse> // Returns job descriptor for async tool testing
 }
 ```
 
