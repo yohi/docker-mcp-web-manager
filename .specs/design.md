@@ -413,6 +413,73 @@ interface TestResult {
 }
 ```
 
+#### CatalogEntry
+```typescript
+interface CatalogEntry {
+  id: string
+  name: string
+  description: string
+  version: string
+  image: string
+  author: string
+  category: string
+  tags: string[]
+  popularity: number
+  lastUpdated: Date
+  verified: boolean
+  metadata: {
+    homepage?: string
+    repository?: string
+    documentation?: string
+    license?: string
+  }
+}
+```
+
+#### CatalogServerInfo
+```typescript
+interface CatalogServerInfo {
+  id: string
+  name: string
+  description: string
+  version: string
+  image: string
+  author: string
+  category: string
+  tags: string[]
+  supportedConfigurations: {
+    environment: Record<string, { type: string; required: boolean; description: string }>
+    availableTools: string[]
+    resourceOptions: {
+      minMemory: number
+      maxMemory: number
+      minCpu: number
+      maxCpu: number
+    }
+    networkRequirements: {
+      ports: Array<{ port: number; protocol: string; description: string }>
+      outboundConnections: string[]
+    }
+  }
+  installMetadata: {
+    installationTime: number // estimated seconds
+    diskSpace: number // MB required
+    dependencies: string[]
+    preInstallChecks: string[]
+    postInstallValidation: string[]
+  }
+  documentation: {
+    readme: string
+    quickStart: string
+    examples: Array<{ name: string; description: string; configuration: ServerConfiguration }>
+  }
+  verified: boolean
+  popularity: number
+  lastUpdated: Date
+  metadata: Record<string, any>
+}
+```
+
 ### Database Schema
 
 #### servers table
