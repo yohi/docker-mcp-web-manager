@@ -451,7 +451,8 @@ CREATE TABLE configurations (
   ) VIRTUAL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE(server_id) -- Enforce one configuration per server
 );
 
 -- Trigger for updated_at field
