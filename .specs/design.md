@@ -763,21 +763,6 @@ CREATE INDEX idx_prompts_server_id ON prompts(server_id);
 CREATE INDEX idx_tools_server_id ON tools(server_id);
 CREATE INDEX idx_tools_enabled ON tools(enabled);
 
--- Create idempotency_keys table for request deduplication
-CREATE TABLE idempotency_keys (
-  key TEXT NOT NULL,
-  scope TEXT NOT NULL,            -- e.g. "POST:/api/v1/servers/{id}/start"
-  request_hash TEXT NOT NULL,     -- normalized request body/params hash
-  job_id TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  expires_at DATETIME NOT NULL,
-  PRIMARY KEY (key, scope),
-  FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
-);
-
--- Index for efficient cleanup of expired keys
-CREATE INDEX idx_idem_scope_exp ON idempotency_keys(scope, expires_at);
-CREATE INDEX idx_idem_job_id ON idempotency_keys(job_id);
 ```
 
 | Interface Field | Database Table.Column | Notes |
@@ -1310,5 +1295,21 @@ END;
 CREATE INDEX idx_jobs_target_latest ON jobs(target_type, target_id, created_at DESC); -- Latest job for a target
 CREATE INDEX idx_jobs_in_progress ON jobs(status, updated_at) WHERE status IN ('pending', 'running'); -- In-progress jobs
 CREATE INDEX idx_jobs_target_status ON jobs(target_type, target_id, status, created_at DESC); -- Target and status queries
+
+-- Create idempotency_keys table for request deduplication
+CREATE TABLE idempotency_keys (
+  key TEXT NOT NULL,
+  scope TEXT NOT NULL,            -- e.g. "POST:/api/v1/servers/{id}/start"
+  request_hash TEXT NOT NULL,     -- normalized request body/params hash
+  job_id TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  PRIMARY KEY (key, scope),
+  FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);
+
+-- Index for efficient cleanup of expired keys
+CREATE INDEX idx_idem_scope_exp ON idempotency_keys(scope, expires_at);
+CREATE INDEX idx_idem_job_id ON idempotency_keys(job_id);
 ```
 
