@@ -628,7 +628,7 @@ CREATE TABLE secrets (
 );
 
 -- 運用クエリ最適化のためのインデックス
-CREATE INDEX idx_secrets_name ON secrets(name);
+-- name列はUNIQUE制約により自動的にインデックスが作成されるため、明示的なインデックスは不要
 CREATE INDEX idx_secrets_type ON secrets(type);
 CREATE INDEX idx_secrets_bitwarden_item_id ON secrets(bitwarden_item_id);
 CREATE INDEX idx_secrets_alg ON secrets(alg);
