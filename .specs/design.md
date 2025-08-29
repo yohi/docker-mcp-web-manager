@@ -579,7 +579,7 @@ CREATE TABLE resources (
   name TEXT NOT NULL,
   description TEXT,
   mime_type TEXT,
-  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
+  metadata TEXT CHECK (metadata IS NULL OR (JSON_VALID(metadata) AND json_type(metadata, '$') = 'object')), -- JSON object
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -784,7 +784,7 @@ CREATE TABLE resources (
   name TEXT NOT NULL,
   description TEXT,
   mime_type TEXT,
-  metadata TEXT CHECK(metadata IS NULL OR JSON_VALID(metadata)), -- JSON with validation
+  metadata TEXT CHECK (metadata IS NULL OR (JSON_VALID(metadata) AND json_type(metadata, '$') = 'object')), -- JSON object
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE ON UPDATE CASCADE,
