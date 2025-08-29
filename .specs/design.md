@@ -1043,7 +1043,7 @@ interface ErrorResponse {
 
 #### Performance Optimization
 - **Search Indexes**: Added comprehensive indexes for efficient querying:
-  - `idx_secrets_name`: Fast name-based lookups
+  - name列: UNIQUE制約により自動インデックス作成（明示的なidx_secrets_nameは不要）
   - `idx_secrets_type`: Type-based filtering
   - `idx_secrets_bitwarden_item_id`: Foreign key relationship queries
   - `idx_secrets_alg`: Algorithm-based searches
