@@ -156,6 +156,28 @@ graph TB
 // Response: { "tests": [{ "id", "tool", "params", "result", "timestamp", "status" }] }
 ```
 
+**Security Requirements for Testing API:**
+
+- **Data Masking & Filtering**: 
+  - PII, credentials, tokens automatically redacted from stored/returned data
+  - Allowlist approach: only safe keys (tool, status, timestamp, duration) preserved
+  - Pattern-based redaction: emails, API keys, secrets automatically detected and masked
+  - Secret data: hashed with SHA-256 or fully redacted (never plain text)
+  
+- **Payload Size Limits**:
+  - Maximum 10KB stored per test result in database
+  - Maximum 1KB returned in API responses
+  - Truncation strategy: preserve first 512B + last 512B with "...[truncated]..." indicator
+  
+- **Data Retention**:
+  - Default retention period: 90 days (configurable)
+  - Automatic purging of test data beyond retention period
+  - Only non-sensitive metadata logged: tool name, execution status, timestamp, duration
+  
+- **API Response Masking**:
+  - Sensitive fields replaced with `"[REDACTED]"` or `"[MASKED-XXX]"` 
+  - Hash-based verification available for debugging without exposing original data
+
 #### 4. Logs API
 ```typescript
 // GET /api/v1/servers/[id]/logs - Get server logs
