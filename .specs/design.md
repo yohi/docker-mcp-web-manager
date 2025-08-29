@@ -109,11 +109,13 @@ graph TB
 // POST /api/v1/servers/[id]/disable - Disable server (202 Accepted, returns { jobId })
 // POST /api/v1/servers/[id]/start - Start server (202 Accepted, returns { jobId })
 // POST /api/v1/servers/[id]/stop - Stop server (202 Accepted, returns { jobId })
+// POST /api/v1/gateway/start - Start MCP gateway (202 Accepted, returns { jobId })
+// POST /api/v1/gateway/stop - Stop MCP gateway (202 Accepted, returns { jobId })
 // PUT /api/v1/servers/[id]/config - Update server configuration
 // DELETE /api/v1/servers/[id] - Remove server
 ```
 
-**Note**: Server start/stop/enable/disable operations are asynchronous and return HTTP 202 with a jobId. See the Job Management API and Job data model below for response format and job status polling.
+**Note**: Server start/stop/enable/disable and gateway start/stop operations are asynchronous and return HTTP 202 with a jobId. See the Job Management API and Job data model below for response format and job status polling.
 
 #### 2. Catalog API
 
