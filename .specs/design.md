@@ -13,14 +13,14 @@ graph TB
     subgraph "Web Browser"
         UI[Web UI]
     end
-    
+
     subgraph "Docker MCP Web Manager"
         subgraph "Frontend (Next.js)"
             Pages[Pages/Components]
             Auth[Authentication]
             State[State Management]
         end
-        
+
         subgraph "Backend (Next.js API)"
             API[API Routes]
             Docker[Docker Integration]
@@ -28,19 +28,19 @@ graph TB
             Secrets[Secrets Manager]
             Logs[Log Manager]
         end
-        
+
         subgraph "Database"
             SQLite[(SQLite DB)]
         end
     end
-    
+
     subgraph "External Systems"
         DockerEngine[Docker Engine]
         MCPGateway[MCP Gateway]
         BitwardenCLI[Bitwarden CLI]
         MCPCatalog[MCP Catalog]
     end
-    
+
     UI --> Pages
     Pages --> API
     API --> Docker
@@ -53,7 +53,7 @@ graph TB
     Docker --> MCPGateway
     MCPGateway --> DockerEngine
     API --> MCPCatalog
-    
+
     %% Note: Docker operations via MCP Gateway only
     %% Web service does not access Docker Engine directly
 ```
@@ -72,32 +72,38 @@ graph TB
 ### Frontend Components
 
 #### 1. Authentication Components
+
 - **LoginForm**: Handles user authentication
 - **AuthProvider**: Manages authentication state
 - **ProtectedRoute**: Route protection wrapper
 
 #### 2. Dashboard Components
+
 - **ServerList**: Displays installed MCP servers with status
 - **ServerCard**: Individual server information card
 - **StatusIndicator**: Visual status representation
 
 #### 3. Server Management Components
+
 - **ServerDetail**: Detailed server information view
 - **ConfigurationForm**: Server configuration editor
 - **ToolSelector**: Tool selection interface
 - **TestRunner**: Tool testing interface
 
 #### 4. Catalog Components
+
 - **CatalogBrowser**: Browse available MCP servers
 - **ServerInstaller**: Installation workflow
 - **InstallationProgress**: Installation status tracking
 
 #### 5. Monitoring Components
+
 - **LogViewer**: Real-time log display
 - **LogFilter**: Log filtering and search
 - **MetricsDisplay**: Resource usage metrics
 
 #### 6. Configuration Components
+
 - **ImportExport**: Configuration import/export interface
 - **SecretsManager**: Secure credential management
 - **BitwardenIntegration**: Bitwarden CLI integration
@@ -105,6 +111,7 @@ graph TB
 ### Backend API Endpoints
 
 #### 1. Server Management API
+
 ```typescript
 // GET /api/v1/servers - List all MCP servers
 // GET /api/v1/servers/[id] - Get server details
@@ -125,6 +132,7 @@ graph TB
 **Idempotency**: All async POST/DELETE endpoints (server enable/disable/start/stop/delete/install/test and gateway start/stop) support the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new job. This ensures safe retries and prevents duplicate operations during network issues or client errors.
 
 **Idempotency Implementation**:
+
 - **Key Storage**: `idempotency_keys` table stores key-to-job mappings with TTL
 - **Scope Definition**: Endpoint path + normalized request hash for precise matching
 - **Conflict Resolution**: On key collision, return existing id with HTTP 202
@@ -135,6 +143,7 @@ graph TB
 #### 2. Catalog API
 
 #### Catalog Install API Details
+
 ```typescript
 // POST /api/v1/catalog/[id]/install - Install server from catalog
 // Request Body:
@@ -156,6 +165,7 @@ graph TB
 ```
 
 **Idempotency**: The catalog install endpoint supports the `Idempotency-Key` header. When the same key is reused within a 24-hour window, the API returns the original id with HTTP 202 instead of creating a new installation job.
+
 ```typescript
 // GET /api/v1/catalog - Get available servers from catalog
 // GET /api/v1/catalog/[id] - Get server details from catalog
@@ -163,6 +173,7 @@ graph TB
 ```
 
 #### 3. Testing API
+
 ```typescript
 // POST /api/v1/servers/[id]/test - Execute tool test (202 Accepted, returns { id })
 // Request Body: { "toolName": "<toolName>", "input": {...} }
@@ -177,7 +188,7 @@ graph TB
 
 **Security Requirements for Testing API:**
 
-- **Data Masking & Filtering Policy**: 
+- **Data Masking & Filtering Policy**:
   - **Sensitive Data Redaction**: PII, credentials, tokens, API keys automatically redacted from stored/returned data
   - **Allowlist Approach**: Only safe keys preserved (toolName, success, timestamp, executionTime, error)
   - **Pattern-based Redaction**: Automated detection and masking of:
@@ -188,19 +199,16 @@ graph TB
     - **HMAC Key Management**: Server-side HMAC key never stored alongside data, regularly rotated, and access-controlled
     - **No Raw Secret Storage**: Plain text secret values never persisted in any form
   - **Redaction-by-Key**: Specific field names automatically masked (`password`, `token`, `secret`, `key`)
-  
 - **Payload Size Limits & Truncation**:
   - Maximum 10KB stored per test result in database
-  - Maximum 1KB returned in API responses  
+  - Maximum 1KB returned in API responses
   - Truncation strategy: preserve first 512B + last 512B with "...[TRUNCATED Nkb]..." indicator
   - Content-aware truncation: preserve JSON structure in truncated payloads
-  
 - **Data Retention & Lifecycle**:
   - Default retention period: 90 days (configurable via environment variable)
   - Automatic purging of test data beyond retention period
   - Metadata-only logging: toolName, success status, timestamp, executionTime, result size
   - Audit trail maintained for all data access and deletion operations
-  
 - **API Response Security**:
   - Sensitive fields replaced with structured masks: `"[REDACTED]"`, `"[MASKED-XXX]"`, `"[HMAC-sha256:8chars]"`
   - HMAC-based verification available for debugging without exposing original data (using server-side secret key)
@@ -208,12 +216,14 @@ graph TB
   - Test result IDs sanitized to prevent enumeration attacks
 
 #### 4. Logs API
+
 ```typescript
 // GET /api/v1/servers/[id]/logs - Get server logs
 // GET /api/v1/servers/[id]/logs/stream - Stream logs (SSE)
 ```
 
 #### 5. Configuration API
+
 ```typescript
 // GET /api/v1/config/export - Export configuration
 // POST /api/v1/config/import - Import configuration
@@ -223,6 +233,7 @@ graph TB
 ```
 
 #### 6. Authentication API
+
 ```typescript
 // POST /api/v1/auth/login - User login
 // POST /api/v1/auth/logout - User logout
@@ -230,6 +241,7 @@ graph TB
 ```
 
 #### 7. Health API
+
 ```typescript
 // GET /api/health - Liveness/Readiness probe (200 OK when healthy)
 ```
@@ -237,28 +249,30 @@ graph TB
 ### Docker Integration Layer
 
 #### DockerMCPClient
+
 ```typescript
 class DockerMCPClient {
-  async listServers(): Promise<MCPServer[]>
-  async getServerDetails(id: string): Promise<MCPServer>
-  async enableServer(id: string): Promise<JobResponse> // Returns job descriptor for async server enablement
-  async disableServer(id: string): Promise<JobResponse> // Returns job descriptor for async server disablement
-  async startGateway(): Promise<JobResponse> // Returns job descriptor for async operation
-  async stopGateway(): Promise<JobResponse> // Returns job descriptor for async operation
-  async getServerLogs(id: string): Promise<string[]>
-  async testServerTool(id: string, toolName: string, input: any): Promise<JobResponse> // Returns job descriptor for async tool testing
+  async listServers(): Promise<MCPServer[]>;
+  async getServerDetails(id: string): Promise<MCPServer>;
+  async enableServer(id: string): Promise<JobResponse>; // Returns job descriptor for async server enablement
+  async disableServer(id: string): Promise<JobResponse>; // Returns job descriptor for async server disablement
+  async startGateway(): Promise<JobResponse>; // Returns job descriptor for async operation
+  async stopGateway(): Promise<JobResponse>; // Returns job descriptor for async operation
+  async getServerLogs(id: string): Promise<string[]>;
+  async testServerTool(id: string, toolName: string, input: any): Promise<JobResponse>; // Returns job descriptor for async tool testing
 }
 ```
 
 #### CatalogClient
+
 ```typescript
 class CatalogClient {
-  async getCatalog(): Promise<CatalogEntry[]>
-  async getServerInfo(id: string): Promise<CatalogServerInfo>
-  async installServer(id: string, config: ServerConfiguration): Promise<JobResponse> // Returns job descriptor
+  async getCatalog(): Promise<CatalogEntry[]>;
+  async getServerInfo(id: string): Promise<CatalogServerInfo>;
+  async installServer(id: string, config: ServerConfiguration): Promise<JobResponse>; // Returns job descriptor
 
-  async getJobStatus(id: string): Promise<Job> // Get job status and progress
-  async cancelJob(id: string): Promise<void> // Cancel job if cancellable
+  async getJobStatus(id: string): Promise<Job>; // Get job status and progress
+  async cancelJob(id: string): Promise<void>; // Cancel job if cancellable
 }
 ```
 
@@ -267,229 +281,243 @@ class CatalogClient {
 ### Core Models
 
 #### MCPServer
+
 ```typescript
 interface MCPServer {
-  id: string
-  name: string
-  image: string
-  status: 'running' | 'stopped' | 'error'
-  version: string
-  description: string
-  tools: Tool[]
-  resources: Resource[]
-  prompts: Prompt[]
-  configuration: ServerConfiguration
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  name: string;
+  image: string;
+  status: 'running' | 'stopped' | 'error';
+  version: string;
+  description: string;
+  tools: Tool[];
+  resources: Resource[];
+  prompts: Prompt[];
+  configuration: ServerConfiguration;
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
 #### ServerConfiguration
+
 ```typescript
 interface ServerConfiguration {
-  id: string
-  serverId: string
-  environment: Record<string, string>
-  enabledTools: string[]
-  secrets: SecretReference[]
-  resourceLimits: ResourceLimits
-  networkConfig: NetworkConfig
+  id: string;
+  serverId: string;
+  environment: Record<string, string>;
+  enabledTools: string[];
+  secrets: SecretReference[];
+  resourceLimits: ResourceLimits;
+  networkConfig: NetworkConfig;
 }
 ```
 
 #### Tool
+
 ```typescript
 interface Tool {
-  name: string
-  description: string
-  inputSchema: JSONSchema
-  enabled: boolean
+  name: string;
+  description: string;
+  inputSchema: JSONSchema;
+  enabled: boolean;
 }
 ```
 
-
 #### Resource
+
 ```typescript
 interface Resource {
-  uri: string
-  name: string
-  description?: string
-  mimeType?: string
-  metadata?: Record<string, any>
+  uri: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+  metadata?: Record<string, any>;
 }
 ```
 
 #### Prompt
+
 ```typescript
 interface Prompt {
-  name: string
-  description?: string
-  arguments?: JSONSchema
-  metadata?: Record<string, any>
+  name: string;
+  description?: string;
+  arguments?: JSONSchema;
+  metadata?: Record<string, any>;
 }
 ```
 
 #### SecretReference
+
 ```typescript
 interface SecretReference {
-  secretId: string
-  environmentVariable: string
-  required: boolean
+  secretId: string;
+  environmentVariable: string;
+  required: boolean;
 }
 ```
 
 #### ResourceLimits
+
 ```typescript
 interface ResourceLimits {
-  memory?: string // e.g., "512m", "1g"
-  cpu?: string // e.g., "0.5", "1"
-  disk?: string // e.g., "1g", "10g"
+  memory?: string; // e.g., "512m", "1g"
+  cpu?: string; // e.g., "0.5", "1"
+  disk?: string; // e.g., "1g", "10g"
   network?: {
-    bandwidth?: string // e.g., "100m", "1g"
-    connections?: number
-  }
+    bandwidth?: string; // e.g., "100m", "1g"
+    connections?: number;
+  };
 }
 ```
 
 #### NetworkConfig
+
 ```typescript
 interface NetworkConfig {
-  mode: 'bridge' | 'host' | 'none' | 'overlay'
+  mode: 'bridge' | 'host' | 'none' | 'overlay';
   ports?: Array<{
-    containerPort: number
-    hostPort?: number
-    protocol: 'tcp' | 'udp'
-  }>
-  networks?: string[]
-  dns?: string[]
+    containerPort: number;
+    hostPort?: number;
+    protocol: 'tcp' | 'udp';
+  }>;
+  networks?: string[];
+  dns?: string[];
   extraHosts?: Array<{
-    hostname: string
-    ip: string
-  }>
+    hostname: string;
+    ip: string;
+  }>;
 }
 ```
 
 #### JSONSchema
+
 ```typescript
 interface JSONSchema {
-  type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null'
-  properties?: Record<string, JSONSchema>
-  items?: JSONSchema | JSONSchema[]
-  required?: string[]
-  enum?: any[]
-  const?: any
-  format?: string
-  pattern?: string
-  minimum?: number
-  maximum?: number
-  minLength?: number
-  maxLength?: number
-  minItems?: number
-  maxItems?: number
-  additionalProperties?: boolean | JSONSchema
-  description?: string
-  title?: string
-  default?: any
-  examples?: any[]
+  type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
+  properties?: Record<string, JSONSchema>;
+  items?: JSONSchema | JSONSchema[];
+  required?: string[];
+  enum?: any[];
+  const?: any;
+  format?: string;
+  pattern?: string;
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  minItems?: number;
+  maxItems?: number;
+  additionalProperties?: boolean | JSONSchema;
+  description?: string;
+  title?: string;
+  default?: any;
+  examples?: any[];
 }
 ```
+
 #### Secret
+
 ```typescript
 interface Secret {
-  id: string
-  name: string
-  type: 'api_key' | 'token' | 'password' | 'certificate'
-  bitwardenItemId?: string
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  name: string;
+  type: 'api_key' | 'token' | 'password' | 'certificate';
+  bitwardenItemId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
 #### TestResult
+
 ```typescript
 interface TestResult {
-  id: string
-  serverId: string
-  toolName: string
-  input: any
-  output: any
-  success: boolean
-  error?: string
-  executionTime: number
-  timestamp: Date
+  id: string;
+  serverId: string;
+  toolName: string;
+  input: any;
+  output: any;
+  success: boolean;
+  error?: string;
+  executionTime: number;
+  timestamp: Date;
 }
 ```
 
 #### CatalogEntry
+
 ```typescript
 interface CatalogEntry {
-  id: string
-  name: string
-  description: string
-  version: string
-  image: string
-  author: string
-  category: string
-  tags: string[]
-  popularity: number
-  lastUpdated: Date
-  verified: boolean
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  image: string;
+  author: string;
+  category: string;
+  tags: string[];
+  popularity: number;
+  lastUpdated: Date;
+  verified: boolean;
   metadata: {
-    homepage?: string
-    repository?: string
-    documentation?: string
-    license?: string
-  }
+    homepage?: string;
+    repository?: string;
+    documentation?: string;
+    license?: string;
+  };
 }
 ```
 
 #### CatalogServerInfo
+
 ```typescript
 interface CatalogServerInfo {
-  id: string
-  name: string
-  description: string
-  version: string
-  image: string
-  author: string
-  category: string
-  tags: string[]
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  image: string;
+  author: string;
+  category: string;
+  tags: string[];
   supportedConfigurations: {
-    environment: Record<string, { type: string; required: boolean; description: string }>
-    availableTools: string[]
+    environment: Record<string, { type: string; required: boolean; description: string }>;
+    availableTools: string[];
     resourceOptions: {
-      minMemory: number
-      maxMemory: number
-      minCpu: number
-      maxCpu: number
-    }
+      minMemory: number;
+      maxMemory: number;
+      minCpu: number;
+      maxCpu: number;
+    };
     networkRequirements: {
-      ports: Array<{ port: number; protocol: string; description: string }>
-      outboundConnections: string[]
-    }
-  }
+      ports: Array<{ port: number; protocol: string; description: string }>;
+      outboundConnections: string[];
+    };
+  };
   installMetadata: {
-    installationTime: number // estimated seconds
-    diskSpace: number // MB required
-    dependencies: string[]
-    preInstallChecks: string[]
-    postInstallValidation: string[]
-  }
+    installationTime: number; // estimated seconds
+    diskSpace: number; // MB required
+    dependencies: string[];
+    preInstallChecks: string[];
+    postInstallValidation: string[];
+  };
   documentation: {
-    readme: string
-    quickStart: string
-    examples: Array<{ name: string; description: string; configuration: ServerConfiguration }>
-  }
-  verified: boolean
-  popularity: number
-  lastUpdated: Date
-  metadata: Record<string, any>
+    readme: string;
+    quickStart: string;
+    examples: Array<{ name: string; description: string; configuration: ServerConfiguration }>;
+  };
+  verified: boolean;
+  popularity: number;
+  lastUpdated: Date;
+  metadata: Record<string, any>;
 }
 ```
 
 ### Database Schema
 
 #### servers table
+
 ```sql
 CREATE TABLE servers (
   id TEXT PRIMARY KEY,
@@ -512,6 +540,7 @@ END;
 ```
 
 #### configurations table
+
 ```sql
 CREATE TABLE configurations (
   id TEXT PRIMARY KEY,
@@ -554,6 +583,7 @@ CREATE INDEX idx_configurations_representative_port ON configurations(representa
 ```
 
 #### secret_references table
+
 ```sql
 CREATE TABLE secret_references (
   id TEXT PRIMARY KEY,
@@ -578,6 +608,7 @@ END;
 ```
 
 #### resources table
+
 ```sql
 CREATE TABLE resources (
   id TEXT PRIMARY KEY,
@@ -603,6 +634,7 @@ END;
 ```
 
 #### prompts table
+
 ```sql
 CREATE TABLE prompts (
   id TEXT PRIMARY KEY,
@@ -627,6 +659,7 @@ END;
 ```
 
 #### tools table
+
 ```sql
 CREATE TABLE tools (
   id TEXT PRIMARY KEY,
@@ -651,6 +684,7 @@ END;
 ```
 
 #### bitwarden_items table
+
 ```sql
 -- Bitwarden統合テーブル（外部キー参照の整合性確保）
 CREATE TABLE bitwarden_items (
@@ -680,6 +714,7 @@ END;
 ```
 
 #### secrets table
+
 ```sql
 -- セキュリティ強化されたsecretsテーブル
 CREATE TABLE secrets (
@@ -735,21 +770,22 @@ This must be executed at the beginning of every database connection and migratio
 The following `drizzle.config.ts` configuration ensures consistent paths for migrations and database:
 
 ```typescript
-import { defineConfig } from "drizzle-kit";
+import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  schema: "./src/db/schema.ts",
-  out: "/app/data/out/migrations",
-  driver: "better-sqlite3",
+  schema: './src/db/schema.ts',
+  out: '/app/data/out/migrations',
+  driver: 'better-sqlite3',
   dbCredentials: {
-    url: process.env.DATABASE_URL || "file:/app/data/app.db"
+    url: process.env.DATABASE_URL || 'file:/app/data/app.db',
   },
   verbose: true,
-  strict: true
+  strict: true,
 });
 ```
 
 **Key Configuration Points:**
+
 - **Migrations Output**: `/app/data/out/migrations` (consistent with Docker volume mount)
 - **Database URL**: Uses `DATABASE_URL` environment variable if set, falls back to `file:/app/data/app.db`
 - **Schema Location**: `./src/db/schema.ts` (project schema definitions)
@@ -839,18 +875,18 @@ CREATE INDEX idx_tools_enabled ON tools(enabled);
 
 ```
 
-| Interface Field | Database Table.Column | Notes |
-|----------------|---------------------|-------|
-| MCPServer.resources | resources.* | One-to-many relationship |
-| MCPServer.prompts | prompts.* | One-to-many relationship |
-| MCPServer.tools | tools.* | One-to-many relationship |
-| ServerConfiguration.secrets | secret_references.* | Many-to-many via junction table |
-| ServerConfiguration.resourceLimits | configurations.resource_limits | JSON field |
-| ServerConfiguration.networkConfig | configurations.network_config | JSON field |
-| Tool.inputSchema | tools.input_schema | JSON field |
-| Prompt.arguments | prompts.arguments | JSON field |
-| Resource.metadata | resources.metadata | JSON field |
-| Prompt.metadata | prompts.metadata | JSON field |
+| Interface Field                    | Database Table.Column          | Notes                           |
+| ---------------------------------- | ------------------------------ | ------------------------------- |
+| MCPServer.resources                | resources.\*                   | One-to-many relationship        |
+| MCPServer.prompts                  | prompts.\*                     | One-to-many relationship        |
+| MCPServer.tools                    | tools.\*                       | One-to-many relationship        |
+| ServerConfiguration.secrets        | secret_references.\*           | Many-to-many via junction table |
+| ServerConfiguration.resourceLimits | configurations.resource_limits | JSON field                      |
+| ServerConfiguration.networkConfig  | configurations.network_config  | JSON field                      |
+| Tool.inputSchema                   | tools.input_schema             | JSON field                      |
+| Prompt.arguments                   | prompts.arguments              | JSON field                      |
+| Resource.metadata                  | resources.metadata             | JSON field                      |
+| Prompt.metadata                    | prompts.metadata               | JSON field                      |
 
 #### Embedded vs Normalized Data
 
@@ -858,6 +894,7 @@ CREATE INDEX idx_tools_enabled ON tools(enabled);
 - **Normalized (Separate Tables)**: Resources, Prompts, Tools, SecretReferences
 
 This approach balances query performance with data integrity and flexibility.
+
 ```sql
 CREATE TABLE test_results (
   id TEXT PRIMARY KEY,
@@ -901,19 +938,21 @@ CREATE INDEX idx_test_results_server_tool_time ON test_results(server_id, tool_n
    - Timeout errors
 
 ### Error Response Format
+
 ```typescript
 interface ErrorResponse {
   error: {
-    code: string
-    message: string
-    details?: any
-    requestId: string
-    timestamp: string
-  }
+    code: string;
+    message: string;
+    details?: any;
+    requestId: string;
+    timestamp: string;
+  };
 }
 ```
 
 #### Standard Error Codes
+
 - `VALIDATION_ERROR` (400) - Request validation failed
 - `AUTHENTICATION_REQUIRED` (401) - Authentication required
 - `AUTHORIZATION_DENIED` (403) - Insufficient permissions
@@ -927,6 +966,7 @@ interface ErrorResponse {
 - `BITWARDEN_ERROR` (424) - Bitwarden integration failed (dependency failure)
 
 #### Error Response Examples
+
 ```typescript
 // Validation Error (400)
 {
@@ -974,28 +1014,33 @@ interface ErrorResponse {
 ## Testing Strategy
 
 ### Unit Testing
+
 - **Frontend**: Jest + React Testing Library
 - **Backend**: Jest + Supertest
 - **Integration**: Docker integration layer testing
 
 ### Integration Testing
+
 - Docker MCP CLI integration tests
 - Database operation tests
 - Authentication flow tests
 - API endpoint tests
 
 ### End-to-End Testing
+
 - Playwright for full user workflow testing
 - Docker Compose test environment
 - Automated installation and configuration testing
 
 ### Security Testing
+
 - Authentication and authorization testing
 - Secret management security validation
 - Input validation and sanitization testing
 - Container security scanning
 
 ### Performance Testing
+
 - Load testing for concurrent users
 - Database query performance testing
 - Docker operation performance testing
@@ -1004,22 +1049,25 @@ interface ErrorResponse {
 ## Security Considerations
 
 ### Authentication & Authorization
+
 - JWT-based session management
 - Role-based access control (future enhancement)
 - Secure session storage
 - Bitwarden integration for credential management
 
 #### CSRF Protection
+
 - **Anti-CSRF Tokens**: Synchronizer token pattern implemented for all state-changing operations
 - **Cookie-based Sessions**: NextAuth sessions require CSRF validation for POST/PUT/DELETE endpoints
 - **Origin/Referer Validation**: Strict validation of Origin and Referer headers for sensitive operations
 - **HTTP Method Restrictions**: State-changing APIs restricted to POST/PUT/DELETE methods only
-- **Session Cookie Security**: 
+- **Session Cookie Security**:
   - `Secure` flag enforced (HTTPS only)
   - `HttpOnly` flag set (prevent XSS access)
   - `SameSite=Strict` for maximum CSRF protection (with CSRF tokens as fallback for SameSite=Lax)
 
 #### Rate Limiting
+
 - **Per-IP Limits**: 100 requests per minute per IP address (general endpoints)
 - **Per-User Limits**: 200 requests per minute per authenticated user
 - **Login Endpoint**: 5 attempts per 15 minutes per IP (prevents brute force)
@@ -1030,13 +1078,15 @@ interface ErrorResponse {
 - **Monitoring & Alerting**: Automated alerts for suspicious activity patterns and rate limit violations
 
 #### Token Management
+
 - **Token Rotation**: Automatic JWT refresh every 15 minutes
 - **Token Expiry**: Access tokens expire in 1 hour, refresh tokens in 7 days
 - **Revocation**: Immediate token invalidation on logout or security events
 - **Monitoring**: Real-time monitoring for unusual token usage patterns
 
 #### CORS & CSP (Cross-Origin Security)
-- **CORS Policy**: 
+
+- **CORS Policy**:
   - Strict origin allowlist for production (only authenticated domains)
   - Development: configurable `CORS_ORIGIN` environment variable
   - Pre-flight request caching (24 hours max-age)
@@ -1056,43 +1106,46 @@ interface ErrorResponse {
   - `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer information
   - `Reporting-Endpoints: csp-reports="/api/csp-report"`: Modern Reporting API endpoint definition
   - Note: `X-XSS-Protection` header is deprecated as modern browsers ignore it; CSP provides stronger XSS protection
-- **HTTPS Enforcement**: 
+- **HTTPS Enforcement**:
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`: Force HTTPS for 1 year
   - Automatic HTTP to HTTPS redirects in production
 
 ### Data Protection
 
 #### Key Management (KMS & Rotation)
+
 - **Master Key Storage**: OS keyring / external KMS（Vault/Cloud KMS）。アプリ内保管は禁止。
 - **Key Identifiers**: Each secret row carries `key_id`; decrypt via KMS-resolved DEK (Data Encryption Key).
-- **Key Rotation**: 
+- **Key Rotation**:
   - Generate new DEK automatically on schedule or manual trigger
   - Re-encrypt ciphertext/tag with new `key_id`
   - Keep N-1 previous keys until migration completes
   - Zero-downtime rotation with backward compatibility
-- **Access Control**: 
+- **Access Control**:
   - Least privilege for KMS operations (encrypt/decrypt only)
   - Service account authentication with KMS
   - Comprehensive audit logging enabled for all key operations
-- **Backup & Disaster Recovery**: 
+- **Backup & Disaster Recovery**:
   - Export wrapped keys（KEK でラップ）separate from database backups
   - Multiple backup locations with different access credentials
   - Recovery procedures documented and tested regularly
-- **Key Lifecycle**: 
+- **Key Lifecycle**:
   - Automated key generation with secure entropy sources
   - Key retirement and secure deletion after retention period
   - Compliance with cryptographic best practices (NIST, FIPS)
 
 #### AEAD Cryptographic Safety
+
 - **IV Uniqueness**: Database-level UNIQUE constraint on (key_id, iv, alg) prevents IV reuse attacks
 - **Nonce Management**: Each encryption operation generates cryptographically secure random IV/nonce
-- **Algorithm Support**: AES-256-GCM and ChaCha20-Poly1305 with proper authentication tag validation  
+- **Algorithm Support**: AES-256-GCM and ChaCha20-Poly1305 with proper authentication tag validation
 - **Component Separation**: Ciphertext, IV, and authentication tag stored separately for security analysis
 - **Reuse Prevention**: Database enforces that no key_id+IV combination can be used twice
 
 ### Database Security Enhancements
 
 #### AEAD Encryption Component Separation
+
 - **Problem**: Storing AEAD ciphertext in a single TEXT column is unsafe and inefficient
 - **Solution**: Separated AEAD components into dedicated columns:
   - `ciphertext BLOB`: Encrypted data (binary-safe)
@@ -1105,6 +1158,7 @@ interface ErrorResponse {
   - Prevents data corruption during storage/retrieval
 
 #### Referential Integrity for External References
+
 - **Problem**: Loose `bitwarden_id TEXT` without proper foreign key constraints
 - **Solution**: Created dedicated `bitwarden_items` table with proper foreign key relationships
 - **Implementation**:
@@ -1113,6 +1167,7 @@ interface ErrorResponse {
   - `ON DELETE SET NULL` ensures graceful handling of deleted Bitwarden items
 
 #### Performance Optimization
+
 - **Search Indexes**: Added comprehensive indexes for efficient querying:
   - name列: UNIQUE制約により自動インデックス作成（明示的なidx_secrets_nameは不要）
   - `UNIQUE(key_id, iv, alg)`: AEAD安全性のためのIV再利用防止制約（自動インデックス作成）
@@ -1127,12 +1182,14 @@ interface ErrorResponse {
   - `idx_bitwarden_items_folder_id`: Folder organization queries
 
 #### Data Validation and Constraints
+
 - **Type Validation**: `CHECK (type IN ('api_key', 'token', 'password', 'certificate'))`
 - **Algorithm Defaults**: `DEFAULT 'AES-256-GCM'` for consistent encryption
 - **Binary Data Integrity**: BLOB columns ensure proper handling of encrypted data
 - **Key ID Requirements**: `key_id TEXT NOT NULL` links each secret to its encryption key
 
 #### Key ID Migration Plan
+
 - **Schema Update**: Add `key_id TEXT` column (initially nullable for safe migration)
 - **Backfill Strategy**: Populate existing rows with current active master key identifier
 - **Index Creation**: Create performance index on `key_id` after backfill completion
@@ -1145,12 +1202,14 @@ interface ErrorResponse {
 - Secure communication with HTTPS
 
 ### Container Security
+
 - Non-root user execution
 - Minimal base images
 - Security scanning integration
 - Resource limits and isolation
 
 ### Input Validation
+
 - Comprehensive input sanitization
 - JSON schema validation
 - File upload restrictions
@@ -1159,12 +1218,13 @@ interface ErrorResponse {
 ## Deployment Architecture
 
 ### Docker Compose Configuration
+
 ```yaml
 services:
   web:
     build: .
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       NODE_ENV: production
       DATABASE_URL: file:/app/data/app.db
@@ -1176,7 +1236,7 @@ services:
       db-migrate:
         condition: service_completed_successfully
     restart: unless-stopped
-    user: "1000:1000"
+    user: '1000:1000'
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -1184,7 +1244,13 @@ services:
     cap_add:
       - NET_BIND_SERVICE
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -1195,8 +1261,8 @@ services:
     volumes:
       - app-data:/app/data
     command: sh -c "mkdir -p /app/data && chown -R 1000:1000 /app/data && chmod 750 /app/data && npx drizzle-kit push --dialect=sqlite --schema=./src/db/schema.ts --url=file:/app/data/app.db"
-    restart: "no"
-    user: "1000:1000"
+    restart: 'no'
+    user: '1000:1000'
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -1206,7 +1272,9 @@ volumes:
   app-data:
     driver: local
 ```
+
 ### Security Improvements
+
 - **Non-root execution**: All services run as user 1000:1000 instead of root
 - **Capability restrictions**: Dropped ALL capabilities and only added NET_BIND_SERVICE for web service
 - **No new privileges**: Prevented privilege escalation attacks
@@ -1215,14 +1283,15 @@ volumes:
 - **MCP Gateway API**: Docker operations performed via MCP Gateway API (web service does not access Docker socket directly)
 - **Service readiness**: Health check includes start_period to ensure service is ready before checking
 
-
 ### Environment Configuration
+
 - Development: Hot reload, debug logging
 - Production: Optimized builds, structured logging
 - MCP Gateway handles Docker interactions over its API; web service communicates with Gateway instead
 - Persistent data storage for configuration and logs
 
 ### Deployment Commands
+
 ```bash
 # Setup data directory with proper ownership
 mkdir -p ./data
@@ -1235,7 +1304,9 @@ docker compose up -d
 docker compose ps
 docker compose logs web
 ```
+
 #### 7. Job Management API
+
 ```typescript
 // GET /api/v1/jobs/[id] - Get job status and result
 // GET /api/v1/jobs - List jobs (with pagination, sort, filter)
@@ -1245,6 +1316,7 @@ docker compose logs web
 ### API Request/Response Specifications
 
 #### Query Parameters for List Endpoints
+
 All list endpoints support the following query parameters:
 
 - `page` (number, default: 1) - Page number for pagination
@@ -1254,17 +1326,19 @@ All list endpoints support the following query parameters:
   - **Multi-field filters**: `filter[status]=running&filter[version]=1.0`
   - **Array values**: `filter[status][]=running&filter[status][]=stopped`
   - **Operators**: `filter[created_at][gte]=2024-01-01&filter[created_at][lte]=2024-12-31`
-  - **Supported alternatives**: 
+  - **Supported alternatives**:
     - Rison-encoded filters: `filter=(status:running,version:1.0)`
     - URL-safe key-value pairs: `status=running&version=1.0`
 - `search` (string) - Search term for text fields
 
 Example:
+
 ```http
 GET /api/v1/servers?page=1&limit=10&sort=name&filter[status]=running&search=docker
 ```
 
 #### Async Operation Response Format
+
 For async operations (install, start, stop, test, enable, disable), the API returns:
 
 ```typescript
@@ -1278,6 +1352,7 @@ For async operations (install, start, stop, test, enable, disable), the API retu
 ```
 
 #### Job Status Response Format
+
 ```typescript
 // GET /api/v1/jobs/[id]
 {
@@ -1305,9 +1380,9 @@ For async operations (install, start, stop, test, enable, disable), the API retu
 }
 ```
 
-
 #### Job
-```typescript
+
+````typescript
 interface Job {
   id: string
   type: 'install' | 'start' | 'stop' | 'test' | 'enable' | 'disable' | 'delete'
@@ -1340,10 +1415,10 @@ interface JobResponse {
   message?: string
   estimatedDuration?: number
 }
-```
-
+````
 
 #### jobs table
+
 ```sql
 CREATE TABLE jobs (
   id TEXT PRIMARY KEY,
