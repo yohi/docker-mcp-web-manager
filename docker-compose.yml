@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # データベース初期化とマイグレーション
+  db-migrate:
+    build: .
+    volumes:
+      - app-data:/app/data
+    command: >
+      sh -c "
+        mkdir -p /app/data &&
+        chown -R 1001:1001 /app/data &&
+        chmod 750 /app/data &&
+        echo 'Database directory created and configured'
+      "
+    restart: 'no'
+    user: '1001:1001'
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # メインWebアプリケーション
+  web:
+    build: .
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: file:/app/data/app.db
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      # セキュリティヘッダー設定
+      SECURITY_HEADERS_ENABLED: 'true'
+      # CSP設定
+      CSP_SCRIPT_SRC: "'self' 'unsafe-inline'"
+      CSP_STYLE_SRC: "'self' 'unsafe-inline'"
+      # ログレベル
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Docker MCP Gateway設定
+      MCP_GATEWAY_URL: ${MCP_GATEWAY_URL:-http://localhost:8080}
+      MCP_GATEWAY_API_KEY: ${MCP_GATEWAY_API_KEY}
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    user: '1001:1001'
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: |
+        node -e "
+        require('http').get('http://localhost:3000/api/health', (res) => 
+          process.exit(res.statusCode === 200 ? 0 : 1)
+        ).on('error', () => process.exit(1))
+        "
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # リソース制限
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+volumes:
+  app-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}
+
+networks:
+  default:
+    name: docker-mcp-web-manager
+    driver: bridge
