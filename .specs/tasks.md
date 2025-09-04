@@ -23,28 +23,28 @@
     - Create repository pattern for data operations
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
-- [ ] 3. Implement Docker MCP integration layer
-  - [ ] 3.1 Create DockerMCPClient class
+- [x] 3. Implement Docker MCP integration layer
+  - [x] 3.1 Create DockerMCPClient class
     - Implement methods to execute docker mcp CLI commands
     - Add server listing, details retrieval, and status management
     - Implement server enable/disable and gateway control functions
     - **Security & Robustness Requirements (MANDATORY for acceptance):**
-      - [ ] **Shell Injection Prevention**: 
+      - [x] **Shell Injection Prevention**: 
         - Use `spawn`/`execFile` with argument arrays and shell disabled to prevent command injection attacks
         - Validate and sanitize all command arguments before execution
         - Implement allowlist-based command validation for docker mcp subcommands
         - **Acceptance Criteria**: All CLI commands must use argument arrays, shell must be explicitly disabled, no string concatenation for command building
-      - [ ] **Timeout & Cancellation**: 
+      - [x] **Timeout & Cancellation**: 
         - Implement AbortController for timeouts, retries, and cancellation of long-running operations
         - Set configurable timeout limits (default: 30s for quick operations, 300s for long-running operations)
         - Implement exponential backoff retry strategy with maximum retry limits
         - **Acceptance Criteria**: All operations must have timeout controls, cancellation must be properly handled, retry logic must prevent infinite loops
-      - [ ] **Structured Error Handling**: 
+      - [x] **Structured Error Handling**: 
         - Surface structured errors containing exit code and stderr for proper error diagnosis
         - Implement error classification (network errors, permission errors, validation errors, etc.)
         - Add error context preservation for debugging and logging
         - **Acceptance Criteria**: All errors must include exit code, stderr content, operation context, and timestamp
-      - [ ] **JSON Validation**: 
+      - [x] **JSON Validation**: 
         - Implement strict JSON parsing with Zod schema validation for all CLI outputs to prevent parsing vulnerabilities
         - Define comprehensive schemas for all expected CLI response formats
         - Handle malformed JSON gracefully with detailed error reporting
@@ -140,20 +140,20 @@
           - [ ] **Compression**: Gzip compression for archived logs with configurable compression level (default: 6)
           - [ ] **Infrastructure level**: Automated deletion after retention period with backup verification
           - [ ] **Storage optimization**: Move old logs to cold storage if available (S3, etc.) with lifecycle policies
-  - [ ] 3.3 Create catalog integration
+  - [x] 3.2 Create catalog integration
     - Implement CatalogClient for MCP server catalog access
     - Add server installation functionality from catalog
     - Create installation progress tracking
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 4. Implement authentication system
-  - [ ] 4.1 Set up NextAuth.js configuration
+- [x] 4. Implement authentication system
+  - [x] 4.1 Set up NextAuth.js configuration
     - Configure JWT-based authentication
     - Implement custom login provider
     - Create session management utilities
     - _Requirements: 9.1, 9.2, 9.3_
 
-  - [ ] 4.2 Add Bitwarden CLI integration for authentication
+  - [x] 4.2 Add Bitwarden CLI integration for authentication
     - Implement Bitwarden CLI wrapper
     - Create authentication flow using Bitwarden credentials
     - Add fallback authentication methods
