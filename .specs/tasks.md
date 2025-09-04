@@ -159,57 +159,57 @@
     - Add fallback authentication methods
     - _Requirements: 9.4_
 
-- [ ] 5. Create API endpoints
-  - [ ] 5.1 Implement server management API routes
+- [x] 5. Create API endpoints
+  - [x] 5.1 Implement server management API routes
     - Create /api/v1/servers endpoints for CRUD operations with API versioning policy
     - Add server start/stop functionality with authentication middleware and RBAC extension point
     - Implement server configuration update endpoints with per-IP and per-user rate limiting
     - **Security & Governance Requirements (MANDATORY for acceptance):**
-      - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
-      - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
-      - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
-      - [ ] **Error Handling**: Defined error code convention (e.g., SERVER_001, CONFIG_002) and HTTP status mapping (400, 401, 403, 404, 500)
+      - [x] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
+      - [x] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
+      - [x] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [x] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
+      - [x] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
+      - [x] **Error Handling**: Defined error code convention (e.g., SERVER_001, CONFIG_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 1.1, 1.2, 2.1, 3.1, 3.2, 3.4_
 
-  - [ ] 5.2 Create catalog and installation API routes
+  - [x] 5.2 Create catalog and installation API routes
     - Implement /api/v1/catalog endpoints for server browsing with API versioning
     - Add installation API with progress tracking and authentication middleware
     - Create server detail retrieval from catalog with RBAC extension point
     - **Security & Governance Requirements (MANDATORY for acceptance):**
-      - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
-      - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
-      - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
-      - [ ] **Error Handling**: Defined error code convention (e.g., CATALOG_001, INSTALL_002) and HTTP status mapping (400, 401, 403, 404, 500)
+      - [x] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
+      - [x] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
+      - [x] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [x] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
+      - [x] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
+      - [x] **Error Handling**: Defined error code convention (e.g., CATALOG_001, INSTALL_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [ ] 5.3 Implement testing and logging API routes
+  - [x] 5.3 Implement testing and logging API routes
     - Create /api/v1/servers/[id]/test endpoints for tool testing with API versioning
     - Add test history retrieval functionality with authentication middleware
     - Implement log streaming API with Server-Sent Events and RBAC extension point
     - **Security & Governance Requirements (MANDATORY for acceptance):**
-      - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
-      - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
-      - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
-      - [ ] **Error Handling**: Defined error code convention (e.g., TEST_001, LOG_002) and HTTP status mapping (400, 401, 403, 404, 500)
+      - [x] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
+      - [x] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
+      - [x] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [x] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
+      - [x] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
+      - [x] **Error Handling**: Defined error code convention (e.g., TEST_001, LOG_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4_
 
-  - [ ] 5.4 Create configuration management API routes
+  - [x] 5.4 Create configuration management API routes
     - Implement /api/v1/config/export and /api/v1/config/import endpoints with API versioning
     - Add secrets management API with encryption and authentication middleware
     - Create Bitwarden integration endpoints with RBAC extension point
     - **Security & Governance Requirements (MANDATORY for acceptance):**
-      - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
-      - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
-      - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
-      - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
-      - [ ] **Error Handling**: Defined error code convention (e.g., CONFIG_001, SECRET_002) and HTTP status mapping (400, 401, 403, 404, 500)
+      - [x] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
+      - [x] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
+      - [x] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [x] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
+      - [x] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
+      - [x] **Error Handling**: Defined error code convention (e.g., CONFIG_001, SECRET_002) and HTTP status mapping (400, 401, 403, 404, 500)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3, 8.4_
 
 - [ ] 6. Implement secrets management system
