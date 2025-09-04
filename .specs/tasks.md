@@ -7,8 +7,8 @@
   - Create Docker Compose configuration with proper volumes and networking
   - _Requirements: 10.1, 10.2_
 
-- [ ] 2. Implement database layer and core models
-  - [ ] 2.1 Set up SQLite database with schema
+- [x] 2. Implement database layer and core models
+  - [x] 2.1 Set up SQLite database with schema
     - Create database initialization scripts
     - Implement database connection utilities
     - Define SQL schema for servers, configurations, secrets, test_results tables
@@ -17,7 +17,7 @@
     - Provide migration strategy (e.g., Drizzle/Prisma) and seed/init scripts
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
-  - [ ] 2.2 Create TypeScript interfaces and data models
+  - [x] 2.2 Create TypeScript interfaces and data models
     - Define MCPServer, ServerConfiguration, Tool, Secret, TestResult, Resource, Prompt, SecretReference, ResourceLimits, NetworkConfig, and JSONSchema interfaces
     - Implement database access layer with proper error handling
     - Create repository pattern for data operations
