@@ -1,0 +1,79 @@
+# Docker MCP Web Manager - Development Environment
+# Use docker-compose.prod.yml for production deployment
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: mcp-web-manager-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    env_file:
+      - .env.local
+    volumes:
+      # Docker socket access (be careful in production)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Application data
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Development: live code reload
+      - ./src:/app/src
+      - ./public:/app/public
+    depends_on:
+      - db-dev
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db-dev:
+    image: postgres:15-alpine
+    container_name: mcp-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mcp_manager_dev
+      POSTGRES_USER: mcp_dev
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - mcp-network
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: mcp-redis-dev
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - mcp-network
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+
+networks:
+  mcp-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
