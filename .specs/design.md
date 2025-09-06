@@ -194,7 +194,7 @@ graph TB
 
 - **Payload Size Limits & Truncation**:
   - Maximum 10KB stored per test result in database
-  - Maximum 1KB returned in API responses
+  - Maximum 4KB returned in API responses (UX改善、詳細情報表示対応)
   - Truncation strategy: preserve first 512B + last 512B with "...[TRUNCATED Nkb]..." indicator
   - Content-aware truncation: preserve JSON structure in truncated payloads
 
@@ -743,7 +743,7 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "/app/data/out/migrations",
-  driver: "better-sqlite3",
+  dialect: "sqlite",
   dbCredentials: {
     url: process.env.DATABASE_URL || "file:/app/data/app.db"
   },
@@ -1022,11 +1022,12 @@ interface ErrorResponse {
 - **Session Cookie Security**:
   - `Secure` flag enforced (HTTPS only)
   - `HttpOnly` flag set (prevent XSS access)
-  - `SameSite=Strict` for maximum CSRF protection (with CSRF tokens as fallback for SameSite=Lax)
+  - `SameSite=Lax` を既定値とし、クロスサイト要件時は `SameSite=None; Secure`
+  - CSRF トークンを併用（POST/PUT/DELETE で必須）
 
 #### Rate Limiting
 - **Per-IP Limits**: 100 requests per minute per IP address (general endpoints)
-- **Per-User Limits**: 200 requests per minute per authenticated user
+- **Per-User Limits**: ${SERVER_RATE_USER_RPM:-1000} requests per minute per authenticated user
 - **Login Endpoint**: 5 attempts per 15 minutes per IP (prevents brute force)
 - **Sensitive Operations**: 20 operations per hour per user (server management, installations)
 - **Burst Policy**: Allow 5 additional requests in 1-minute penalty window
@@ -1049,7 +1050,8 @@ interface ErrorResponse {
 - **Content Security Policy (CSP)** - セキュリティファースト設計:
   - `default-src 'self'`: All resources from same origin by default
   - `script-src 'nonce-<nonce>' 'self' 'strict-dynamic'`: Nonce-based script execution with strict-dynamic fallback (unsafe-inlineを排除)
-  - `style-src 'nonce-<nonce>' 'self'`: Nonce-based inline styles for CSS-in-JS (unsafe-inlineを排除)
+  - Production: `style-src 'nonce-<nonce>' 'self'`
+  - Development: `style-src 'self' 'unsafe-inline'`（監査ログ前提、ビルドでは無効化）
   - `connect-src 'self' https://api.bitwarden.com`: API calls to self and Bitwarden
   - `frame-ancestors 'none'`: Prevent embedding in iframes (clickjacking protection)
   - `upgrade-insecure-requests`: Force HTTPS in production
@@ -1199,7 +1201,9 @@ services:
     build: .
     volumes:
       - app-data:/app/data
-    command: sh -c "mkdir -p /app/data && chown -R 1000:1000 /app/data && chmod 750 /app/data && npx drizzle-kit push --dialect=sqlite --schema=./src/db/schema.ts --url=file:/app/data/app.db"
+    command: sh -c "mkdir -p /app/data && chown -R 1000:1000 /app/data && chmod 750 /app/data && \
+      npx drizzle-kit generate --dialect=sqlite --schema=./src/db/schema.ts --out=/app/data/out/migrations && \
+      npx drizzle-kit migrate --dialect=sqlite --url=file:/app/data/app.db --config=./drizzle.config.ts"
     restart: "no"
     user: "1000:1000"
     security_opt:
@@ -1219,6 +1223,8 @@ volumes:
 - **Drizzle**: 0.44.5 for database migrations within containers
 - **SQLite**: 3.50.4 with WAL mode for concurrent access
 - **Tailwind CSS**: 4.1.13 with build-time purging
+- **Alpine Environment**: better-sqlite3ビルド依存のためDockerfileにbuild-base（python3, make, g++）追加必須
+- **NextAuth.js**: v4.24.11固定、v5(Auth.js)移行計画を将来検討
 ### Security Improvements
 - **Non-root execution**: All services run as user 1000:1000 instead of root
 - **Capability restrictions**: Dropped ALL capabilities and only added NET_BIND_SERVICE for web service

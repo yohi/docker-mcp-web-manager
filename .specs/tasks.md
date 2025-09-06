@@ -47,7 +47,8 @@
       - [ ] **Migration Container**: Separate db-migrate service for schema initialization
       - [ ] **Database URL**: Environment variable configuration for container paths
       - [ ] **Drizzle Kit**: Configure drizzle-kit commands for Docker execution
-      - [ ] **Connection Pooling**: Optimize SQLite connections for containerized environment
+      - [ ] **Serialized Access**: 単一ライタ原則、`PRAGMA journal_mode=WAL` と `busy_timeout` の設定
+      - [ ] **Backpressure**: 書き込み集中時のスロットリング戦略
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
   - [ ] 2.2 Create TypeScript interfaces and data models
@@ -200,7 +201,7 @@
     - **Security & Governance Requirements (MANDATORY for acceptance):**
       - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: ${SERVER_RATE_USER_RPM:-1000} req/min) with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
       - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., SERVER_001, CONFIG_002) and HTTP status mapping (400, 401, 403, 404, 500)
@@ -213,7 +214,7 @@
     - **Security & Governance Requirements (MANDATORY for acceptance):**
       - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: ${SERVER_RATE_USER_RPM:-1000} req/min) with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
       - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., CATALOG_001, INSTALL_002) and HTTP status mapping (400, 401, 403, 404, 500)
@@ -226,7 +227,7 @@
     - **Security & Governance Requirements (MANDATORY for acceptance):**
       - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: ${SERVER_RATE_USER_RPM:-1000} req/min) with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
       - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., TEST_001, LOG_002) and HTTP status mapping (400, 401, 403, 404, 500)
@@ -239,7 +240,7 @@
     - **Security & Governance Requirements (MANDATORY for acceptance):**
       - [ ] **API Versioning**: All endpoints must use /api/v1/ prefix with versioning policy documentation
       - [ ] **Authentication Middleware**: JWT-based authentication on all endpoints with RBAC extension point for role-based access control
-      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: 1000 req/min) rate limiting with configurable enforcement
+      - [ ] **Rate Limiting**: Per-IP (default: 100 req/min) and per-user (default: ${SERVER_RATE_USER_RPM:-1000} req/min) with configurable enforcement
       - [ ] **Audit Logging**: Mandatory audit logging for all create/update/delete operations and admin actions with structured format
       - [ ] **Paging & Sorting**: Standard paging (page, limit) and sorting (sort_by, sort_order) parameters for all list endpoints with defaults (page=1, limit=20, max limit=100) and validation
       - [ ] **Error Handling**: Defined error code convention (e.g., CONFIG_001, SECRET_002) and HTTP status mapping (400, 401, 403, 404, 500)
@@ -472,7 +473,8 @@ docker compose -f docker-compose.prod.yml logs -f web
 docker compose exec db-migrate npx drizzle-kit push
 
 # Database backup
-docker compose exec web sqlite3 /app/data/app.db ".backup /app/data/backup.db"
+docker compose run --rm sqlite \
+ sqlite3 /app/data/app.db ".backup /app/data/backup.db"
 
 # Database restore
 docker compose exec web sqlite3 /app/data/app.db ".restore /app/data/backup.db"
