@@ -47,8 +47,8 @@
       - [ ] **Migration Container**: Separate db-migrate service for schema initialization
       - [ ] **Database URL**: Environment variable configuration for container paths
       - [ ] **Drizzle Kit**: Configure drizzle-kit commands for Docker execution
-      - [ ] **Serialized Access**: 単一ライタ原則、`PRAGMA journal_mode=WAL` と `busy_timeout` の設定
-      - [ ] **Backpressure**: 書き込み集中時のスロットリング戦略
+      - [ ] **Serialized Access**: Single writer principle, `PRAGMA journal_mode=WAL` and `busy_timeout` configuration
+      - [ ] **Backpressure**: Throttling strategy during write-intensive operations
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
   - [ ] 2.2 Create TypeScript interfaces and data models
@@ -428,7 +428,7 @@
 ```bash
 # Clone repository and setup
 git clone <repository-url>
-cd docker-mcp-web-manager-v2
+cd docker-mcp-web-manager
 
 # Build and start services
 docker compose up --build -d
@@ -443,7 +443,7 @@ docker compose logs -f web
 docker compose -f docker-compose.dev.yml up --build
 
 # Run database migrations
-docker compose exec web npx drizzle-kit push
+docker compose run --rm db-migrate npx drizzle-kit push
 
 # Install new dependencies (within container)
 docker compose exec web npm install <package-name>
@@ -470,12 +470,11 @@ docker compose -f docker-compose.prod.yml logs -f web
 ### Database Operations
 ```bash
 # Run Drizzle migrations
-docker compose exec db-migrate npx drizzle-kit push
+docker compose run --rm db-migrate npx drizzle-kit push
 
 # Database backup
-docker compose run --rm sqlite \
- sqlite3 /app/data/app.db ".backup /app/data/backup.db"
+docker compose run --rm web sqlite3 /app/data/app.db ".backup /app/data/backup.db"
 
 # Database restore
-docker compose exec web sqlite3 /app/data/app.db ".restore /app/data/backup.db"
+docker compose run --rm web sqlite3 /app/data/app.db ".restore /app/data/backup.db"
 ```

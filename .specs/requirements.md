@@ -25,7 +25,7 @@ The following specific versions are required for the project:
 - **Database**: SQLite with file-based storage in Docker volumes
 - **Process Management**: All development and runtime operations performed within Docker containers
 - **Minimum Versions**: Docker Engine >= 20.10.0, Docker Compose V2 >= 2.0.0
-- **SQLite**: WAL 有効化必須、単一ライタ原則、データディレクトリの UID/GID/パーミッション要件を準拠
+- **SQLite**: WAL mode activation required, single writer principle, compliance with data directory UID/GID/permission requirements
 
 ## Requirements
 
