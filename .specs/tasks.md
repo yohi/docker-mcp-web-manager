@@ -34,8 +34,8 @@
     - [x] **Environment Variables**: Comprehensive environment configuration for all stages
   - _Requirements: 10.1, 10.2_
 
-- [ ] 2. Implement database layer and core models
-  - [ ] 2.1 Set up SQLite 3.50.4 database with schema using Drizzle ORM 0.44.5
+- [x] 2. Implement database layer and core models
+  - [x] 2.1 Set up SQLite 3.50.4 database with schema using Drizzle ORM 0.44.5
     - Create database initialization scripts for Docker environment
     - Implement database connection utilities with Docker volume persistence
     - Define SQL schema for servers, configurations, secrets, test_results tables
@@ -43,15 +43,15 @@
     - Enable PRAGMA foreign_keys=ON and PRAGMA journal_mode=WAL for security and performance
     - Configure Drizzle ORM 0.44.5 migration strategy for Docker Compose environment
     - **Docker Database Requirements:**
-      - [ ] **Volume Persistence**: Configure `/app/data` volume for SQLite database persistence
-      - [ ] **Migration Container**: Separate db-migrate service for schema initialization
-      - [ ] **Database URL**: Environment variable configuration for container paths
-      - [ ] **Drizzle Kit**: Configure drizzle-kit commands for Docker execution
-      - [ ] **Serialized Access**: Single writer principle, `PRAGMA journal_mode=WAL` and `busy_timeout` configuration
-      - [ ] **Backpressure**: Throttling strategy during write-intensive operations
+      - [x] **Volume Persistence**: Configure `/app/data` volume for SQLite database persistence
+      - [x] **Migration Container**: Separate db-migrate service for schema initialization
+      - [x] **Database URL**: Environment variable configuration for container paths
+      - [x] **Drizzle Kit**: Configure drizzle-kit commands for Docker execution
+      - [x] **Serialized Access**: Single writer principle, `PRAGMA journal_mode=WAL` and `busy_timeout` configuration
+      - [x] **Backpressure**: Throttling strategy during write-intensive operations
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
-  - [ ] 2.2 Create TypeScript interfaces and data models
+  - [x] 2.2 Create TypeScript interfaces and data models
     - Define MCPServer, ServerConfiguration, Tool, Secret, TestResult, Resource, Prompt, SecretReference, ResourceLimits, NetworkConfig, and JSONSchema interfaces
     - Implement database access layer with proper error handling
     - Create repository pattern for data operations
