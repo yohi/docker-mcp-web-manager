@@ -13,14 +13,14 @@ graph TB
     subgraph "Web Browser"
         UI[Web UI]
     end
-    
+
     subgraph "Docker MCP Web Manager"
         subgraph "Frontend (Next.js)"
             Pages[Pages/Components]
             Auth[Authentication]
             State[State Management]
         end
-        
+
         subgraph "Backend (Next.js API)"
             API[API Routes]
             Docker[Docker Integration]
@@ -28,19 +28,19 @@ graph TB
             Secrets[Secrets Manager]
             Logs[Log Manager]
         end
-        
+
         subgraph "Database"
             SQLite[(SQLite DB)]
         end
     end
-    
+
     subgraph "External Systems"
         DockerEngine[Docker Engine]
         MCPGateway[MCP Gateway]
         BitwardenCLI[Bitwarden CLI]
         MCPCatalog[MCP Catalog]
     end
-    
+
     UI --> Pages
     Pages --> API
     API --> Docker
@@ -53,19 +53,22 @@ graph TB
     Docker --> MCPGateway
     MCPGateway --> DockerEngine
     API --> MCPCatalog
-    
+
     %% Note: Docker operations via MCP Gateway only
     %% Web service does not access Docker Engine directly
 ```
 
 ### Technology Stack
 
-- **Frontend**: Next.js 14 with TypeScript, Tailwind CSS, React Query
-- **Backend**: Next.js API Routes with TypeScript
-- **Database**: SQLite for configuration and metadata storage
-- **Authentication**: NextAuth.js with custom providers
+- **Frontend**: Next.js 15.5.2 with TypeScript 5.9, Tailwind CSS 4.1.13, React Query
+- **Backend**: Next.js 15.5.2 API Routes with TypeScript 5.9
+- **Database**: SQLite 3.50.4 for configuration and metadata storage
+- **ORM**: Drizzle ORM 0.44.5 for database operations and migrations
+- **Authentication**: NextAuth.js 4.24.11 with custom providers
+- **Runtime**: Node.js 24.7.0
 - **Container**: Docker with multi-stage builds
 - **Orchestration**: Docker Compose V2
+- **Development Environment**: Docker-based development (no local npm execution)
 
 ## Components and Interfaces
 
@@ -177,7 +180,7 @@ graph TB
 
 **Security Requirements for Testing API:**
 
-- **Data Masking & Filtering Policy**: 
+- **Data Masking & Filtering Policy**:
   - **Sensitive Data Redaction**: PII, credentials, tokens, API keys automatically redacted from stored/returned data
   - **Allowlist Approach**: Only safe keys preserved (toolName, success, timestamp, executionTime, error)
   - **Pattern-based Redaction**: Automated detection and masking of:
@@ -188,19 +191,19 @@ graph TB
     - **HMAC Key Management**: Server-side HMAC key never stored alongside data, regularly rotated, and access-controlled
     - **No Raw Secret Storage**: Plain text secret values never persisted in any form
   - **Redaction-by-Key**: Specific field names automatically masked (`password`, `token`, `secret`, `key`)
-  
+
 - **Payload Size Limits & Truncation**:
   - Maximum 10KB stored per test result in database
-  - Maximum 1KB returned in API responses  
+  - Maximum 1KB returned in API responses
   - Truncation strategy: preserve first 512B + last 512B with "...[TRUNCATED Nkb]..." indicator
   - Content-aware truncation: preserve JSON structure in truncated payloads
-  
+
 - **Data Retention & Lifecycle**:
   - Default retention period: 90 days (configurable via environment variable)
   - Automatic purging of test data beyond retention period
   - Metadata-only logging: toolName, success status, timestamp, executionTime, result size
   - Audit trail maintained for all data access and deletion operations
-  
+
 - **API Response Security**:
   - Sensitive fields replaced with structured masks: `"[REDACTED]"`, `"[MASKED-XXX]"`, `"[HMAC-sha256:8chars]"`
   - HMAC-based verification available for debugging without exposing original data (using server-side secret key)
@@ -732,7 +735,7 @@ This must be executed at the beginning of every database connection and migratio
 
 ### Drizzle Configuration
 
-The following `drizzle.config.ts` configuration ensures consistent paths for migrations and database:
+The following `drizzle.config.ts` configuration ensures consistent paths for migrations and database using Drizzle ORM 0.44.5:
 
 ```typescript
 import { defineConfig } from "drizzle-kit";
@@ -750,12 +753,14 @@ export default defineConfig({
 ```
 
 **Key Configuration Points:**
+- **Drizzle Version**: 0.44.5 with enhanced SQLite support and migration capabilities
 - **Migrations Output**: `/app/data/out/migrations` (consistent with Docker volume mount)
 - **Database URL**: Uses `DATABASE_URL` environment variable if set, falls back to `file:/app/data/app.db`
 - **Schema Location**: `./src/db/schema.ts` (project schema definitions)
-- **Driver**: `better-sqlite3` (SQLite with enhanced performance)
+- **Driver**: `better-sqlite3` (SQLite 3.50.4 with enhanced performance)
+- **Docker Integration**: All database operations performed within Docker containers
 
-This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount. Docker Compose should set `DATABASE_URL` environment variable to ensure consistency between runtime and migration paths.
+This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount. Docker Compose should set `DATABASE_URL` environment variable to ensure consistency between runtime and migration paths. All Drizzle commands are executed within Docker containers, not locally.
 
 ### New Tables to Create
 
@@ -1014,7 +1019,7 @@ interface ErrorResponse {
 - **Cookie-based Sessions**: NextAuth sessions require CSRF validation for POST/PUT/DELETE endpoints
 - **Origin/Referer Validation**: Strict validation of Origin and Referer headers for sensitive operations
 - **HTTP Method Restrictions**: State-changing APIs restricted to POST/PUT/DELETE methods only
-- **Session Cookie Security**: 
+- **Session Cookie Security**:
   - `Secure` flag enforced (HTTPS only)
   - `HttpOnly` flag set (prevent XSS access)
   - `SameSite=Strict` for maximum CSRF protection (with CSRF tokens as fallback for SameSite=Lax)
@@ -1036,7 +1041,7 @@ interface ErrorResponse {
 - **Monitoring**: Real-time monitoring for unusual token usage patterns
 
 #### CORS & CSP (Cross-Origin Security)
-- **CORS Policy**: 
+- **CORS Policy**:
   - Strict origin allowlist for production (only authenticated domains)
   - Development: configurable `CORS_ORIGIN` environment variable
   - Pre-flight request caching (24 hours max-age)
@@ -1056,7 +1061,7 @@ interface ErrorResponse {
   - `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer information
   - `Reporting-Endpoints: csp-reports="/api/csp-report"`: Modern Reporting API endpoint definition
   - Note: `X-XSS-Protection` header is deprecated as modern browsers ignore it; CSP provides stronger XSS protection
-- **HTTPS Enforcement**: 
+- **HTTPS Enforcement**:
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`: Force HTTPS for 1 year
   - Automatic HTTP to HTTPS redirects in production
 
@@ -1065,20 +1070,20 @@ interface ErrorResponse {
 #### Key Management (KMS & Rotation)
 - **Master Key Storage**: OS keyring / external KMS（Vault/Cloud KMS）。アプリ内保管は禁止。
 - **Key Identifiers**: Each secret row carries `key_id`; decrypt via KMS-resolved DEK (Data Encryption Key).
-- **Key Rotation**: 
+- **Key Rotation**:
   - Generate new DEK automatically on schedule or manual trigger
   - Re-encrypt ciphertext/tag with new `key_id`
   - Keep N-1 previous keys until migration completes
   - Zero-downtime rotation with backward compatibility
-- **Access Control**: 
+- **Access Control**:
   - Least privilege for KMS operations (encrypt/decrypt only)
   - Service account authentication with KMS
   - Comprehensive audit logging enabled for all key operations
-- **Backup & Disaster Recovery**: 
+- **Backup & Disaster Recovery**:
   - Export wrapped keys（KEK でラップ）separate from database backups
   - Multiple backup locations with different access credentials
   - Recovery procedures documented and tested regularly
-- **Key Lifecycle**: 
+- **Key Lifecycle**:
   - Automated key generation with secure entropy sources
   - Key retirement and secure deletion after retention period
   - Compliance with cryptographic best practices (NIST, FIPS)
@@ -1086,7 +1091,7 @@ interface ErrorResponse {
 #### AEAD Cryptographic Safety
 - **IV Uniqueness**: Database-level UNIQUE constraint on (key_id, iv, alg) prevents IV reuse attacks
 - **Nonce Management**: Each encryption operation generates cryptographically secure random IV/nonce
-- **Algorithm Support**: AES-256-GCM and ChaCha20-Poly1305 with proper authentication tag validation  
+- **Algorithm Support**: AES-256-GCM and ChaCha20-Poly1305 with proper authentication tag validation
 - **Component Separation**: Ciphertext, IV, and authentication tag stored separately for security analysis
 - **Reuse Prevention**: Database enforces that no key_id+IV combination can be used twice
 
@@ -1206,6 +1211,14 @@ volumes:
   app-data:
     driver: local
 ```
+
+**Technology Stack Integration:**
+- **Base Image**: Node.js 24.7.0 Alpine for minimal footprint
+- **Next.js**: 15.5.2 with production optimizations
+- **TypeScript**: 5.9 compilation in Docker build stage
+- **Drizzle**: 0.44.5 for database migrations within containers
+- **SQLite**: 3.50.4 with WAL mode for concurrent access
+- **Tailwind CSS**: 4.1.13 with build-time purging
 ### Security Improvements
 - **Non-root execution**: All services run as user 1000:1000 instead of root
 - **Capability restrictions**: Dropped ALL capabilities and only added NET_BIND_SERVICE for web service
@@ -1254,7 +1267,7 @@ All list endpoints support the following query parameters:
   - **Multi-field filters**: `filter[status]=running&filter[version]=1.0`
   - **Array values**: `filter[status][]=running&filter[status][]=stopped`
   - **Operators**: `filter[created_at][gte]=2024-01-01&filter[created_at][lte]=2024-12-31`
-  - **Supported alternatives**: 
+  - **Supported alternatives**:
     - Rison-encoded filters: `filter=(status:running,version:1.0)`
     - URL-safe key-value pairs: `status=running&version=1.0`
 - `search` (string) - Search term for text fields

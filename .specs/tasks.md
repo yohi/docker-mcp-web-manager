@@ -1,20 +1,53 @@
 # Implementation Plan
 
+## Technology Stack Requirements
+
+### Framework and Library Versions
+- **Next.js**: 15.5.2
+- **Node.js**: 24.7.0
+- **Drizzle ORM**: 0.44.5
+- **NextAuth.js**: 4.24.11
+- **SQLite**: 3.50.4
+- **Tailwind CSS**: 4.1.13
+- **TypeScript**: 5.9
+
+### Development Environment
+- **Container Platform**: Docker with Docker Compose V2
+- **Development Workflow**: All operations performed within Docker containers
+- **Local npm**: Not used - all package management within containers
+- **Database Operations**: Drizzle migrations executed in Docker environment
+
+## Implementation Tasks
+
 - [ ] 1. Set up project structure and core configuration
-  - Create Next.js project with TypeScript and required dependencies
-  - Configure Tailwind CSS, ESLint, and Prettier
-  - Set up Docker multi-stage build configuration
-  - Create Docker Compose configuration with proper volumes and networking
+  - Create Next.js 15.5.2 project with TypeScript 5.9 and required dependencies
+  - Configure Tailwind CSS 4.1.13, ESLint, and Prettier
+  - Set up Docker multi-stage build configuration with Node.js 24.7.0
+  - Create Docker Compose V2 configuration with proper volumes and networking
+  - Configure Drizzle ORM 0.44.5 for Docker-based database operations
+  - **Docker Environment Setup Requirements:**
+    - [ ] **Dockerfile Configuration**: Multi-stage build with Node.js 24.7.0 Alpine base image
+    - [ ] **Development Stage**: Include all dev dependencies and hot reload capabilities
+    - [ ] **Production Stage**: Optimized build with minimal runtime dependencies
+    - [ ] **Package Management**: All npm/yarn operations within Docker containers only
+    - [ ] **Volume Mounting**: Proper source code and data volume configuration
+    - [ ] **Environment Variables**: Comprehensive environment configuration for all stages
   - _Requirements: 10.1, 10.2_
 
 - [ ] 2. Implement database layer and core models
-  - [ ] 2.1 Set up SQLite database with schema
-    - Create database initialization scripts
-    - Implement database connection utilities
+  - [ ] 2.1 Set up SQLite 3.50.4 database with schema using Drizzle ORM 0.44.5
+    - Create database initialization scripts for Docker environment
+    - Implement database connection utilities with Docker volume persistence
     - Define SQL schema for servers, configurations, secrets, test_results tables
     - Add secret_references table for many-to-many relationship (id TEXT PRIMARY KEY, configuration_id TEXT, secret_id TEXT, environment_variable TEXT, required BOOLEAN, UNIQUE(configuration_id, environment_variable), FOREIGN KEY (configuration_id) REFERENCES configurations(id) ON DELETE CASCADE, FOREIGN KEY (secret_id) REFERENCES secrets(id) ON DELETE CASCADE)
     - Enable PRAGMA foreign_keys=ON and PRAGMA journal_mode=WAL for security and performance
-    - Provide migration strategy (e.g., Drizzle/Prisma) and seed/init scripts
+    - Configure Drizzle ORM 0.44.5 migration strategy for Docker Compose environment
+    - **Docker Database Requirements:**
+      - [ ] **Volume Persistence**: Configure `/app/data` volume for SQLite database persistence
+      - [ ] **Migration Container**: Separate db-migrate service for schema initialization
+      - [ ] **Database URL**: Environment variable configuration for container paths
+      - [ ] **Drizzle Kit**: Configure drizzle-kit commands for Docker execution
+      - [ ] **Connection Pooling**: Optimize SQLite connections for containerized environment
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
   - [ ] 2.2 Create TypeScript interfaces and data models
@@ -29,22 +62,22 @@
     - Add server listing, details retrieval, and status management
     - Implement server enable/disable and gateway control functions
     - **Security & Robustness Requirements (MANDATORY for acceptance):**
-      - [ ] **Shell Injection Prevention**: 
+      - [ ] **Shell Injection Prevention**:
         - Use `spawn`/`execFile` with argument arrays and shell disabled to prevent command injection attacks
         - Validate and sanitize all command arguments before execution
         - Implement allowlist-based command validation for docker mcp subcommands
         - **Acceptance Criteria**: All CLI commands must use argument arrays, shell must be explicitly disabled, no string concatenation for command building
-      - [ ] **Timeout & Cancellation**: 
+      - [ ] **Timeout & Cancellation**:
         - Implement AbortController for timeouts, retries, and cancellation of long-running operations
         - Set configurable timeout limits (default: 30s for quick operations, 300s for long-running operations)
         - Implement exponential backoff retry strategy with maximum retry limits
         - **Acceptance Criteria**: All operations must have timeout controls, cancellation must be properly handled, retry logic must prevent infinite loops
-      - [ ] **Structured Error Handling**: 
+      - [ ] **Structured Error Handling**:
         - Surface structured errors containing exit code and stderr for proper error diagnosis
         - Implement error classification (network errors, permission errors, validation errors, etc.)
         - Add error context preservation for debugging and logging
         - **Acceptance Criteria**: All errors must include exit code, stderr content, operation context, and timestamp
-      - [ ] **JSON Validation**: 
+      - [ ] **JSON Validation**:
         - Implement strict JSON parsing with Zod schema validation for all CLI outputs to prevent parsing vulnerabilities
         - Define comprehensive schemas for all expected CLI response formats
         - Handle malformed JSON gracefully with detailed error reporting
@@ -362,13 +395,85 @@
 
 - [ ] 11. Create documentation and deployment setup
   - [ ] 11.1 Write comprehensive documentation
-    - Create README with setup and usage instructions
-    - Document API endpoints and data models
-    - Add troubleshooting guide and FAQ
+    - Create README with Docker-based setup and usage instructions
+    - Document API endpoints and data models with version specifications
+    - Add troubleshooting guide and FAQ for Docker environment
+    - Document technology stack versions and compatibility requirements
+    - **Docker Documentation Requirements:**
+      - [ ] **Setup Instructions**: Complete Docker Compose V2 setup guide
+      - [ ] **Development Workflow**: Container-based development procedures
+      - [ ] **Environment Configuration**: Environment variable documentation
+      - [ ] **Troubleshooting**: Docker-specific issue resolution guide
+      - [ ] **Version Compatibility**: Framework version compatibility matrix
     - _Requirements: 10.1, 10.2, 10.3, 10.4_
 
   - [ ] 11.2 Finalize Docker deployment configuration
-    - Optimize Dockerfile for production builds
-    - Ensure proper volume mounting and data persistence
-    - Test complete Docker Compose deployment workflow
+    - Optimize Dockerfile for production builds with Node.js 24.7.0
+    - Ensure proper volume mounting and data persistence for SQLite 3.50.4
+    - Test complete Docker Compose V2 deployment workflow
+    - Validate all technology stack versions in containerized environment
+    - **Docker Deployment Requirements:**
+      - [ ] **Multi-stage Dockerfile**: Optimized build stages for development and production
+      - [ ] **Health Checks**: Container health monitoring and readiness probes
+      - [ ] **Security Configuration**: Non-root user execution and capability restrictions
+      - [ ] **Volume Management**: Persistent data storage and backup strategies
+      - [ ] **Environment Validation**: Verify all framework versions in containers
+      - [ ] **Performance Optimization**: Container resource limits and optimization
     - _Requirements: 10.1, 10.2, 10.3, 10.4_
+
+## Docker Development Commands
+
+### Initial Setup
+```bash
+# Clone repository and setup
+git clone <repository-url>
+cd docker-mcp-web-manager-v2
+
+# Build and start services
+docker compose up --build -d
+
+# View logs
+docker compose logs -f web
+```
+
+### Development Workflow
+```bash
+# Start development environment
+docker compose -f docker-compose.dev.yml up --build
+
+# Run database migrations
+docker compose exec web npx drizzle-kit push
+
+# Install new dependencies (within container)
+docker compose exec web npm install <package-name>
+
+# Run tests
+docker compose exec web npm test
+
+# TypeScript compilation check
+docker compose exec web npx tsc --noEmit
+```
+
+### Production Deployment
+```bash
+# Production build and deployment
+docker compose -f docker-compose.prod.yml up --build -d
+
+# Health check
+curl http://localhost:3000/api/health
+
+# View production logs
+docker compose -f docker-compose.prod.yml logs -f web
+```
+
+### Database Operations
+```bash
+# Run Drizzle migrations
+docker compose exec db-migrate npx drizzle-kit push
+
+# Database backup
+docker compose exec web sqlite3 /app/data/app.db ".backup /app/data/backup.db"
+
+# Database restore
+docker compose exec web sqlite3 /app/data/app.db ".restore /app/data/backup.db"
+```
