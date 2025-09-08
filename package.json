@@ -18,6 +18,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "build:analyze": "ANALYZE=true npm run build",
     "docker:build": "docker build -t docker-mcp-web-manager .",
     "docker:run": "docker-compose up -d",
     "docker:stop": "docker-compose down",
@@ -93,7 +94,8 @@
     "jest-environment-jsdom": "^29.7.0",
     "@playwright/test": "^1.40.0",
     "@types/jest": "^29.5.8",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "webpack-bundle-analyzer": "^4.10.1"
   },
   "engines": {
     "node": ">=24.7.0",
