@@ -13,14 +13,14 @@ graph TB
     subgraph "Web Browser"
         UI[Web UI]
     end
-    
+
     subgraph "Docker MCP Web Manager"
         subgraph "Frontend (Next.js)"
             Pages[Pages/Components]
             Auth[Authentication]
             State[State Management]
         end
-        
+
         subgraph "Backend (Next.js API)"
             API[API Routes]
             Docker[Docker Integration]
@@ -28,19 +28,19 @@ graph TB
             Secrets[Secrets Manager]
             Logs[Log Manager]
         end
-        
+
         subgraph "Database"
             SQLite[(SQLite DB)]
         end
     end
-    
+
     subgraph "External Systems"
         DockerEngine[Docker Engine]
         MCPGateway[MCP Gateway]
         BitwardenCLI[Bitwarden CLI]
         MCPCatalog[MCP Catalog]
     end
-    
+
     UI --> Pages
     Pages --> API
     API --> Docker
@@ -53,19 +53,96 @@ graph TB
     Docker --> MCPGateway
     MCPGateway --> DockerEngine
     API --> MCPCatalog
-    
+
     %% Note: Docker operations via MCP Gateway only
     %% Web service does not access Docker Engine directly
 ```
 
 ### Technology Stack
 
-- **Frontend**: Next.js 14 with TypeScript, Tailwind CSS, React Query
-- **Backend**: Next.js API Routes with TypeScript
-- **Database**: SQLite for configuration and metadata storage
-- **Authentication**: NextAuth.js with custom providers
+- **Frontend**: Next.js 15.5.2 with TypeScript 5.9, Tailwind CSS 4.1.13, React Query
+- **Backend**: Next.js 15.5.2 API Routes with TypeScript 5.9
+- **Database**: SQLite 3.50.4 for configuration and metadata storage
+- **ORM**: Drizzle ORM 0.44.5 for database operations and migrations
+- **Authentication**: NextAuth.js 4.24.11 with custom providers
+- **Runtime**: Node.js 24.7.0
 - **Container**: Docker with multi-stage builds
 - **Orchestration**: Docker Compose V2
+- **Development Environment**: Docker-based development (no local npm execution)
+
+### Compatibility Requirements & Constraints
+
+#### package.json Engine Requirements
+```json
+{
+  "engines": {
+    "node": ">=18.18.0",
+    "npm": ">=9.0.0"
+  }
+}
+```
+
+#### NextAuth.js v4.24.11 Constraints & Migration Plan
+**Current Limitations:**
+- Legacy session management with JWT tokens only
+- Limited Edge Runtime compatibility
+- Manual CSRF protection implementation required
+- Provider configuration complexity for custom authentication flows
+
+**⚠️ Known Issues:**
+- NextAuth.js v4 has limited support for Next.js 15.x App Router features
+- Session callbacks may experience compatibility issues with newer React Server Components
+- Provider configuration requires manual OAuth state management
+
+**🚀 Recommended Migration Path to Auth.js v5:**
+```typescript
+// Phase 1: Current Implementation (v4.24.11)
+// - Maintain current NextAuth.js setup for stability
+// - Implement comprehensive session validation
+
+// Phase 2: Migration Preparation (Sprint N+2)
+// - Audit current provider configurations
+// - Test session state management with Auth.js v5 beta
+// - Prepare authentication flow migration scripts
+
+// Phase 3: Auth.js v5 Migration (Sprint N+4)
+// - Migrate to @auth/nextjs package
+// - Update provider configurations to new format
+// - Implement new session management APIs
+// - Test Edge Runtime compatibility
+```
+
+#### Tailwind CSS ^4 Pinning & PostCSS Setup
+**Version Constraint:** Tailwind CSS must be pinned to `^4.1.13` to avoid create-next-app v3 compatibility issues.
+
+**Required PostCSS Configuration:**
+```javascript
+// postcss.config.mjs
+export default {
+  plugins: {
+    '@tailwindcss/postcss': {},
+    autoprefixer: {},
+  },
+}
+```
+
+**⚠️ Critical Setup Notes:**
+- Avoid default create-next-app v3 Tailwind setup which uses deprecated plugins
+- Ensure `@tailwindcss/postcss` is included in dependencies
+- PostCSS configuration must use `.mjs` extension for ES modules compatibility
+
+#### Edge Runtime & Platform Limitations
+**Current Restrictions:**
+- **SQLite**: Not compatible with Edge Runtime (requires Node.js runtime)
+- **File System**: Database operations require full Node.js environment
+- **Drizzle ORM**: Limited Edge Runtime support for SQLite operations
+- **NextAuth.js v4**: Partial Edge Runtime compatibility only
+
+**Platform-Specific Constraints:**
+- **Vercel Edge**: Cannot use SQLite or file system operations
+- **Netlify Edge**: Limited to serverless functions for database operations
+- **Docker Alpine**: Requires build-base for better-sqlite3 compilation
+- **ARM64**: May need additional configuration for better-sqlite3 binaries
 
 ## Components and Interfaces
 
@@ -177,7 +254,7 @@ graph TB
 
 **Security Requirements for Testing API:**
 
-- **Data Masking & Filtering Policy**: 
+- **Data Masking & Filtering Policy**:
   - **Sensitive Data Redaction**: PII, credentials, tokens, API keys automatically redacted from stored/returned data
   - **Allowlist Approach**: Only safe keys preserved (toolName, success, timestamp, executionTime, error)
   - **Pattern-based Redaction**: Automated detection and masking of:
@@ -188,19 +265,19 @@ graph TB
     - **HMAC Key Management**: Server-side HMAC key never stored alongside data, regularly rotated, and access-controlled
     - **No Raw Secret Storage**: Plain text secret values never persisted in any form
   - **Redaction-by-Key**: Specific field names automatically masked (`password`, `token`, `secret`, `key`)
-  
+
 - **Payload Size Limits & Truncation**:
   - Maximum 10KB stored per test result in database
-  - Maximum 1KB returned in API responses  
+  - Maximum 4KB returned in API responses (UX improvement for detailed information display)
   - Truncation strategy: preserve first 512B + last 512B with "...[TRUNCATED Nkb]..." indicator
   - Content-aware truncation: preserve JSON structure in truncated payloads
-  
+
 - **Data Retention & Lifecycle**:
   - Default retention period: 90 days (configurable via environment variable)
   - Automatic purging of test data beyond retention period
   - Metadata-only logging: toolName, success status, timestamp, executionTime, result size
   - Audit trail maintained for all data access and deletion operations
-  
+
 - **API Response Security**:
   - Sensitive fields replaced with structured masks: `"[REDACTED]"`, `"[MASKED-XXX]"`, `"[HMAC-sha256:8chars]"`
   - HMAC-based verification available for debugging without exposing original data (using server-side secret key)
@@ -652,20 +729,20 @@ END;
 
 #### bitwarden_items table
 ```sql
--- Bitwarden統合テーブル（外部キー参照の整合性確保）
+-- Bitwarden integration table (ensures foreign key reference integrity)
 CREATE TABLE bitwarden_items (
   id TEXT PRIMARY KEY,
-  item_id TEXT NOT NULL UNIQUE, -- BitwardenのアイテムID
+  item_id TEXT NOT NULL UNIQUE, -- Bitwarden item ID
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('login', 'secure_note', 'card', 'identity')), -- Bitwardenアイテムタイプ制限
+  type TEXT NOT NULL CHECK (type IN ('login', 'secure_note', 'card', 'identity')), -- Bitwarden item type constraint
   folder_id TEXT,
   organization_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- パフォーマンス向上のためのインデックス
--- item_id: UNIQUE制約により自動的にインデックスが作成されるため、明示的なインデックスは不要
+-- Performance improvement indexes
+-- item_id: Automatic index created by UNIQUE constraint, explicit index unnecessary
 CREATE INDEX idx_bitwarden_items_name ON bitwarden_items(name);
 CREATE INDEX idx_bitwarden_items_type ON bitwarden_items(type);
 CREATE INDEX idx_bitwarden_items_folder_id ON bitwarden_items(folder_id);
@@ -681,30 +758,30 @@ END;
 
 #### secrets table
 ```sql
--- セキュリティ強化されたsecretsテーブル
+-- Security-enhanced secrets table
 CREATE TABLE secrets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   type TEXT NOT NULL CHECK (type IN ('api_key', 'token', 'password', 'certificate')),
-  -- AEAD暗号化コンポーネントを分離して格納（セキュリティファースト設計）
-  ciphertext BLOB NOT NULL, -- 暗号化されたデータ
+  -- AEAD encryption components stored separately (security-first design)
+  ciphertext BLOB NOT NULL, -- Encrypted data
   iv BLOB NOT NULL CHECK (
     (alg = 'ChaCha20-Poly1305' AND LENGTH(iv) = 12) OR
     (alg = 'AES-256-GCM' AND LENGTH(iv) = 12)
-  ), -- 初期化ベクトル（アルゴリズム固有: 12バイト固定）
-  tag BLOB NOT NULL CHECK (LENGTH(tag) = 16), -- 認証タグ（16バイト）
-  alg TEXT NOT NULL DEFAULT 'AES-256-GCM' CHECK (alg IN ('AES-256-GCM', 'ChaCha20-Poly1305')), -- 使用した暗号化アルゴリズム
+  ), -- Initialization vector (algorithm-specific: 12 bytes fixed)
+  tag BLOB NOT NULL CHECK (LENGTH(tag) = 16), -- Authentication tag (16 bytes)
+  alg TEXT NOT NULL DEFAULT 'AES-256-GCM' CHECK (alg IN ('AES-256-GCM', 'ChaCha20-Poly1305')), -- Encryption algorithm used
   key_id TEXT NOT NULL, -- KMS key identifier for decryption (UUID format)
-  bitwarden_item_id TEXT,   -- 外部キー参照（Bitwardenテーブルへの適切な参照）
+  bitwarden_item_id TEXT,   -- Foreign key reference (proper reference to Bitwarden table)
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (bitwarden_item_id) REFERENCES bitwarden_items(id) ON DELETE SET NULL,
-  -- AEAD安全性: 同一key_id+IV+algの組み合わせを禁止（IV再利用攻撃防止）
+  -- AEAD security: Prevent same key_id+IV+alg combination (IV reuse attack prevention)
   UNIQUE(key_id, iv, alg)
 );
 
--- 運用クエリ最適化のためのインデックス
--- name列はUNIQUE制約により自動的にインデックスが作成されるため、明示的なインデックスは不要
+-- Operational query optimization indexes
+-- name column: Automatic index created by UNIQUE constraint, explicit index unnecessary
 CREATE INDEX idx_secrets_type ON secrets(type);
 CREATE INDEX idx_secrets_bitwarden_item_id ON secrets(bitwarden_item_id);
 CREATE INDEX idx_secrets_alg ON secrets(alg);
@@ -732,7 +809,7 @@ This must be executed at the beginning of every database connection and migratio
 
 ### Drizzle Configuration
 
-The following `drizzle.config.ts` configuration ensures consistent paths for migrations and database:
+The following `drizzle.config.ts` configuration ensures consistent paths for migrations and database using Drizzle ORM 0.44.5:
 
 ```typescript
 import { defineConfig } from "drizzle-kit";
@@ -740,7 +817,7 @@ import { defineConfig } from "drizzle-kit";
 export default defineConfig({
   schema: "./src/db/schema.ts",
   out: "/app/data/out/migrations",
-  driver: "better-sqlite3",
+  dialect: "sqlite",
   dbCredentials: {
     url: process.env.DATABASE_URL || "file:/app/data/app.db"
   },
@@ -750,12 +827,14 @@ export default defineConfig({
 ```
 
 **Key Configuration Points:**
+- **Drizzle Version**: 0.44.5 with enhanced SQLite support and migration capabilities
 - **Migrations Output**: `/app/data/out/migrations` (consistent with Docker volume mount)
 - **Database URL**: Uses `DATABASE_URL` environment variable if set, falls back to `file:/app/data/app.db`
 - **Schema Location**: `./src/db/schema.ts` (project schema definitions)
-- **Driver**: `better-sqlite3` (SQLite with enhanced performance)
+- **Driver**: `better-sqlite3` (SQLite 3.50.4 with enhanced performance)
+- **Docker Integration**: All database operations performed within Docker containers
 
-This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount. Docker Compose should set `DATABASE_URL` environment variable to ensure consistency between runtime and migration paths.
+This configuration ensures all database operations use the same `/app/data` path as the Docker volume mount. Docker Compose should set `DATABASE_URL` environment variable to ensure consistency between runtime and migration paths. All Drizzle commands are executed within Docker containers, not locally.
 
 ### New Tables to Create
 
@@ -1014,14 +1093,15 @@ interface ErrorResponse {
 - **Cookie-based Sessions**: NextAuth sessions require CSRF validation for POST/PUT/DELETE endpoints
 - **Origin/Referer Validation**: Strict validation of Origin and Referer headers for sensitive operations
 - **HTTP Method Restrictions**: State-changing APIs restricted to POST/PUT/DELETE methods only
-- **Session Cookie Security**: 
+- **Session Cookie Security**:
   - `Secure` flag enforced (HTTPS only)
   - `HttpOnly` flag set (prevent XSS access)
-  - `SameSite=Strict` for maximum CSRF protection (with CSRF tokens as fallback for SameSite=Lax)
+  - `SameSite=Lax` as default, `SameSite=None; Secure` for cross-site requirements
+  - CSRF tokens used in conjunction (mandatory for POST/PUT/DELETE)
 
 #### Rate Limiting
 - **Per-IP Limits**: 100 requests per minute per IP address (general endpoints)
-- **Per-User Limits**: 200 requests per minute per authenticated user
+- **Per-User Limits**: ${SERVER_RATE_USER_RPM:-1000} requests per minute per authenticated user
 - **Login Endpoint**: 5 attempts per 15 minutes per IP (prevents brute force)
 - **Sensitive Operations**: 20 operations per hour per user (server management, installations)
 - **Burst Policy**: Allow 5 additional requests in 1-minute penalty window
@@ -1036,15 +1116,16 @@ interface ErrorResponse {
 - **Monitoring**: Real-time monitoring for unusual token usage patterns
 
 #### CORS & CSP (Cross-Origin Security)
-- **CORS Policy**: 
+- **CORS Policy**:
   - Strict origin allowlist for production (only authenticated domains)
   - Development: configurable `CORS_ORIGIN` environment variable
   - Pre-flight request caching (24 hours max-age)
   - Credentials support enabled with explicit origin matching
-- **Content Security Policy (CSP)** - セキュリティファースト設計:
+- **Content Security Policy (CSP)** - Security-first design:
   - `default-src 'self'`: All resources from same origin by default
-  - `script-src 'nonce-<nonce>' 'self' 'strict-dynamic'`: Nonce-based script execution with strict-dynamic fallback (unsafe-inlineを排除)
-  - `style-src 'nonce-<nonce>' 'self'`: Nonce-based inline styles for CSS-in-JS (unsafe-inlineを排除)
+  - `script-src 'nonce-<nonce>' 'self' 'strict-dynamic'`: Nonce-based script execution with strict-dynamic fallback (eliminating unsafe-inline)
+  - Production: `style-src 'nonce-<nonce>' 'self'`
+  - Development: `style-src 'self' 'unsafe-inline'` (audit logging prerequisite, disabled in builds)
   - `connect-src 'self' https://api.bitwarden.com`: API calls to self and Bitwarden
   - `frame-ancestors 'none'`: Prevent embedding in iframes (clickjacking protection)
   - `upgrade-insecure-requests`: Force HTTPS in production
@@ -1056,29 +1137,29 @@ interface ErrorResponse {
   - `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer information
   - `Reporting-Endpoints: csp-reports="/api/csp-report"`: Modern Reporting API endpoint definition
   - Note: `X-XSS-Protection` header is deprecated as modern browsers ignore it; CSP provides stronger XSS protection
-- **HTTPS Enforcement**: 
+- **HTTPS Enforcement**:
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`: Force HTTPS for 1 year
   - Automatic HTTP to HTTPS redirects in production
 
 ### Data Protection
 
 #### Key Management (KMS & Rotation)
-- **Master Key Storage**: OS keyring / external KMS（Vault/Cloud KMS）。アプリ内保管は禁止。
+- **Master Key Storage**: OS keyring / external KMS (Vault/Cloud KMS). In-app storage prohibited.
 - **Key Identifiers**: Each secret row carries `key_id`; decrypt via KMS-resolved DEK (Data Encryption Key).
-- **Key Rotation**: 
+- **Key Rotation**:
   - Generate new DEK automatically on schedule or manual trigger
   - Re-encrypt ciphertext/tag with new `key_id`
   - Keep N-1 previous keys until migration completes
   - Zero-downtime rotation with backward compatibility
-- **Access Control**: 
+- **Access Control**:
   - Least privilege for KMS operations (encrypt/decrypt only)
   - Service account authentication with KMS
   - Comprehensive audit logging enabled for all key operations
-- **Backup & Disaster Recovery**: 
-  - Export wrapped keys（KEK でラップ）separate from database backups
+- **Backup & Disaster Recovery**:
+  - Export wrapped keys (KEK wrapped) separate from database backups
   - Multiple backup locations with different access credentials
   - Recovery procedures documented and tested regularly
-- **Key Lifecycle**: 
+- **Key Lifecycle**:
   - Automated key generation with secure entropy sources
   - Key retirement and secure deletion after retention period
   - Compliance with cryptographic best practices (NIST, FIPS)
@@ -1086,7 +1167,7 @@ interface ErrorResponse {
 #### AEAD Cryptographic Safety
 - **IV Uniqueness**: Database-level UNIQUE constraint on (key_id, iv, alg) prevents IV reuse attacks
 - **Nonce Management**: Each encryption operation generates cryptographically secure random IV/nonce
-- **Algorithm Support**: AES-256-GCM and ChaCha20-Poly1305 with proper authentication tag validation  
+- **Algorithm Support**: AES-256-GCM and ChaCha20-Poly1305 with proper authentication tag validation
 - **Component Separation**: Ciphertext, IV, and authentication tag stored separately for security analysis
 - **Reuse Prevention**: Database enforces that no key_id+IV combination can be used twice
 
@@ -1114,14 +1195,14 @@ interface ErrorResponse {
 
 #### Performance Optimization
 - **Search Indexes**: Added comprehensive indexes for efficient querying:
-  - name列: UNIQUE制約により自動インデックス作成（明示的なidx_secrets_nameは不要）
-  - `UNIQUE(key_id, iv, alg)`: AEAD安全性のためのIV再利用防止制約（自動インデックス作成）
+  - name column: Automatic index creation by UNIQUE constraint (explicit idx_secrets_name unnecessary)
+  - `UNIQUE(key_id, iv, alg)`: IV reuse prevention constraint for AEAD security (automatic index creation)
   - `idx_secrets_type`: Type-based filtering
   - `idx_secrets_bitwarden_item_id`: Foreign key relationship queries
   - `idx_secrets_alg`: Algorithm-based searches
   - `idx_secrets_key_id`: KMS key identifier lookups for decryption operations
 - **Bitwarden Integration Indexes**:
-  - `item_id`: UNIQUE制約により自動インデックス作成（明示的なidx_bitwarden_items_item_idは不要）
+  - `item_id`: Automatic index creation by UNIQUE constraint (explicit idx_bitwarden_items_item_id unnecessary)
   - `idx_bitwarden_items_name`: Name-based searches
   - `idx_bitwarden_items_type`: Type filtering
   - `idx_bitwarden_items_folder_id`: Folder organization queries
@@ -1194,7 +1275,9 @@ services:
     build: .
     volumes:
       - app-data:/app/data
-    command: sh -c "mkdir -p /app/data && chown -R 1000:1000 /app/data && chmod 750 /app/data && npx drizzle-kit push --dialect=sqlite --schema=./src/db/schema.ts --url=file:/app/data/app.db"
+    command: sh -c "mkdir -p /app/data && chown -R 1000:1000 /app/data && chmod 750 /app/data && \
+      npx drizzle-kit generate --dialect=sqlite --schema=./src/db/schema.ts --out=/app/data/out/migrations && \
+      npx drizzle-kit migrate --dialect=sqlite --url=file:/app/data/app.db --config=./drizzle.config.ts"
     restart: "no"
     user: "1000:1000"
     security_opt:
@@ -1206,6 +1289,16 @@ volumes:
   app-data:
     driver: local
 ```
+
+**Technology Stack Integration:**
+- **Base Image**: Node.js 24.7.0 Alpine for minimal footprint
+- **Next.js**: 15.5.2 with production optimizations
+- **TypeScript**: 5.9 compilation in Docker build stage
+- **Drizzle**: 0.44.5 for database migrations within containers
+- **SQLite**: 3.50.4 with WAL mode for concurrent access
+- **Tailwind CSS**: 4.1.13 with build-time purging
+- **Alpine Environment**: build-base (python3, make, g++) required in Dockerfile for better-sqlite3 build dependencies
+- **NextAuth.js**: Fixed at v4.24.11, consider future migration plan to v5 (Auth.js)
 ### Security Improvements
 - **Non-root execution**: All services run as user 1000:1000 instead of root
 - **Capability restrictions**: Dropped ALL capabilities and only added NET_BIND_SERVICE for web service
@@ -1254,7 +1347,7 @@ All list endpoints support the following query parameters:
   - **Multi-field filters**: `filter[status]=running&filter[version]=1.0`
   - **Array values**: `filter[status][]=running&filter[status][]=stopped`
   - **Operators**: `filter[created_at][gte]=2024-01-01&filter[created_at][lte]=2024-12-31`
-  - **Supported alternatives**: 
+  - **Supported alternatives**:
     - Rison-encoded filters: `filter=(status:running,version:1.0)`
     - URL-safe key-value pairs: `status=running&version=1.0`
 - `search` (string) - Search term for text fields
