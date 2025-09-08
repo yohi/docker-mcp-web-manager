@@ -57,28 +57,28 @@
     - Create repository pattern for data operations
     - _Requirements: 1.1, 2.1, 3.1, 7.1_
 
-- [ ] 3. Implement Docker MCP integration layer
-  - [ ] 3.1 Create DockerMCPClient class
+- [x] 3. Implement Docker MCP integration layer
+  - [x] 3.1 Create DockerMCPClient class
     - Implement methods to execute docker mcp CLI commands
     - Add server listing, details retrieval, and status management
     - Implement server enable/disable and gateway control functions
     - **Security & Robustness Requirements (MANDATORY for acceptance):**
-      - [ ] **Shell Injection Prevention**:
+      - [x] **Shell Injection Prevention**:
         - Use `spawn`/`execFile` with argument arrays and shell disabled to prevent command injection attacks
         - Validate and sanitize all command arguments before execution
         - Implement allowlist-based command validation for docker mcp subcommands
         - **Acceptance Criteria**: All CLI commands must use argument arrays, shell must be explicitly disabled, no string concatenation for command building
-      - [ ] **Timeout & Cancellation**:
+      - [x] **Timeout & Cancellation**:
         - Implement AbortController for timeouts, retries, and cancellation of long-running operations
         - Set configurable timeout limits (default: 30s for quick operations, 300s for long-running operations)
         - Implement exponential backoff retry strategy with maximum retry limits
         - **Acceptance Criteria**: All operations must have timeout controls, cancellation must be properly handled, retry logic must prevent infinite loops
-      - [ ] **Structured Error Handling**:
+      - [x] **Structured Error Handling**:
         - Surface structured errors containing exit code and stderr for proper error diagnosis
         - Implement error classification (network errors, permission errors, validation errors, etc.)
         - Add error context preservation for debugging and logging
         - **Acceptance Criteria**: All errors must include exit code, stderr content, operation context, and timestamp
-      - [ ] **JSON Validation**:
+      - [x] **JSON Validation**:
         - Implement strict JSON parsing with Zod schema validation for all CLI outputs to prevent parsing vulnerabilities
         - Define comprehensive schemas for all expected CLI response formats
         - Handle malformed JSON gracefully with detailed error reporting
@@ -86,95 +86,95 @@
     - _Requirements: 1.1, 1.2, 2.1, 3.4_
     - Add log file download functionality
     - **Log File Download Path Traversal Protection (MANDATORY for acceptance):**
-      - [ ] **Path Normalization & Validation**
-        - [ ] Implement strict path normalization using `path.resolve()` and `path.normalize()`
-          - [ ] **Input validation**: Reject paths containing `../`, `..\\`, or any parent directory references
-          - [ ] **Path resolution**: Always resolve to absolute paths and validate against allowed directories
-          - [ ] **Character filtering**: Block null bytes, control characters, and Unicode normalization attacks
-          - [ ] **Acceptance Criteria**: All file paths must be normalized and validated before any file system access
-      - [ ] **Allowlist-Based File Access Control**
-        - [ ] Implement strict allowlist for downloadable files (log files only)
-          - [ ] **File extension restriction**: Only allow `.log`, `.txt` extensions for log files
-          - [ ] **Directory allowlist**: Restrict access to predefined log directories only (e.g., `/var/log/`, `./logs/`)
-          - [ ] **File naming pattern**: Enforce strict naming conventions (alphanumeric, hyphens, underscores only)
-          - [ ] **Size limits**: Implement maximum file size limits (default: 100MB, configurable)
-          - [ ] **Acceptance Criteria**: Only explicitly allowed files in allowed directories can be downloaded
-      - [ ] **Root Directory Access Prevention**
-        - [ ] Implement absolute path boundary enforcement
-          - [ ] **Base directory validation**: Ensure all file access is within designated log directories
-          - [ ] **Symlink protection**: Block symbolic links and resolve to actual paths before validation
-          - [ ] **Directory traversal blocking**: Explicitly reject any path that escapes the allowed directory tree
-          - [ ] **Real path resolution**: Use `fs.realpathSync()` to resolve actual file paths before validation
-          - [ ] **Acceptance Criteria**: No file access outside designated log directories is possible
-      - [ ] **File Extension & Type Restrictions**
-        - [ ] Implement strict file type validation
-          - [ ] **Extension allowlist**: Only `.log` and `.txt` files are downloadable
-          - [ ] **MIME type validation**: Verify file content matches expected log file format
-          - [ ] **Magic number checking**: Validate file headers to prevent extension spoofing
-          - [ ] **Content scanning**: Basic content validation to ensure file is actually a log file
-          - [ ] **Acceptance Criteria**: Only valid log files with correct extensions and content can be downloaded
-      - [ ] **Secure Response Headers Configuration**
-        - [ ] Implement comprehensive security headers for file downloads
-          - [ ] **Content-Type**: Explicitly set `text/plain` or `application/octet-stream` based on file type
-          - [ ] **Content-Disposition**: Set safe attachment filename with sanitized original name
-          - [ ] **X-Content-Type-Options**: Always set to `nosniff` to prevent MIME type sniffing
-          - [ ] **Cache-Control**: Set appropriate caching headers (`no-cache`, `no-store` for sensitive logs)
-          - [ ] **Content-Security-Policy**: Implement strict CSP for download endpoints
-          - [ ] **X-Frame-Options**: Set to `DENY` to prevent clickjacking
-          - [ ] **Strict-Transport-Security**: Enforce HTTPS for download endpoints
-          - [ ] **Acceptance Criteria**: All download responses must include comprehensive security headers
+      - [x] **Path Normalization & Validation**
+        - [x] Implement strict path normalization using `path.resolve()` and `path.normalize()`
+          - [x] **Input validation**: Reject paths containing `../`, `..\\`, or any parent directory references
+          - [x] **Path resolution**: Always resolve to absolute paths and validate against allowed directories
+          - [x] **Character filtering**: Block null bytes, control characters, and Unicode normalization attacks
+          - [x] **Acceptance Criteria**: All file paths must be normalized and validated before any file system access
+      - [x] **Allowlist-Based File Access Control**
+        - [x] Implement strict allowlist for downloadable files (log files only)
+          - [x] **File extension restriction**: Only allow `.log`, `.txt` extensions for log files
+          - [x] **Directory allowlist**: Restrict access to predefined log directories only (e.g., `/var/log/`, `./logs/`)
+          - [x] **File naming pattern**: Enforce strict naming conventions (alphanumeric, hyphens, underscores only)
+          - [x] **Size limits**: Implement maximum file size limits (default: 100MB, configurable)
+          - [x] **Acceptance Criteria**: Only explicitly allowed files in allowed directories can be downloaded
+      - [x] **Root Directory Access Prevention**
+        - [x] Implement absolute path boundary enforcement
+          - [x] **Base directory validation**: Ensure all file access is within designated log directories
+          - [x] **Symlink protection**: Block symbolic links and resolve to actual paths before validation
+          - [x] **Directory traversal blocking**: Explicitly reject any path that escapes the allowed directory tree
+          - [x] **Real path resolution**: Use `fs.realpathSync()` to resolve actual file paths before validation
+          - [x] **Acceptance Criteria**: No file access outside designated log directories is possible
+      - [x] **File Extension & Type Restrictions**
+        - [x] Implement strict file type validation
+          - [x] **Extension allowlist**: Only `.log` and `.txt` files are downloadable
+          - [x] **MIME type validation**: Verify file content matches expected log file format
+          - [x] **Magic number checking**: Validate file headers to prevent extension spoofing
+          - [x] **Content scanning**: Basic content validation to ensure file is actually a log file
+          - [x] **Acceptance Criteria**: Only valid log files with correct extensions and content can be downloaded
+      - [x] **Secure Response Headers Configuration**
+        - [x] Implement comprehensive security headers for file downloads
+          - [x] **Content-Type**: Explicitly set `text/plain` or `application/octet-stream` based on file type
+          - [x] **Content-Disposition**: Set safe attachment filename with sanitized original name
+          - [x] **X-Content-Type-Options**: Always set to `nosniff` to prevent MIME type sniffing
+          - [x] **Cache-Control**: Set appropriate caching headers (`no-cache`, `no-store` for sensitive logs)
+          - [x] **Content-Security-Policy**: Implement strict CSP for download endpoints
+          - [x] **X-Frame-Options**: Set to `DENY` to prevent clickjacking
+          - [x] **Strict-Transport-Security**: Enforce HTTPS for download endpoints
+          - [x] **Acceptance Criteria**: All download responses must include comprehensive security headers
     - **SSE/Streaming Security & Resource Protection Requirements (MANDATORY for acceptance):**
-      - [ ] **SSE Heartbeat & Client Timeout Management**
-        - [ ] Implement configurable heartbeat interval (default: 30s, configurable via SERVER_SSE_HEARTBEAT_INTERVAL)
-          - [ ] **Server config**: Set heartbeat interval in milliseconds with validation (min: 5s, max: 300s)
-          - [ ] **Application level**: Enforce heartbeat sending and client timeout detection with connection registry
-          - [ ] **Client timeout**: Default 60s (configurable via SERVER_SSE_CLIENT_TIMEOUT, min: 30s, max: 600s)
-          - [ ] **Automatic cleanup**: Connection cleanup on timeout with proper resource release and logging
-      - [ ] **Connection Backpressure & Rate Limiting**
-        - [ ] Implement maximum concurrent SSE connections limit (default: 100, configurable via SERVER_SSE_MAX_CONNECTIONS)
-          - [ ] **Server config**: Set global connection limit with validation (min: 10, max: 1000)
-          - [ ] **Application level**: Track active connections and enforce limits with connection registry
-          - [ ] **Backpressure behavior**: Return HTTP 503 with Retry-After header when limit exceeded
-          - [ ] **Return HTTP 503 + Retry-After for new SSE connections when overloaded**
-      - [ ] **Per-Connection Resource Limits**
-        - [ ] Implement per-connection line length limit (default: 10KB, configurable via SERVER_SSE_MAX_LINE_LENGTH)
-          - [ ] **Application level**: Validate and truncate lines exceeding limit with warning logs
-          - [ ] **Error handling**: Send error event and close connection on repeated violations (max: 3 violations)
-        - [ ] Add events-per-second rate limit per connection (default: 100 events/s, configurable via SERVER_SSE_RATE_LIMIT)
-          - [ ] **Middleware level**: Implement token bucket algorithm for rate limiting (burst: 200 events)
-          - [ ] **Per-connection tracking**: Monitor and enforce individual connection limits with sliding window
-          - [ ] **Throttling**: Queue events when rate limit exceeded, drop oldest events if queue full (max queue: 1000 events)
-      - [ ] **Memory Management & Pagination**
-        - [ ] Implement memory caps for in-memory filtering/search (default: 50MB, configurable via SERVER_SSE_MEMORY_CAP)
-          - [ ] **Application level**: Monitor memory usage per connection with real-time tracking
-          - [ ] **Memory pressure handling**: Apply backpressure strategies when 80% of SERVER_SSE_MEMORY_CAP (default: 50MB) is reached: drop oldest/low-priority in-memory items, close or reject new SSE/stream connections with appropriate error status or retry hints, and clean up resources rather than relying on global GC
-        - [ ] Add mandatory pagination limits for large result sets (default: 1000 lines/page, configurable via SERVER_SSE_PAGE_SIZE)
-          - [ ] **API level**: Enforce pagination for all log retrieval operations with cursor-based pagination
-          - [ ] **Streaming requirement**: Mandatory for results exceeding memory cap with streaming indicators
-          - [ ] **Cursor-based pagination**: Use timestamp/page for consistent pagination across concurrent requests
-      - [ ] **Connection Lifecycle & Cleanup**
-        - [ ] Implement explicit cleanup steps on client disconnect
-          - [ ] **Application level**: Close file handles, clear buffers, release memory with cleanup callbacks
-          - [ ] **Resource tracking**: Maintain connection registry with cleanup callbacks and resource monitoring
-        - [ ] Add connection state tracking and orphaned connection detection
-          - [ ] **Middleware level**: Track connection states (connecting, active, closing, closed) with state machine
-          - [ ] **Health checks**: Periodic cleanup of orphaned connections every 30s with connection health monitoring
-        - [ ] Implement graceful shutdown handling for active SSE connections
-          - [ ] **Signal handling**: Graceful shutdown on SIGTERM/SIGINT with 30s timeout for connection draining
-          - [ ] **Connection draining**: Allow active connections to complete before shutdown with progress tracking
-      - [ ] **Log Retention & Rotation Policy**
-        - [ ] Implement configurable log retention period (default: 30 days, configurable via SERVER_LOG_RETENTION_DAYS)
-          - [ ] **Infrastructure level**: Automated cleanup of expired logs with cron job (daily at 2 AM)
-          - [ ] **Application level**: Log access tracking and retention enforcement with metadata management
-        - [ ] Add log rotation based on size and time interval
-          - [ ] **Size-based rotation**: Default 100MB (configurable via SERVER_LOG_ROTATION_SIZE, min: 10MB, max: 1GB)
-          - [ ] **Time-based rotation**: Default daily (configurable via SERVER_LOG_ROTATION_INTERVAL: hourly/daily/weekly)
-          - [ ] **Application level**: Trigger rotation and handle file switching with atomic operations
-        - [ ] Implement archival and cleanup rules for rotated logs
-          - [ ] **Compression**: Gzip compression for archived logs with configurable compression level (default: 6)
-          - [ ] **Infrastructure level**: Automated deletion after retention period with backup verification
-          - [ ] **Storage optimization**: Move old logs to cold storage if available (S3, etc.) with lifecycle policies
-  - [ ] 3.3 Create catalog integration
+      - [x] **SSE Heartbeat & Client Timeout Management**
+        - [x] Implement configurable heartbeat interval (default: 30s, configurable via SERVER_SSE_HEARTBEAT_INTERVAL)
+          - [x] **Server config**: Set heartbeat interval in milliseconds with validation (min: 5s, max: 300s)
+          - [x] **Application level**: Enforce heartbeat sending and client timeout detection with connection registry
+          - [x] **Client timeout**: Default 60s (configurable via SERVER_SSE_CLIENT_TIMEOUT, min: 30s, max: 600s)
+          - [x] **Automatic cleanup**: Connection cleanup on timeout with proper resource release and logging
+      - [x] **Connection Backpressure & Rate Limiting**
+        - [x] Implement maximum concurrent SSE connections limit (default: 100, configurable via SERVER_SSE_MAX_CONNECTIONS)
+          - [x] **Server config**: Set global connection limit with validation (min: 10, max: 1000)
+          - [x] **Application level**: Track active connections and enforce limits with connection registry
+          - [x] **Backpressure behavior**: Return HTTP 503 with Retry-After header when limit exceeded
+          - [x] **Return HTTP 503 + Retry-After for new SSE connections when overloaded**
+      - [x] **Per-Connection Resource Limits**
+        - [x] Implement per-connection line length limit (default: 10KB, configurable via SERVER_SSE_MAX_LINE_LENGTH)
+          - [x] **Application level**: Validate and truncate lines exceeding limit with warning logs
+          - [x] **Error handling**: Send error event and close connection on repeated violations (max: 3 violations)
+        - [x] Add events-per-second rate limit per connection (default: 100 events/s, configurable via SERVER_SSE_RATE_LIMIT)
+          - [x] **Middleware level**: Implement token bucket algorithm for rate limiting (burst: 200 events)
+          - [x] **Per-connection tracking**: Monitor and enforce individual connection limits with sliding window
+          - [x] **Throttling**: Queue events when rate limit exceeded, drop oldest events if queue full (max queue: 1000 events)
+      - [x] **Memory Management & Pagination**
+        - [x] Implement memory caps for in-memory filtering/search (default: 50MB, configurable via SERVER_SSE_MEMORY_CAP)
+          - [x] **Application level**: Monitor memory usage per connection with real-time tracking
+          - [x] **Memory pressure handling**: Apply backpressure strategies when 80% of SERVER_SSE_MEMORY_CAP (default: 50MB) is reached: drop oldest/low-priority in-memory items, close or reject new SSE/stream connections with appropriate error status or retry hints, and clean up resources rather than relying on global GC
+        - [x] Add mandatory pagination limits for large result sets (default: 1000 lines/page, configurable via SERVER_SSE_PAGE_SIZE)
+          - [x] **API level**: Enforce pagination for all log retrieval operations with cursor-based pagination
+          - [x] **Streaming requirement**: Mandatory for results exceeding memory cap with streaming indicators
+          - [x] **Cursor-based pagination**: Use timestamp/page for consistent pagination across concurrent requests
+      - [x] **Connection Lifecycle & Cleanup**
+        - [x] Implement explicit cleanup steps on client disconnect
+          - [x] **Application level**: Close file handles, clear buffers, release memory with cleanup callbacks
+          - [x] **Resource tracking**: Maintain connection registry with cleanup callbacks and resource monitoring
+        - [x] Add connection state tracking and orphaned connection detection
+          - [x] **Middleware level**: Track connection states (connecting, active, closing, closed) with state machine
+          - [x] **Health checks**: Periodic cleanup of orphaned connections every 30s with connection health monitoring
+        - [x] Implement graceful shutdown handling for active SSE connections
+          - [x] **Signal handling**: Graceful shutdown on SIGTERM/SIGINT with 30s timeout for connection draining
+          - [x] **Connection draining**: Allow active connections to complete before shutdown with progress tracking
+      - [x] **Log Retention & Rotation Policy**
+        - [x] Implement configurable log retention period (default: 30 days, configurable via SERVER_LOG_RETENTION_DAYS)
+          - [x] **Infrastructure level**: Automated cleanup of expired logs with cron job (daily at 2 AM)
+          - [x] **Application level**: Log access tracking and retention enforcement with metadata management
+        - [x] Add log rotation based on size and time interval
+          - [x] **Size-based rotation**: Default 100MB (configurable via SERVER_LOG_ROTATION_SIZE, min: 10MB, max: 1GB)
+          - [x] **Time-based rotation**: Default daily (configurable via SERVER_LOG_ROTATION_INTERVAL: hourly/daily/weekly)
+          - [x] **Application level**: Trigger rotation and handle file switching with atomic operations
+        - [x] Implement archival and cleanup rules for rotated logs
+          - [x] **Compression**: Gzip compression for archived logs with configurable compression level (default: 6)
+          - [x] **Infrastructure level**: Automated deletion after retention period with backup verification
+          - [x] **Storage optimization**: Move old logs to cold storage if available (S3, etc.) with lifecycle policies
+  - [x] 3.3 Create catalog integration
     - Implement CatalogClient for MCP server catalog access
     - Add server installation functionality from catalog
     - Create installation progress tracking
