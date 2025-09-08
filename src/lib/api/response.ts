@@ -67,11 +67,15 @@ export const ERROR_CODES = {
   SERVER_006: 'SERVER_CONFIG_INVALID',
 
   // カタログ
-  CATALOG_001: 'CATALOG_NOT_AVAILABLE',
-  CATALOG_002: 'CATALOG_ENTRY_NOT_FOUND',
-  CATALOG_003: 'INSTALL_FAILED',
-  CATALOG_004: 'INSTALL_IN_PROGRESS',
-  CATALOG_005: 'INSTALL_ALREADY_EXISTS',
+  CATALOG_001: 'CATALOG_SEARCH_FAILED',
+  CATALOG_002: 'CATALOG_OPERATION_FAILED', 
+  CATALOG_003: 'CATALOG_SERVER_NOT_FOUND',
+  CATALOG_004: 'CATALOG_SERVER_DETAILS_FAILED',
+  CATALOG_005: 'CATALOG_INSTALL_FAILED',
+  CATALOG_006: 'CATALOG_INSTALL_ID_MISSING',
+  CATALOG_007: 'CATALOG_INSTALLATION_NOT_FOUND',
+  CATALOG_008: 'CATALOG_INSTALL_PROGRESS_FAILED',
+  CATALOG_009: 'CATALOG_CATEGORIES_FAILED',
 
   // テスト・ツール
   TEST_001: 'TOOL_NOT_FOUND',
@@ -121,10 +125,14 @@ const STATUS_CODE_MAP: Record<string, number> = {
 
   // カタログエラー
   [ERROR_CODES.CATALOG_001]: 503,
-  [ERROR_CODES.CATALOG_002]: 404,
-  [ERROR_CODES.CATALOG_003]: 500,
-  [ERROR_CODES.CATALOG_004]: 409,
-  [ERROR_CODES.CATALOG_005]: 409,
+  [ERROR_CODES.CATALOG_002]: 500,
+  [ERROR_CODES.CATALOG_003]: 404,
+  [ERROR_CODES.CATALOG_004]: 500,
+  [ERROR_CODES.CATALOG_005]: 500,
+  [ERROR_CODES.CATALOG_006]: 500,
+  [ERROR_CODES.CATALOG_007]: 404,
+  [ERROR_CODES.CATALOG_008]: 500,
+  [ERROR_CODES.CATALOG_009]: 500,
 
   // テスト・ツールエラー
   [ERROR_CODES.TEST_001]: 404,
@@ -278,11 +286,15 @@ function getDefaultErrorMessage(errorCode: string): string {
     [ERROR_CODES.SERVER_006]: 'Server configuration is invalid',
 
     // カタログ
-    [ERROR_CODES.CATALOG_001]: 'Catalog service unavailable',
-    [ERROR_CODES.CATALOG_002]: 'Catalog entry not found',
-    [ERROR_CODES.CATALOG_003]: 'Installation failed',
-    [ERROR_CODES.CATALOG_004]: 'Installation already in progress',
-    [ERROR_CODES.CATALOG_005]: 'Server already installed',
+    [ERROR_CODES.CATALOG_001]: 'Catalog search failed',
+    [ERROR_CODES.CATALOG_002]: 'Catalog operation failed',
+    [ERROR_CODES.CATALOG_003]: 'Server not found in catalog',
+    [ERROR_CODES.CATALOG_004]: 'Failed to retrieve server details from catalog',
+    [ERROR_CODES.CATALOG_005]: 'Server installation failed',
+    [ERROR_CODES.CATALOG_006]: 'Installation started but tracking failed',
+    [ERROR_CODES.CATALOG_007]: 'Installation not found',
+    [ERROR_CODES.CATALOG_008]: 'Failed to retrieve installation progress',
+    [ERROR_CODES.CATALOG_009]: 'Failed to retrieve categories',
 
     // テスト・ツール
     [ERROR_CODES.TEST_001]: 'Tool not found',

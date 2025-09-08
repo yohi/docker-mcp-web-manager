@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { 
-  createSuccessResponse, 
   createErrorResponse,
   createValidationErrorResponse,
   ERROR_CODES,
@@ -8,29 +7,39 @@ import {
 } from '@/lib/api/response';
 import {
   validateRequest,
-  CatalogSchemas,
+  CommonSchemas,
 } from '@/lib/api/validation';
 import {
   requirePermissions,
   PERMISSIONS,
 } from '@/lib/auth';
-import { CatalogClient } from '@/lib/docker-mcp';
-import { ServerRepository } from '@/db/repositories/server-repository';
-import { JobRepository } from '@/db/repositories/job-repository';
+import { CatalogClient, CatalogClientError } from '@/lib/catalog/catalog-client';
+import { z } from 'zod';
 
 // =============================================================================
-// /api/v1/catalog/install - カタログからのサーバーインストールAPI
-// カタログエントリからのサーバーインストール機能
+// /api/v1/catalog/install - サーバーインストールAPI
+// MCPサーバーカタログからサーバーをインストールする機能
 // =============================================================================
 
 /**
- * カタログからサーバーインストール
+ * サーバーインストールリクエストのスキーマ
+ */
+const InstallRequestSchema = z.object({
+  serverId: CommonSchemas.id,
+  name: z.string().min(1).max(100).optional(),
+  version: z.string().min(1).max(20).optional(),
+  config: z.record(z.any()).optional(),
+  secrets: z.record(z.string()).optional(),
+});
+
+/**
+ * サーバーインストール
  * POST /api/v1/catalog/install
  */
 export async function POST(request: NextRequest) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const startTime = Date.now();
-  
+
   try {
     // 認証・認可チェック
     const authResult = await requirePermissions([PERMISSIONS.CATALOG_INSTALL], request);
@@ -43,122 +52,23 @@ export async function POST(request: NextRequest) {
     }
 
     // リクエストボディのバリデーション
-    const validation = await validateRequest(request, undefined, { 
-      body: CatalogSchemas.installServer 
+    const validation = await validateRequest(request, {}, {
+      body: InstallRequestSchema,
     });
-    if (!validation.success || !validation.data?.body) {
-      return createValidationErrorResponse(validation.errors!.body!, requestId);
+    if (!validation.success) {
+      const error = validation.errors!.body!;
+      return createValidationErrorResponse(error, requestId);
     }
 
-    const installData = validation.data.body;
+    const { serverId, name, version, config, secrets } = validation.data!.body;
 
-    // サーバー名の重複チェック
-    const serverRepository = new ServerRepository();
-    const existingServer = await serverRepository.findByName(installData.name);
-    if (existingServer) {
-      logAPIRequest('POST', '/api/v1/catalog/install', requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 409,
-        error: 'Server name already exists',
-      });
-      return createErrorResponse(
-        ERROR_CODES.CATALOG_005,
-        `Server with name '${installData.name}' already exists`,
-        { requestId }
-      );
-    }
-
-    // カタログエントリの存在確認
+    // カタログクライアントでサーバーをインストール
     const catalogClient = new CatalogClient();
-    let serverInfo;
-    
-    try {
-      serverInfo = await catalogClient.getServerInfo(installData.entryId);
-    } catch (error) {
-      console.error(`[CATALOG_ERROR] Failed to fetch catalog entry ${installData.entryId}:`, error);
-      
-      logAPIRequest('POST', '/api/v1/catalog/install', requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 404,
-        error: 'Catalog entry not found',
-      });
-      
-      return createErrorResponse(
-        ERROR_CODES.CATALOG_002,
-        `Catalog entry with ID '${installData.entryId}' not found`,
-        { requestId }
-      );
-    }
-
-    // インストールジョブの作成（データベースに記録）
-    const jobRepository = new JobRepository();
-    const installJob = await jobRepository.create({
-      type: 'install',
-      status: 'pending',
-      target: {
-        type: 'catalog',
-        id: installData.entryId,
-      },
-      progress: {
-        current: 0,
-        total: 100,
-        message: 'Installation queued',
-      },
-    });
-
-    // カタログクライアントでインストール開始
-    let installResult;
-    
-    try {
-      installResult = await catalogClient.installServer(installData.entryId, {
-        name: installData.name,
-        environment: installData.environment,
-        resourceLimits: installData.resourceLimits,
-        networkConfig: installData.networkConfig,
-      });
-
-      // ジョブステータスの更新
-      await jobRepository.update(installJob.id, {
-        status: 'running',
-        progress: {
-          current: 10,
-          total: 100,
-          message: 'Installation started',
-        },
-      });
-
-    } catch (error) {
-      console.error(`[INSTALL_ERROR] Failed to start installation for ${installData.entryId}:`, error);
-      
-      // ジョブステータスの更新
-      await jobRepository.update(installJob.id, {
-        status: 'failed',
-        error: {
-          code: ERROR_CODES.CATALOG_003,
-          message: error instanceof Error ? error.message : 'Installation failed',
-          details: error,
-        },
-      });
-      
-      logAPIRequest('POST', '/api/v1/catalog/install', requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 500,
-        error: error instanceof Error ? error.message : 'Installation failed',
-      });
-      
-      return createErrorResponse(
-        ERROR_CODES.CATALOG_003,
-        `Installation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        { requestId }
-      );
-    }
-
-    // データベースにサーバー情報を事前登録
-    const newServer = await serverRepository.create({
-      name: installData.name,
-      image: serverInfo.image,
-      status: 'stopped', // インストール完了まで停止状態
-      description: serverInfo.description,
+    const installationId = await catalogClient.installServer(serverId, {
+      name,
+      version,
+      config,
+      secrets,
     });
 
     const duration = Date.now() - startTime;
@@ -169,27 +79,31 @@ export async function POST(request: NextRequest) {
       userRole: authResult.session.user.role,
       duration,
       statusCode: 202,
-    });
-
-    const responseData = {
-      jobId: installJob.id,
-      serverId: newServer.id,
-      serverName: installData.name,
-      catalogEntryId: installData.entryId,
-      status: 'running',
-      message: 'Installation started successfully',
-      estimatedDuration: serverInfo.installMetadata?.installationTime,
-      progress: {
-        current: 10,
-        total: 100,
-        message: 'Installation in progress',
+      details: {
+        serverId,
+        installationId,
+        customName: name,
+        version,
+        hasConfig: !!config,
+        hasSecrets: !!secrets,
       },
-    };
-
-    return createSuccessResponse(responseData, { 
-      requestId, 
-      duration 
     });
+
+    // 非同期処理のため202 Acceptedを返す
+    return Response.json({
+      success: true,
+      data: {
+        installationId,
+        serverId,
+        status: 'pending',
+        message: 'Server installation started successfully',
+      },
+      metadata: {
+        requestId,
+        timestamp: new Date().toISOString(),
+        duration,
+      },
+    }, { status: 202 });
 
   } catch (error) {
     const duration = Date.now() - startTime;
@@ -203,9 +117,42 @@ export async function POST(request: NextRequest) {
       error: errorMessage,
     });
 
+    // カタログクライアント固有のエラーハンドリング
+    if (error instanceof CatalogClientError) {
+      switch (error.code) {
+        case 'SERVER_NOT_FOUND':
+          return createErrorResponse(
+            ERROR_CODES.CATALOG_003,
+            `Server not found in catalog`,
+            { requestId }
+          );
+        
+        case 'SERVER_INSTALL_FAILED':
+          return createErrorResponse(
+            ERROR_CODES.CATALOG_005,
+            'Server installation failed',
+            { requestId, details: error.details }
+          );
+        
+        case 'INSTALL_ID_MISSING':
+          return createErrorResponse(
+            ERROR_CODES.CATALOG_006,
+            'Installation started but tracking failed',
+            { requestId, details: error.details }
+          );
+        
+        default:
+          return createErrorResponse(
+            ERROR_CODES.CATALOG_002,
+            `Catalog operation failed: ${error.message}`,
+            { requestId, details: error.details }
+          );
+      }
+    }
+
     return createErrorResponse(
       ERROR_CODES.INTERNAL_ERROR,
-      'Failed to start server installation',
+      'Failed to install server',
       { requestId, details: errorMessage }
     );
   }

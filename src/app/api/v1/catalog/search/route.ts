@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { 
-  createErrorResponse,
+  createErrorResponse, 
   createValidationErrorResponse,
   ERROR_CODES,
   logAPIRequest,
@@ -17,18 +17,28 @@ import { CatalogClient, CatalogClientError } from '@/lib/catalog/catalog-client'
 import { z } from 'zod';
 
 // =============================================================================
-// /api/v1/catalog/[id] - カタログサーバー詳細API
-// MCPサーバーカタログから特定のサーバー詳細を取得する機能
+// /api/v1/catalog/search - カタログ検索API
+// MCPサーバーカタログからサーバーを検索する機能
 // =============================================================================
 
 /**
- * サーバー詳細取得
- * GET /api/v1/catalog/[id]
+ * カタログ検索クエリのスキーマ
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+const CatalogSearchQuerySchema = z.object({
+  search: z.string().min(1).max(100).optional(),
+  tags: z.string().optional().transform((val) => val ? val.split(',').filter(Boolean) : undefined),
+  category: z.string().min(1).max(50).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  sortBy: z.enum(['name', 'popularity', 'updated', 'rating']).default('popularity'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+/**
+ * カタログ検索
+ * GET /api/v1/catalog/search
+ */
+export async function GET(request: NextRequest) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const startTime = Date.now();
 
@@ -36,46 +46,57 @@ export async function GET(
     // 認証・認可チェック
     const authResult = await requirePermissions([PERMISSIONS.CATALOG_READ], request);
     if (!authResult.valid || !authResult.session) {
-      logAPIRequest('GET', `/api/v1/catalog/${params.id}`, requestId, {
+      logAPIRequest('GET', '/api/v1/catalog/search', requestId, {
         statusCode: 401,
         error: authResult.error,
       });
       return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
     }
 
-    // パラメータバリデーション
-    const validation = await validateRequest(request, params, {
-      params: z.object({ id: CommonSchemas.id }),
+    // クエリパラメータのバリデーション
+    const validation = await validateRequest(request, {}, {
+      query: CatalogSearchQuerySchema,
     });
     if (!validation.success) {
-      const error = validation.errors!.params!;
+      const error = validation.errors!.query!;
       return createValidationErrorResponse(error, requestId);
     }
 
-    const serverId = validation.data!.params.id;
+    const query = validation.data!.query;
 
-    // カタログクライアントでサーバー詳細を取得
+    // カタログクライアントでサーバー検索
     const catalogClient = new CatalogClient();
-    const serverDetails = await catalogClient.getServerDetails(serverId);
+    const searchResult = await catalogClient.searchServers({
+      search: query.search,
+      tags: query.tags,
+      category: query.category,
+      page: query.page,
+      pageSize: query.pageSize,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
 
     const duration = Date.now() - startTime;
 
     // 監査ログ
-    logAPIRequest('GET', `/api/v1/catalog/${serverId}`, requestId, {
+    logAPIRequest('GET', '/api/v1/catalog/search', requestId, {
       userId: authResult.session.user.id,
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
       details: {
-        serverId,
-        serverName: serverDetails.name,
-        version: serverDetails.version,
+        query: query.search,
+        tags: query.tags,
+        category: query.category,
+        resultsCount: searchResult.entries.length,
+        total: searchResult.total,
+        page: searchResult.page,
       },
     });
 
     return Response.json({
       success: true,
-      data: serverDetails,
+      data: searchResult,
       metadata: {
         requestId,
         timestamp: new Date().toISOString(),
@@ -87,28 +108,21 @@ export async function GET(
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    console.error(`[API_ERROR] GET /api/v1/catalog/${params.id}:`, error);
+    console.error('[API_ERROR] GET /api/v1/catalog/search:', error);
     
-    logAPIRequest('GET', `/api/v1/catalog/${params.id}`, requestId, {
+    logAPIRequest('GET', '/api/v1/catalog/search', requestId, {
       duration,
-      statusCode: error instanceof CatalogClientError && error.code === 'SERVER_NOT_FOUND' ? 404 : 500,
+      statusCode: 500,
       error: errorMessage,
     });
 
     // カタログクライアント固有のエラーハンドリング
     if (error instanceof CatalogClientError) {
       switch (error.code) {
-        case 'SERVER_NOT_FOUND':
+        case 'CATALOG_SEARCH_FAILED':
           return createErrorResponse(
-            ERROR_CODES.CATALOG_003,
-            `Server '${params.id}' not found in catalog`,
-            { requestId }
-          );
-        
-        case 'SERVER_DETAILS_FAILED':
-          return createErrorResponse(
-            ERROR_CODES.CATALOG_004,
-            'Failed to retrieve server details from catalog',
+            ERROR_CODES.CATALOG_001,
+            'Failed to search catalog. The catalog service may be temporarily unavailable.',
             { requestId, details: error.details }
           );
         
@@ -123,7 +137,7 @@ export async function GET(
 
     return createErrorResponse(
       ERROR_CODES.INTERNAL_ERROR,
-      'Failed to get server details',
+      'Failed to search catalog',
       { requestId, details: errorMessage }
     );
   }

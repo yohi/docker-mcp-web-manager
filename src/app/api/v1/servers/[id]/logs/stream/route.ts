@@ -15,7 +15,8 @@ import {
   PERMISSIONS,
 } from '@/lib/auth';
 import { ServerRepository } from '@/db/repositories/server-repository';
-import { SSEManager, DockerMCPClient } from '@/lib/docker-mcp';
+import { DockerMCPClient } from '@/lib/docker-mcp';
+import { sseSecurityManager } from '@/lib/utils/sse-security';
 import { z } from 'zod';
 
 // =============================================================================
@@ -24,7 +25,7 @@ import { z } from 'zod';
 // =============================================================================
 
 /**
- * ログストリーミング開始
+ * ログストリーミング
  * GET /api/v1/servers/[id]/logs/stream
  */
 export async function GET(
@@ -89,8 +90,39 @@ export async function GET(
       );
     }
 
-    // SSEストリーミング開始
-    const sseManager = new SSEManager();
+    // クライアントIP取得
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                     request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
+    // SSEセキュリティ認証
+    const sseAuthResult = sseSecurityManager.authenticateConnection({
+      ip: clientIp,
+      userAgent,
+      userId: authResult.session.user.id,
+      headers: Object.fromEntries(request.headers.entries()),
+    });
+
+    if (!sseAuthResult.allowed) {
+      logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/stream`, requestId, {
+        userId: authResult.session.user.id,
+        statusCode: 429,
+        error: sseAuthResult.error,
+      });
+      
+      return new Response(sseAuthResult.error, {
+        status: 429,
+        headers: {
+          'Content-Type': 'text/plain',
+          'Retry-After': '60',
+          'X-Request-ID': requestId,
+        },
+      });
+    }
+
+    const connectionId = sseAuthResult.connectionId!;
+
+    // Docker MCPクライアント初期化
     const dockerClient = new DockerMCPClient();
 
     // 監査ログ（開始）
@@ -98,106 +130,125 @@ export async function GET(
       userId: authResult.session.user.id,
       userRole: authResult.session.user.role,
       statusCode: 200,
-      details: { action: 'stream_started' },
+      details: { 
+        action: 'stream_started',
+        connectionId,
+        clientIp,
+      },
     });
 
     // ReadableStreamを作成してSSEレスポンスを構築
     const stream = new ReadableStream({
       start(controller) {
-        // SSE初期設定
-        const encoder = new TextEncoder();
+        // 接続状態を「アクティブ」に更新
+        sseSecurityManager.updateConnectionState(connectionId, 'active');
         
         // 初期接続確認メッセージ
-        const initMessage = `data: ${JSON.stringify({
-          type: 'connected',
-          serverId,
-          serverName: server.name,
-          timestamp: new Date().toISOString(),
-          requestId,
-        })}\n\n`;
-        controller.enqueue(encoder.encode(initMessage));
+        const initMessage = sseSecurityManager.formatSSEMessage({
+          event: 'connected',
+          data: JSON.stringify({
+            serverId,
+            serverName: server.name,
+            timestamp: new Date().toISOString(),
+            requestId,
+            connectionId,
+          }),
+        });
+        
+        controller.enqueue(new TextEncoder().encode(initMessage));
 
         // ログストリーミング開始
         const startLogStream = async () => {
           try {
-            const logStream = await dockerClient.streamServerLogs(serverId, {
-              follow: true,
-              tail: queryParams.tail || 100,
+            const logs = await dockerClient.getServerLogs(serverId, {
+              lines: queryParams.tail || 100,
               since: queryParams.since,
-              level: queryParams.level,
+              follow: true,
             });
 
-            // ログエントリを順次ストリーミング
-            logStream.on('log', (logEntry) => {
+            // ログエントリを順次ストリーミング（実際の実装では非同期ストリーム）
+            for (const logLine of logs) {
               try {
-                const message = `data: ${JSON.stringify({
-                  type: 'log',
-                  serverId,
-                  timestamp: logEntry.timestamp,
-                  level: logEntry.level,
-                  message: logEntry.message,
-                  source: logEntry.source,
-                })}\n\n`;
-                controller.enqueue(encoder.encode(message));
+                // セキュリティマネージャーを通してメッセージをキューイング
+                const queueResult = sseSecurityManager.queueMessage(connectionId, {
+                  event: 'log',
+                  data: JSON.stringify({
+                    serverId,
+                    timestamp: new Date().toISOString(),
+                    level: 'info',
+                    message: logLine,
+                    source: 'container',
+                  }),
+                });
+
+                if (queueResult.success) {
+                  // キューからメッセージを取り出して送信
+                  const message = sseSecurityManager.dequeueMessage(connectionId);
+                  if (message) {
+                    const formattedMessage = sseSecurityManager.formatSSEMessage(message);
+                    controller.enqueue(new TextEncoder().encode(formattedMessage));
+                  }
+                } else {
+                  console.warn(`[SSE_BACKPRESSURE] ${queueResult.error} for connection ${connectionId}`);
+                }
               } catch (error) {
                 console.error('[SSE_LOG_ERROR] Failed to send log entry:', error);
               }
-            });
-
-            // エラーハンドリング
-            logStream.on('error', (error) => {
-              console.error(`[LOG_STREAM_ERROR] Stream error for server ${serverId}:`, error);
-              
-              const errorMessage = `data: ${JSON.stringify({
-                type: 'error',
-                serverId,
-                error: error.message,
-                timestamp: new Date().toISOString(),
-              })}\n\n`;
-              controller.enqueue(encoder.encode(errorMessage));
-              
-              // エラー時は接続を閉じる
-              controller.close();
-            });
-
-            // ストリーム終了時
-            logStream.on('end', () => {
-              const endMessage = `data: ${JSON.stringify({
-                type: 'disconnected',
-                serverId,
-                reason: 'stream_ended',
-                timestamp: new Date().toISOString(),
-              })}\n\n`;
-              controller.enqueue(encoder.encode(endMessage));
-              controller.close();
-            });
+            }
 
           } catch (error) {
             console.error(`[LOG_STREAM_INIT_ERROR] Failed to initialize log stream for ${serverId}:`, error);
             
-            const errorMessage = `data: ${JSON.stringify({
-              type: 'error',
-              serverId,
-              error: error instanceof Error ? error.message : 'Stream initialization failed',
-              timestamp: new Date().toISOString(),
-            })}\n\n`;
-            controller.enqueue(encoder.encode(errorMessage));
+            const errorMessage = sseSecurityManager.formatSSEMessage({
+              event: 'error',
+              data: JSON.stringify({
+                serverId,
+                error: error instanceof Error ? error.message : 'Stream initialization failed',
+                timestamp: new Date().toISOString(),
+              }),
+            });
+            
+            controller.enqueue(new TextEncoder().encode(errorMessage));
+            sseSecurityManager.updateConnectionState(connectionId, 'closed');
             controller.close();
           }
         };
 
         // 非同期でストリーミング開始
         startLogStream();
+
+        // ハートビートの設定
+        const heartbeatInterval = setInterval(() => {
+          const heartbeat = sseSecurityManager.generateHeartbeat();
+          const formattedMessage = sseSecurityManager.formatSSEMessage(heartbeat);
+          controller.enqueue(new TextEncoder().encode(formattedMessage));
+        }, 30000); // 30秒間隔
+
+        // クリーンアップ関数を保存
+        (controller as any)._cleanup = () => {
+          clearInterval(heartbeatInterval);
+          sseSecurityManager.updateConnectionState(connectionId, 'closed');
+        };
       },
 
       cancel() {
         // クライアント切断時の処理
         const duration = Date.now() - startTime;
+        
+        if ((this as any)._cleanup) {
+          (this as any)._cleanup();
+        }
+        
+        sseSecurityManager.updateConnectionState(connectionId, 'closed');
+        
         logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/stream`, requestId, {
           userId: authResult.session.user.id,
           duration,
           statusCode: 200,
-          details: { action: 'stream_cancelled' },
+          details: { 
+            action: 'stream_cancelled',
+            connectionId,
+          },
         });
       },
     });
@@ -212,10 +263,13 @@ export async function GET(
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Authorization',
         'X-Request-ID': requestId,
+        'X-Connection-ID': connectionId,
         // セキュリティヘッダー
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'DENY',
         'X-XSS-Protection': '1; mode=block',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'Content-Security-Policy': "default-src 'none'",
       },
     });
 

@@ -17,13 +17,13 @@ import { CatalogClient, CatalogClientError } from '@/lib/catalog/catalog-client'
 import { z } from 'zod';
 
 // =============================================================================
-// /api/v1/catalog/[id] - カタログサーバー詳細API
-// MCPサーバーカタログから特定のサーバー詳細を取得する機能
+// /api/v1/catalog/install/[id] - インストール進捗取得API
+// サーバーインストールの進捗状況を取得する機能
 // =============================================================================
 
 /**
- * サーバー詳細取得
- * GET /api/v1/catalog/[id]
+ * インストール進捗取得
+ * GET /api/v1/catalog/install/[id]
  */
 export async function GET(
   request: NextRequest,
@@ -36,7 +36,7 @@ export async function GET(
     // 認証・認可チェック
     const authResult = await requirePermissions([PERMISSIONS.CATALOG_READ], request);
     if (!authResult.valid || !authResult.session) {
-      logAPIRequest('GET', `/api/v1/catalog/${params.id}`, requestId, {
+      logAPIRequest('GET', `/api/v1/catalog/install/${params.id}`, requestId, {
         statusCode: 401,
         error: authResult.error,
       });
@@ -52,30 +52,34 @@ export async function GET(
       return createValidationErrorResponse(error, requestId);
     }
 
-    const serverId = validation.data!.params.id;
+    const installationId = validation.data!.params.id;
 
-    // カタログクライアントでサーバー詳細を取得
+    // カタログクライアントでインストール進捗を取得
     const catalogClient = new CatalogClient();
-    const serverDetails = await catalogClient.getServerDetails(serverId);
+    const progress = await catalogClient.getInstallationProgress(installationId);
 
     const duration = Date.now() - startTime;
 
-    // 監査ログ
-    logAPIRequest('GET', `/api/v1/catalog/${serverId}`, requestId, {
-      userId: authResult.session.user.id,
-      userRole: authResult.session.user.role,
-      duration,
-      statusCode: 200,
-      details: {
-        serverId,
-        serverName: serverDetails.name,
-        version: serverDetails.version,
-      },
-    });
+    // 監査ログ（完了時のみ記録）
+    if (progress.status === 'completed' || progress.status === 'failed') {
+      logAPIRequest('GET', `/api/v1/catalog/install/${installationId}`, requestId, {
+        userId: authResult.session.user.id,
+        userRole: authResult.session.user.role,
+        duration,
+        statusCode: 200,
+        details: {
+          installationId,
+          serverId: progress.serverId,
+          finalStatus: progress.status,
+          progress: progress.progress,
+          hasError: !!progress.error,
+        },
+      });
+    }
 
     return Response.json({
       success: true,
-      data: serverDetails,
+      data: progress,
       metadata: {
         requestId,
         timestamp: new Date().toISOString(),
@@ -87,28 +91,28 @@ export async function GET(
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    console.error(`[API_ERROR] GET /api/v1/catalog/${params.id}:`, error);
+    console.error(`[API_ERROR] GET /api/v1/catalog/install/${params.id}:`, error);
     
-    logAPIRequest('GET', `/api/v1/catalog/${params.id}`, requestId, {
+    logAPIRequest('GET', `/api/v1/catalog/install/${params.id}`, requestId, {
       duration,
-      statusCode: error instanceof CatalogClientError && error.code === 'SERVER_NOT_FOUND' ? 404 : 500,
+      statusCode: error instanceof CatalogClientError && error.code === 'INSTALLATION_NOT_FOUND' ? 404 : 500,
       error: errorMessage,
     });
 
     // カタログクライアント固有のエラーハンドリング
     if (error instanceof CatalogClientError) {
       switch (error.code) {
-        case 'SERVER_NOT_FOUND':
+        case 'INSTALLATION_NOT_FOUND':
           return createErrorResponse(
-            ERROR_CODES.CATALOG_003,
-            `Server '${params.id}' not found in catalog`,
+            ERROR_CODES.CATALOG_007,
+            `Installation '${params.id}' not found`,
             { requestId }
           );
         
-        case 'SERVER_DETAILS_FAILED':
+        case 'INSTALL_PROGRESS_FAILED':
           return createErrorResponse(
-            ERROR_CODES.CATALOG_004,
-            'Failed to retrieve server details from catalog',
+            ERROR_CODES.CATALOG_008,
+            'Failed to retrieve installation progress',
             { requestId, details: error.details }
           );
         
@@ -123,7 +127,7 @@ export async function GET(
 
     return createErrorResponse(
       ERROR_CODES.INTERNAL_ERROR,
-      'Failed to get server details',
+      'Failed to get installation progress',
       { requestId, details: errorMessage }
     );
   }

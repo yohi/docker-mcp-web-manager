@@ -15,7 +15,12 @@ import {
   PERMISSIONS,
 } from '@/lib/auth';
 import { ServerRepository } from '@/db/repositories/server-repository';
-import { SecureFileAccess } from '@/lib/docker-mcp';
+import { DockerMCPClient } from '@/lib/docker-mcp';
+import { 
+  secureFileAccess,
+  logFileAccess,
+  generateSecureHeaders,
+} from '@/lib/utils/secure-file-access';
 import { z } from 'zod';
 
 // =============================================================================
@@ -75,82 +80,87 @@ export async function GET(
       );
     }
 
-    // セキュアファイルアクセスでログファイルを取得
-    const fileAccess = new SecureFileAccess();
-    let logFile;
-
+    // Docker MCP経由でログファイルパスを取得
+    const dockerClient = new DockerMCPClient();
+    let logFilePath: string;
+    
     try {
-      logFile = await fileAccess.downloadLogFile(serverId, {
-        format: queryParams.format || 'txt',
-        compress: queryParams.compress || false,
-        since: queryParams.since,
-        until: queryParams.until,
-        level: queryParams.level,
-        maxSize: 50 * 1024 * 1024, // 50MB制限
-      });
+      // ログファイルのパスを取得（実際のDocker MCPコマンド実装に依存）
+      logFilePath = `/var/log/docker-mcp/servers/${serverId}/server.log`;
     } catch (error) {
-      console.error(`[LOG_DOWNLOAD_ERROR] Failed to download logs for server ${serverId}:`, error);
-      
-      // エラーの種類による分岐
-      if (error && typeof error === 'object' && 'code' in error) {
-        const fileError = error as any;
-        
-        if (fileError.code === 'RESOURCE_NOT_FOUND') {
-          logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
-            userId: authResult.session.user.id,
-            statusCode: 404,
-            error: 'Log files not found',
-          });
-          
-          return createErrorResponse(
-            ERROR_CODES.LOG_001,
-            `Log files for server '${serverId}' not found`,
-            { requestId }
-          );
-        }
-        
-        if (fileError.code === 'FILE_TOO_LARGE') {
-          logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
-            userId: authResult.session.user.id,
-            statusCode: 413,
-            error: 'Log file too large',
-          });
-          
-          return createErrorResponse(
-            ERROR_CODES.LOG_004,
-            'Log file exceeds maximum download size (50MB). Use streaming or filter options.',
-            { requestId }
-          );
-        }
-        
-        if (fileError.code === 'PERMISSION_DENIED') {
-          logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
-            userId: authResult.session.user.id,
-            statusCode: 403,
-            error: 'Insufficient permissions to download logs',
-          });
-          
-          return createErrorResponse(
-            ERROR_CODES.LOG_002,
-            'Insufficient permissions to download server logs',
-            { requestId }
-          );
-        }
-      }
-      
-      logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 500,
-        error: error instanceof Error ? error.message : 'Log download failed',
-      });
+      console.error(`[LOG_PATH_ERROR] Failed to get log path for server ${serverId}:`, error);
       
       return createErrorResponse(
-        ERROR_CODES.LOG_003,
-        `Failed to download logs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ERROR_CODES.LOG_001,
+        `Log files for server '${serverId}' not found`,
         { requestId }
       );
     }
 
+    // セキュアファイルアクセスでログファイルを取得
+    const fileAccess = await secureFileAccess(logFilePath);
+    
+    if (!fileAccess.success) {
+      console.error(`[LOG_SECURITY_ERROR] Secure file access failed for ${logFilePath}:`, fileAccess.error);
+      
+      // エラーの種類による分岐
+      if (fileAccess.error?.includes('not found') || fileAccess.error?.includes('does not exist')) {
+        logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
+          userId: authResult.session.user.id,
+          statusCode: 404,
+          error: 'Log files not found',
+        });
+        
+        return createErrorResponse(
+          ERROR_CODES.LOG_001,
+          `Log files for server '${serverId}' not found`,
+          { requestId }
+        );
+      }
+      
+      if (fileAccess.error?.includes('too large') || fileAccess.error?.includes('exceeds maximum')) {
+        logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
+          userId: authResult.session.user.id,
+          statusCode: 413,
+          error: 'Log file too large',
+        });
+        
+        return createErrorResponse(
+          ERROR_CODES.LOG_004,
+          'Log file exceeds maximum download size (100MB). Use streaming or filter options.',
+          { requestId }
+        );
+      }
+      
+      if (fileAccess.error?.includes('permission') || fileAccess.error?.includes('access denied')) {
+        logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
+          userId: authResult.session.user.id,
+          statusCode: 403,
+          error: 'Insufficient permissions to download logs',
+        });
+        
+        return createErrorResponse(
+          ERROR_CODES.LOG_002,
+          'Insufficient permissions to download server logs',
+          { requestId }
+        );
+      }
+      
+      // その他のセキュリティエラー
+      logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/download`, requestId, {
+        userId: authResult.session.user.id,
+        statusCode: 500,
+        error: fileAccess.error || 'Security validation failed',
+      });
+      
+      return createErrorResponse(
+        ERROR_CODES.LOG_003,
+        `Failed to download logs: ${fileAccess.error || 'Security validation failed'}`,
+        { requestId }
+      );
+    }
+
+    const logFile = fileAccess.file!;
     const duration = Date.now() - startTime;
 
     // 監査ログ
@@ -161,34 +171,25 @@ export async function GET(
       statusCode: 200,
       details: {
         fileSize: logFile.size,
-        format: queryParams.format,
-        compressed: queryParams.compress,
+        filePath: logFile.path,
+        mimeType: logFile.mimeType,
       },
     });
 
-    // ファイル名を生成
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-    const extension = queryParams.compress ? 
-      (queryParams.format === 'json' ? 'json.gz' : 'txt.gz') :
-      (queryParams.format === 'json' ? 'json' : 'txt');
-    const filename = `${server.name}_logs_${timestamp}.${extension}`;
+    // アクセスログ記録
+    await logFileAccess(logFile.path, authResult.session.user.id, 'download');
 
+    // セキュアヘッダーを生成
+    const secureHeaders = generateSecureHeaders(logFile.sanitizedName, logFile.mimeType);
+    
     // レスポンスヘッダーを設定してファイルを返す
-    return new Response(logFile.content, {
+    return new Response(logFile.readStream as any, {
       status: 200,
       headers: {
-        'Content-Type': queryParams.compress ? 
-          'application/gzip' : 
-          (queryParams.format === 'json' ? 'application/json' : 'text/plain'),
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        ...secureHeaders,
         'Content-Length': logFile.size.toString(),
         'X-Request-ID': requestId,
         'X-Response-Time': duration.toString(),
-        // セキュリティヘッダー
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
       },
     });
 
