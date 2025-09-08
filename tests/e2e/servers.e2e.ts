@@ -43,7 +43,7 @@ test.describe('Servers Management', () => {
 
   test('server creation flow works', async ({ page }) => {
     // 新規作成ボタンのクリック
-    await page.click('button', { hasText: '新規作成' });
+    await page.locator('button', { hasText: '新規作成' }).click();
     
     // モーダルまたは作成ページが表示されることを確認
     await expect(page.locator('[data-testid="create-server-modal"]').or(page.locator('h1', { hasText: '新規サーバー作成' }))).toBeVisible();
@@ -61,7 +61,7 @@ test.describe('Servers Management', () => {
     await page.fill('input[name="port"]', '8080');
     
     // 作成ボタンのクリック
-    await page.click('button[type="submit"]', { hasText: '作成' });
+    await page.locator('button[type="submit"]', { hasText: '作成' }).click();
     
     // 作成成功メッセージまたはリダイレクトの確認
     await expect(page.locator('[data-testid="success-message"]').or(page.locator('.toast'))).toBeVisible();
@@ -142,7 +142,7 @@ test.describe('Servers Management', () => {
       }
       
       // 保存ボタンのクリック
-      await page.click('button', { hasText: '保存' });
+      await page.locator('button', { hasText: '保存' }).click();
       
       // 更新成功の確認
       await expect(page.locator('[data-testid="success-message"]').or(page.locator('.toast'))).toBeVisible();
@@ -168,7 +168,7 @@ test.describe('Servers Management', () => {
       
       // 確認ダイアログの処理
       await expect(page.locator('[role="dialog"]', { hasText: '削除' })).toBeVisible();
-      await page.click('button', { hasText: '削除' });
+      await page.locator('button', { hasText: '削除' }).click();
       
       // 削除成功の確認
       await expect(page.locator('[data-testid="success-message"]').or(page.locator('.toast'))).toBeVisible();

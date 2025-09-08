@@ -404,22 +404,6 @@ export interface ErrorResponse {
 }
 
 // =============================================================================
-// Export all types
+// Note: All types are exported as interfaces above
+// No need for additional type exports as interfaces are automatically exported
 // =============================================================================
-export type {
-  JSONSchema,
-  ResourceLimits,
-  NetworkConfig,
-  Tool,
-  Resource,
-  Prompt,
-  SecretReference,
-  Secret,
-  ServerConfiguration,
-  MCPServer,
-  TestResult,
-  Job,
-  JobResponse,
-  CatalogEntry,
-  CatalogServerInfo,
-};

@@ -87,7 +87,7 @@ test.describe('Authentication Flow', () => {
     
     // ログアウト
     await page.click('[data-testid="user-menu"]');
-    await page.click('button', { hasText: 'ログアウト' });
+    await page.locator('button', { hasText: 'ログアウト' }).click();
     
     // ログインページにリダイレクトされることを確認
     await expect(page).toHaveURL(/\/auth\/signin/);
@@ -267,7 +267,14 @@ test.describe('Role-based Access Control', () => {
     
     // 直接URLでアクセスしても拒否されることを確認
     await page.goto('/settings');
-    await expect(page.locator('[data-testid="access-denied"]').or(page)).toHaveURL(/\/dashboard/);
+    // アクセス拒否ページまたはダッシュボードリダイレクトを確認
+    const accessDenied = page.locator('[data-testid="access-denied"]');
+    const isAccessDenied = await accessDenied.isVisible();
+    if (isAccessDenied) {
+      await expect(accessDenied).toBeVisible();
+    } else {
+      await expect(page).toHaveURL(/\/dashboard/);
+    }
   });
 
   test('viewer user has read-only access', async ({ page }) => {
