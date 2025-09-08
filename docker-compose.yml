@@ -1,0 +1,123 @@
+# Docker Compose V2 Configuration for Docker MCP Web Manager
+# Development Environment Configuration
+
+version: '3.9'
+
+services:
+  # データベース移行サービス（初期化とマイグレーション実行）
+  db-migrate:
+    build:
+      context: .
+      target: development
+    volumes:
+      - app-data:/app/data
+    environment:
+      - DATABASE_URL=file:/app/data/app.db
+      - NODE_ENV=development
+    command: >
+      sh -c "
+        mkdir -p /app/data && 
+        chown -R 1000:1000 /app/data && 
+        chmod 750 /app/data &&
+        npx drizzle-kit generate --dialect=sqlite --schema=./src/db/schema.ts --out=/app/data/out/migrations &&
+        npx drizzle-kit migrate --dialect=sqlite --url=file:/app/data/app.db --config=./drizzle.config.ts
+      "
+    restart: "no"
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - app-network
+
+  # メインWebアプリケーション
+  web:
+    build:
+      context: .
+      target: development
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:/app/data/app.db
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dev-secret-change-in-production}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      - SERVER_RATE_USER_RPM=${SERVER_RATE_USER_RPM:-1000}
+      - SERVER_SSE_HEARTBEAT_INTERVAL=${SERVER_SSE_HEARTBEAT_INTERVAL:-30000}
+      - SERVER_SSE_CLIENT_TIMEOUT=${SERVER_SSE_CLIENT_TIMEOUT:-60000}
+      - SERVER_SSE_MAX_CONNECTIONS=${SERVER_SSE_MAX_CONNECTIONS:-100}
+      - SERVER_SSE_MAX_LINE_LENGTH=${SERVER_SSE_MAX_LINE_LENGTH:-10240}
+      - SERVER_SSE_RATE_LIMIT=${SERVER_SSE_RATE_LIMIT:-100}
+      - SERVER_SSE_MEMORY_CAP=${SERVER_SSE_MEMORY_CAP:-52428800}
+      - SERVER_SSE_PAGE_SIZE=${SERVER_SSE_PAGE_SIZE:-1000}
+      - SERVER_LOG_RETENTION_DAYS=${SERVER_LOG_RETENTION_DAYS:-30}
+      - SERVER_LOG_ROTATION_SIZE=${SERVER_LOG_ROTATION_SIZE:-104857600}
+      - SERVER_LOG_ROTATION_INTERVAL=${SERVER_LOG_ROTATION_INTERVAL:-daily}
+    volumes:
+      - app-data:/app/data
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./tailwind.config.js:/app/tailwind.config.js:ro
+      - ./next.config.js:/app/next.config.js:ro
+      - ./postcss.config.mjs:/app/postcss.config.mjs:ro
+      - ./package.json:/app/package.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    user: "1000:1000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+
+  # Redis (レート制限とセッション管理用)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    user: "999:999"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+    networks:
+      - app-network
+
+# 永続化ボリューム
+volumes:
+  app-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+  redis-data:
+    driver: local
+
+# ネットワーク設定
+networks:
+  app-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: mcp-web-bridge

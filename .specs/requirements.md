@@ -4,6 +4,29 @@
 
 A web-based management tool for DockerMCPGateway that provides browser-based administration capabilities. The system offers MCP server listing, detailed inspection, configuration management, testing functionality, log monitoring, catalog-based installation, secure credential management, configuration import/export, BitwardenCLI integration, and authentication features.
 
+## Technical Requirements
+
+### Framework and Library Versions
+
+The following specific versions are required for the project:
+
+- **Next.js**: 15.5.2
+- **Node.js**: 24.7.0
+- **Drizzle ORM**: 0.44.5
+- **NextAuth.js**: 4.24.11
+- **SQLite**: 3.50.4
+- **Tailwind CSS**: 4.1.13
+- **TypeScript**: 5.9
+
+### Runtime Environment
+
+- **Container Platform**: Docker with Docker Compose V2
+- **Development Environment**: Docker-based development (local npm execution is not used)
+- **Database**: SQLite with file-based storage in Docker volumes
+- **Process Management**: All development and runtime operations performed within Docker containers
+- **Minimum Versions**: Docker Engine >= 20.10.0, Docker Compose V2 >= 2.0.0
+- **SQLite**: WAL mode activation required, single writer principle, compliance with data directory UID/GID/permission requirements
+
 ## Requirements
 
 ### Requirement 1
