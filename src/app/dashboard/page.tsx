@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { ProtectedRoute } from '@/components/auth/protected-route';
-import { ServerList } from '@/components/servers/server-list';
-import { MonitoringDashboard } from '@/components/monitoring/monitoring-dashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +14,30 @@ import {
   TrendingUp,
   Users,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
+
+// コード分割：重いコンポーネントを遅延読み込み
+const ServerList = dynamic(() => import('@/components/servers/server-list').then(mod => ({ default: mod.ServerList })), {
+  loading: () => (
+    <div className="flex items-center justify-center p-8">
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <span className="ml-2">サーバーリストを読み込み中...</span>
+    </div>
+  ),
+  ssr: false
+});
+
+const MonitoringDashboard = dynamic(() => import('@/components/monitoring/monitoring-dashboard').then(mod => ({ default: mod.MonitoringDashboard })), {
+  loading: () => (
+    <div className="flex items-center justify-center p-8">
+      <Loader2 className="h-8 w-8 animate-spin" />
+      <span className="ml-2">監視ダッシュボードを読み込み中...</span>
+    </div>
+  ),
+  ssr: false
+});
 
 // =============================================================================
 // ダッシュボードページ - 新しいコンポーネントベース実装
@@ -274,14 +295,21 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ServerList
-              servers={servers}
-              isLoading={isLoading}
-              error={error}
-              onRefresh={loadDashboardData}
-              onServerStart={handleServerStart}
-              onServerStop={handleServerStop}
-            />
+            <Suspense fallback={
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">サーバーリストを読み込み中...</span>
+              </div>
+            }>
+              <ServerList
+                servers={servers}
+                isLoading={isLoading}
+                error={error}
+                onRefresh={loadDashboardData}
+                onServerStart={handleServerStart}
+                onServerStop={handleServerStop}
+              />
+            </Suspense>
           </CardContent>
         </Card>
 
@@ -296,8 +324,14 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <MonitoringDashboard
-              serverMetrics={servers.map(server => ({
+            <Suspense fallback={
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <span className="ml-2">監視ダッシュボードを読み込み中...</span>
+              </div>
+            }>
+              <MonitoringDashboard
+                serverMetrics={servers.map(server => ({
                 serverId: server.id,
                 serverName: server.name,
                 status: server.status,
@@ -347,6 +381,7 @@ export default function DashboardPage() {
               error={error}
               onRefresh={loadDashboardData}
             />
+            </Suspense>
           </CardContent>
         </Card>
       </div>
