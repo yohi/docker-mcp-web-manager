@@ -1,449 +1,349 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import MainLayout from '@/components/layout/MainLayout';
-import PageHeader from '@/components/layout/PageHeader';
-import { CardLoading } from '@/components/common/LoadingSpinner';
-import {
-  Plus as PlusIcon,
-  Play as PlayIcon,
-  Square as StopIcon,
-  Settings as CogIcon,
-  Trash2 as TrashIcon,
-  Search as MagnifyingGlassIcon,
-  Server as ServerIcon,
-  AlertTriangle as ExclamationTriangleIcon,
-  CheckCircle as CheckCircleIcon,
-  Clock as ClockIcon,
+import { ProtectedRoute } from '@/components/auth/protected-route';
+import { ServerList } from '@/components/servers/server-list';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Plus,
+  Server,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  Search,
+  Filter
 } from 'lucide-react';
-import { clsx } from 'clsx';
 
 // =============================================================================
-// サーバー管理ページ
-// MCPサーバーの一覧表示と基本操作
+// サーバー管理ページ - 新しいコンポーネントベース実装
+// MCPサーバーの専用管理画面、詳細なフィルタリングと操作を提供
 // =============================================================================
-
-interface Server {
-  id: string;
-  name: string;
-  image: string;
-  status: 'running' | 'stopped' | 'starting' | 'stopping' | 'error';
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  lastHealthCheck?: string;
-  resourceUsage?: {
-    cpu: number;
-    memory: number;
-  };
-}
 
 export default function ServersPage() {
-  const [servers, setServers] = useState<Server[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [servers, setServers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [operatingServers, setOperatingServers] = useState<Set<string>>(new Set());
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+
+  // データ取得
+  const loadServers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/v1/servers');
+      if (!response.ok) throw new Error('サーバー情報の取得に失敗しました');
+      
+      const data = await response.json();
+      const serversList = data.success ? data.data : [];
+      setServers(serversList);
+    } catch (error) {
+      console.error('Failed to load servers:', error);
+      setError(error instanceof Error ? error.message : 'データ読み込みエラー');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadServers();
   }, []);
 
-  const loadServers = async () => {
+  // サーバー操作
+  const handleServerStart = async (serverId: string) => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/v1/servers');
-      const data = await response.json();
-      
-      if (data.success) {
-        setServers(data.data);
-      } else {
-        console.error('Failed to load servers:', data.error);
-      }
-    } catch (error) {
-      console.error('Failed to load servers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleServerAction = async (serverId: string, action: 'start' | 'stop') => {
-    if (operatingServers.has(serverId)) return;
-
-    try {
-      setOperatingServers(prev => new Set(prev).add(serverId));
-      
-      const response = await fetch(`/api/v1/servers/${serverId}/${action}`, {
+      const response = await fetch(`/api/v1/servers/${serverId}/start`, {
         method: 'POST',
       });
+      if (!response.ok) throw new Error('サーバー起動に失敗しました');
       
-      const data = await response.json();
-      
-      if (data.success) {
-        // サーバーリストを更新
-        await loadServers();
-      } else {
-        console.error(`Failed to ${action} server:`, data.error);
-        alert(`サーバーの${action === 'start' ? '開始' : '停止'}に失敗しました: ${data.error?.message || 'Unknown error'}`);
-      }
+      await loadServers();
     } catch (error) {
-      console.error(`Failed to ${action} server:`, error);
-      alert(`サーバーの${action === 'start' ? '開始' : '停止'}中にエラーが発生しました`);
-    } finally {
-      setOperatingServers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(serverId);
-        return newSet;
-      });
+      console.error('Server start failed:', error);
+      throw error;
     }
   };
 
-  const handleDeleteServer = async (serverId: string, serverName: string) => {
-    if (!confirm(`サーバー "${serverName}" を削除してもよろしいですか？この操作は元に戻せません。`)) {
-      return;
+  const handleServerStop = async (serverId: string) => {
+    try {
+      const response = await fetch(`/api/v1/servers/${serverId}/stop`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('サーバー停止に失敗しました');
+      
+      await loadServers();
+    } catch (error) {
+      console.error('Server stop failed:', error);
+      throw error;
     }
+  };
 
+  const handleServerDelete = async (serverId: string) => {
     try {
       const response = await fetch(`/api/v1/servers/${serverId}`, {
         method: 'DELETE',
       });
+      if (!response.ok) throw new Error('サーバー削除に失敗しました');
       
-      const data = await response.json();
-      
-      if (data.success) {
-        await loadServers();
-      } else {
-        console.error('Failed to delete server:', data.error);
-        alert(`サーバーの削除に失敗しました: ${data.error?.message || 'Unknown error'}`);
-      }
+      await loadServers();
     } catch (error) {
-      console.error('Failed to delete server:', error);
-      alert('サーバーの削除中にエラーが発生しました');
+      console.error('Server delete failed:', error);
+      throw error;
     }
   };
 
   // フィルタリング
   const filteredServers = servers.filter(server => {
-    const matchesSearch = server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         server.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = searchQuery === '' || 
+      server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      server.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      server.image?.toLowerCase().includes(searchQuery.toLowerCase());
+    
     const matchesStatus = statusFilter === 'all' || server.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    const matchesCategory = categoryFilter === 'all' || 
+      server.category === categoryFilter ||
+      server.tags?.includes(categoryFilter);
+    
+    return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'running':
-        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      case 'stopped':
-        return <ClockIcon className="h-5 w-5 text-gray-500" />;
-      case 'starting':
-      case 'stopping':
-        return <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />;
-      case 'error':
-        return <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />;
-      default:
-        return <ServerIcon className="h-5 w-5 text-gray-400" />;
-    }
-  };
+  // 利用可能なカテゴリの抽出
+  const availableCategories = Array.from(new Set(
+    servers.flatMap(server => [
+      server.category,
+      ...(server.tags || [])
+    ]).filter(Boolean)
+  ));
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'running': return '実行中';
-      case 'stopped': return '停止中';
-      case 'starting': return '開始中';
-      case 'stopping': return '停止中';
-      case 'error': return 'エラー';
-      default: return '不明';
-    }
+  // 統計情報
+  const stats = {
+    total: servers.length,
+    running: servers.filter(s => s.status === 'running').length,
+    stopped: servers.filter(s => s.status === 'stopped').length,
+    error: servers.filter(s => s.status === 'error').length,
   };
-
-  const getStatusBadge = (status: string) => {
-    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    switch (status) {
-      case 'running':
-        return `${baseClasses} bg-green-100 text-green-800`;
-      case 'stopped':
-        return `${baseClasses} bg-gray-100 text-gray-800`;
-      case 'starting':
-      case 'stopping':
-        return `${baseClasses} bg-blue-100 text-blue-800`;
-      case 'error':
-        return `${baseClasses} bg-red-100 text-red-800`;
-      default:
-        return `${baseClasses} bg-gray-100 text-gray-800`;
-    }
-  };
-
-  if (loading) {
-    return (
-      <MainLayout>
-        <PageHeader title="サーバー管理" />
-        <div className="px-4 sm:px-6 lg:px-8">
-          <CardLoading text="サーバー一覧を読み込み中..." />
-        </div>
-      </MainLayout>
-    );
-  }
 
   return (
-    <MainLayout>
-      <PageHeader
-        title="サーバー管理"
-        description="MCPサーバーの管理と監視"
-        breadcrumbs={[
-          { name: 'ダッシュボード', href: '/dashboard' },
-          { name: 'サーバー管理' },
-        ]}
-        actions={
-          <Link
-            href="/servers/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-            新しいサーバー
-          </Link>
-        }
-      >
-        {/* Search and filters */}
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-          <div className="flex-1 min-w-0">
-            <label htmlFor="search" className="sr-only">
-              サーバーを検索
-            </label>
-            <div className="relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                name="search"
-                id="search"
-                className="block w-full pl-10 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="サーバー名または説明で検索"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+    <ProtectedRoute requiredPermissions={['SERVERS_READ']}>
+      <div className="space-y-6">
+        {/* ヘッダー */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">サーバー管理</h1>
+            <p className="text-sm text-gray-600">
+              MCPサーバーの詳細な管理と監視を行います
+            </p>
           </div>
           
-          <div className="sm:w-48">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-            >
-              <option value="all">すべてのステータス</option>
-              <option value="running">実行中</option>
-              <option value="stopped">停止中</option>
-              <option value="error">エラー</option>
-            </select>
-          </div>
-        </div>
-      </PageHeader>
-
-      <div className="px-4 sm:px-6 lg:px-8">
-        {/* Server stats */}
-        <div className="mt-6">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <ServerIcon className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        総サーバー数
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {servers.length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <CheckCircleIcon className="h-8 w-8 text-green-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        実行中
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {servers.filter(s => s.status === 'running').length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <ClockIcon className="h-8 w-8 text-gray-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        停止中
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {servers.filter(s => s.status === 'stopped').length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        エラー
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {servers.filter(s => s.status === 'error').length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={loadServers} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              更新
+            </Button>
+            <Button size="sm" asChild>
+              <a href="/servers/new">
+                <Plus className="h-4 w-4 mr-2" />
+                サーバー追加
+              </a>
+            </Button>
           </div>
         </div>
 
-        {/* Servers list */}
-        <div className="mt-8">
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            {filteredServers.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {filteredServers.map((server) => (
-                  <li key={server.id}>
-                    <div className="px-4 py-4 flex items-center justify-between hover:bg-gray-50">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                            <ServerIcon className="h-6 w-6 text-blue-600" />
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="flex items-center">
-                            <div className="text-sm font-medium text-gray-900">
-                              {server.name}
-                            </div>
-                            <div className="ml-3 flex items-center">
-                              {getStatusIcon(server.status)}
-                              <span className={clsx("ml-1", getStatusBadge(server.status))}>
-                                {getStatusText(server.status)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {server.description || `Image: ${server.image}`}
-                          </div>
-                          <div className="text-xs text-gray-400 mt-1">
-                            作成日: {new Date(server.createdAt).toLocaleString('ja-JP')}
-                          </div>
-                        </div>
-                      </div>
+        {/* エラー表示 */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-                      <div className="flex items-center space-x-2">
-                        {/* Start/Stop buttons */}
-                        {server.status === 'stopped' && (
-                          <button
-                            onClick={() => handleServerAction(server.id, 'start')}
-                            disabled={operatingServers.has(server.id)}
-                            className="inline-flex items-center p-2 border border-transparent rounded-full shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                          >
-                            <PlayIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                        
-                        {server.status === 'running' && (
-                          <button
-                            onClick={() => handleServerAction(server.id, 'stop')}
-                            disabled={operatingServers.has(server.id)}
-                            className="inline-flex items-center p-2 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-                          >
-                            <StopIcon className="h-4 w-4" />
-                          </button>
-                        )}
+        {/* 統計情報 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Server className="h-8 w-8 text-blue-500" />
+                <div>
+                  <p className="text-2xl font-semibold">{stats.total}</p>
+                  <p className="text-sm text-gray-600">総サーバー数</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                        {/* Settings button */}
-                        <Link
-                          href={`/servers/${server.id}`}
-                          className="inline-flex items-center p-2 border border-gray-300 rounded-full shadow-sm text-gray-400 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          <CogIcon className="h-4 w-4" />
-                        </Link>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-8 w-8 text-green-500" />
+                <div>
+                  <p className="text-2xl font-semibold text-green-600">{stats.running}</p>
+                  <p className="text-sm text-gray-600">実行中</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                        {/* Delete button */}
-                        {server.status === 'stopped' && (
-                          <button
-                            onClick={() => handleDeleteServer(server.id, server.name)}
-                            className="inline-flex items-center p-2 border border-transparent rounded-full shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="px-4 py-12 text-center">
-                {searchQuery || statusFilter !== 'all' ? (
-                  <div>
-                    <ServerIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">
-                      該当するサーバーが見つかりません
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      検索条件を変更してもう一度お試しください
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <ServerIcon className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">
-                      サーバーがありません
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      新しいサーバーを作成して始めましょう
-                    </p>
-                    <div className="mt-6">
-                      <Link
-                        href="/servers/new"
-                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-                        新しいサーバー
-                      </Link>
-                    </div>
-                  </div>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-8 w-8 text-gray-500" />
+                <div>
+                  <p className="text-2xl font-semibold">{stats.stopped}</p>
+                  <p className="text-sm text-gray-600">停止中</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+                <div>
+                  <p className="text-2xl font-semibold text-red-600">{stats.error}</p>
+                  <p className="text-sm text-gray-600">エラー</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* フィルタリング */}
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* 検索バー */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="サーバー名、説明、イメージで検索..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-500" />
+                
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="text-sm border rounded px-2 py-1"
+                >
+                  <option value="all">全ステータス</option>
+                  <option value="running">実行中</option>
+                  <option value="stopped">停止中</option>
+                  <option value="starting">開始中</option>
+                  <option value="stopping">停止中</option>
+                  <option value="error">エラー</option>
+                </select>
+
+                {availableCategories.length > 0 && (
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="text-sm border rounded px-2 py-1"
+                  >
+                    <option value="all">全カテゴリ</option>
+                    {availableCategories.map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
                 )}
               </div>
+            </div>
+
+            {/* アクティブフィルターの表示 */}
+            {(searchQuery || statusFilter !== 'all' || categoryFilter !== 'all') && (
+              <div className="flex items-center gap-2 pt-2 border-t">
+                <span className="text-xs text-gray-500">アクティブフィルター:</span>
+                
+                {searchQuery && (
+                  <Badge variant="outline" className="text-xs">
+                    検索: "{searchQuery}"
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="ml-1 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                
+                {statusFilter !== 'all' && (
+                  <Badge variant="outline" className="text-xs">
+                    ステータス: {statusFilter}
+                    <button
+                      onClick={() => setStatusFilter('all')}
+                      className="ml-1 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                
+                {categoryFilter !== 'all' && (
+                  <Badge variant="outline" className="text-xs">
+                    カテゴリ: {categoryFilter}
+                    <button
+                      onClick={() => setCategoryFilter('all')}
+                      className="ml-1 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                )}
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setStatusFilter('all');
+                    setCategoryFilter('all');
+                  }}
+                  className="text-xs h-6"
+                >
+                  すべてクリア
+                </Button>
+              </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* サーバー一覧 */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                サーバー一覧 ({filteredServers.length}件)
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ServerList
+              servers={filteredServers}
+              isLoading={isLoading}
+              error={error}
+              onRefresh={loadServers}
+              onServerStart={handleServerStart}
+              onServerStop={handleServerStop}
+              onServerDelete={handleServerDelete}
+              showActions={true}
+              showDetailsLink={true}
+            />
+          </CardContent>
+        </Card>
       </div>
-    </MainLayout>
+    </ProtectedRoute>
   );
 }
