@@ -54,15 +54,15 @@ export async function GET(request: NextRequest) {
     }
 
     // クエリパラメータのバリデーション
-    const validation = await validateRequest(request, {}, {
-      query: CatalogSearchQuerySchema,
-    });
-    if (!validation.success) {
-      const error = validation.errors!.query!;
-      return createValidationErrorResponse(error, requestId);
+    const url = new URL(request.url);
+    const searchParams = Object.fromEntries(url.searchParams.entries());
+    
+    const queryValidation = CatalogSearchQuerySchema.safeParse(searchParams);
+    if (!queryValidation.success) {
+      return createValidationErrorResponse(queryValidation.error, requestId);
     }
 
-    const query = validation.data!.query;
+    const query = queryValidation.data;
 
     // カタログクライアントでサーバー検索
     const catalogClient = new CatalogClient();
@@ -84,14 +84,6 @@ export async function GET(request: NextRequest) {
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        query: query.search,
-        tags: query.tags,
-        category: query.category,
-        resultsCount: searchResult.entries.length,
-        total: searchResult.total,
-        page: searchResult.page,
-      },
     });
 
     return Response.json({

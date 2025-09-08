@@ -1,8 +1,6 @@
 # Docker Compose V2 Configuration for Docker MCP Web Manager
 # Development Environment Configuration
 
-version: '3.9'
-
 services:
   # データベース移行サービス（初期化とマイグレーション実行）
   # db-migrate:

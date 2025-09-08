@@ -52,7 +52,14 @@ export async function GET(
       return createValidationErrorResponse(error, requestId);
     }
 
-    const installationId = validation.data!.params.id;
+    const installationId = validation.data?.params?.id;
+    if (!installationId) {
+      return createErrorResponse(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Invalid installation ID',
+        { requestId }
+      );
+    }
 
     // カタログクライアントでインストール進捗を取得
     const catalogClient = new CatalogClient();
@@ -67,13 +74,6 @@ export async function GET(
         userRole: authResult.session.user.role,
         duration,
         statusCode: 200,
-        details: {
-          installationId,
-          serverId: progress.serverId,
-          finalStatus: progress.status,
-          progress: progress.progress,
-          hasError: !!progress.error,
-        },
       });
     }
 

@@ -189,6 +189,28 @@ export const ConfigSchemas = {
     overwrite: z.boolean().default(false),
     dryRun: z.boolean().default(false),
   }),
+  
+  // 設定更新
+  updateConfig: z.object({
+    configurations: z.array(z.object({
+      key: z.string().min(1).max(100),
+      value: z.string(),
+      category: z.string().optional(),
+    })),
+  }),
+};
+
+/**
+ * ジョブ管理関連スキーマ
+ */
+export const JobSchemas = {
+  // ジョブクエリ
+  jobQuery: z.object({
+    status: z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']).optional(),
+    type: z.string().max(50).optional(),
+    since: CommonSchemas.datetime.optional(),
+    until: CommonSchemas.datetime.optional(),
+  }),
 };
 
 /**

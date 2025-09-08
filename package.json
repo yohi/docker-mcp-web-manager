@@ -38,6 +38,7 @@
     "postcss": "^8.4.31",
     "clsx": "^2.0.0",
     "tailwind-merge": "^2.0.0",
+    "class-variance-authority": "^0.7.0",
     "lucide-react": "^0.460.0",
     "@radix-ui/react-accordion": "^1.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",

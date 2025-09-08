@@ -137,6 +137,11 @@ export const PERMISSIONS = {
   SECRETS_MANAGE: 'secrets:manage',
   SECRETS_DELETE: 'secrets:delete',
   
+  // ジョブ管理
+  JOBS_READ: 'jobs:read',
+  JOBS_MANAGE: 'jobs:manage',
+  JOBS_CANCEL: 'jobs:cancel',
+  
   // 管理者権限
   ADMIN_ALL: '*',
 } as const;
@@ -164,6 +169,9 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.CONFIG_READ,
     PERMISSIONS.CONFIG_EXPORT,
     PERMISSIONS.SECRETS_READ,
+    PERMISSIONS.JOBS_READ,
+    PERMISSIONS.JOBS_MANAGE,
+    PERMISSIONS.JOBS_CANCEL,
   ],
   [ROLES.VIEWER]: [
     PERMISSIONS.SERVERS_READ,
@@ -172,5 +180,6 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     PERMISSIONS.LOGS_READ,
     PERMISSIONS.LOGS_STREAM,
     PERMISSIONS.CONFIG_READ,
+    PERMISSIONS.JOBS_READ,
   ],
 } as const;

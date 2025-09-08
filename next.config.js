@@ -1,16 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    // Next.js 15.5.2 で利用可能な実験的機能
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-  },
   // セキュリティヘッダー設定（CORS、CSP含む）
   async headers() {
     const isDevelopment = process.env.NODE_ENV === 'development';
@@ -141,13 +130,19 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   
-  // コード分割とバンドル最適化
+  // コード分割とバンドル最適化（循環参照を回避）
   experimental: {
-    ...nextConfig.experimental,
     optimizeCss: true,
     optimizeServerReact: true,
-    turbotrace: {
-      logLevel: 'error',
+  },
+  
+  // Turbopack設定（deprecated turbo設定の代替）
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
     },
   },
 

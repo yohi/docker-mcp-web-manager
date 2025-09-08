@@ -46,9 +46,6 @@ export async function GET(request: NextRequest) {
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        categoriesCount: categories.length,
-      },
     });
 
     return Response.json({

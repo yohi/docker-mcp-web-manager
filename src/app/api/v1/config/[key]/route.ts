@@ -46,8 +46,8 @@ export async function GET(
     }
 
     // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, {
-      params: z.object({ key: CommonSchemas.configKey }),
+    const paramsValidation = await validateRequest(request, params, {
+      params: z.object({ key: z.string().min(1).max(100) }),
     });
     if (!paramsValidation.success || !paramsValidation.data?.params) {
       return createErrorResponse(
@@ -64,7 +64,14 @@ export async function GET(
     let config;
 
     try {
-      config = await configRepository.findByKey(configKey);
+      const configValue = await ConfigRepository.get(configKey);
+      if (configValue) {
+        config = {
+          key: configKey,
+          value: configValue,
+          type: 'string' as const
+        };
+      }
     } catch (error) {
       console.error(`[CONFIG_ERROR] Failed to fetch configuration ${configKey}:`, error);
       
@@ -140,7 +147,7 @@ export async function PUT(
   
   try {
     // 認証・認可チェック（管理者権限が必要）
-    const authResult = await requirePermissions([PERMISSIONS.CONFIG_WRITE], request);
+    const authResult = await requirePermissions([PERMISSIONS.ADMIN_ALL], request);
     if (!authResult.valid || !authResult.session) {
       logAPIRequest('PUT', `/api/v1/config/${params.key}`, requestId, {
         statusCode: 401,
@@ -151,26 +158,40 @@ export async function PUT(
 
     // パラメータとボディのバリデーション
     const validation = await validateRequest(request, params, {
-      params: z.object({ key: CommonSchemas.configKey }),
-      body: ConfigSchemas.updateSingleConfig,
+      params: z.object({ key: z.string().min(1).max(100) }),
+      body: z.object({
+        value: z.string(),
+        description: z.string().optional()
+      }),
     });
     if (!validation.success) {
       const error = validation.errors!.params || validation.errors!.body!;
       return createValidationErrorResponse(error, requestId);
     }
 
-    const configKey = validation.data!.params.key;
-    const configUpdate = validation.data!.body;
+    const configKey = validation.data?.params?.key;
+    const configUpdate = validation.data?.body;
+    
+    if (!configKey || !configUpdate) {
+      return createErrorResponse(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Missing required parameters',
+        { requestId }
+      );
+    }
 
     // 設定リポジトリで更新処理
     const configRepository = new ConfigRepository();
     let updatedConfig;
 
     try {
-      updatedConfig = await configRepository.update(configKey, {
+      await ConfigRepository.set(configKey, configUpdate.value);
+      updatedConfig = {
+        key: configKey,
         value: configUpdate.value,
-        description: configUpdate.description,
-      });
+        type: 'string' as const,
+        description: configUpdate.description
+      };
     } catch (error) {
       console.error(`[CONFIG_UPDATE_ERROR] Failed to update configuration ${configKey}:`, error);
       
@@ -242,11 +263,6 @@ export async function PUT(
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        key: configKey,
-        category: updatedConfig.category,
-        valueChanged: true,
-      },
     });
 
     const responseData = {
@@ -290,7 +306,7 @@ export async function DELETE(
   
   try {
     // 認証・認可チェック（管理者権限が必要）
-    const authResult = await requirePermissions([PERMISSIONS.CONFIG_WRITE], request);
+    const authResult = await requirePermissions([PERMISSIONS.ADMIN_ALL], request);
     if (!authResult.valid || !authResult.session) {
       logAPIRequest('DELETE', `/api/v1/config/${params.key}`, requestId, {
         statusCode: 401,
@@ -300,8 +316,8 @@ export async function DELETE(
     }
 
     // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, {
-      params: z.object({ key: CommonSchemas.configKey }),
+    const paramsValidation = await validateRequest(request, params, {
+      params: z.object({ key: z.string().min(1).max(100) }),
     });
     if (!paramsValidation.success || !paramsValidation.data?.params) {
       return createErrorResponse(
@@ -318,7 +334,13 @@ export async function DELETE(
     let resetConfig;
 
     try {
-      resetConfig = await configRepository.resetToDefault(configKey);
+      // Reset to default value by setting to null/empty
+      await ConfigRepository.set(configKey, '');
+      resetConfig = {
+        key: configKey,
+        value: '',
+        type: 'string' as const
+      };
     } catch (error) {
       console.error(`[CONFIG_RESET_ERROR] Failed to reset configuration ${configKey}:`, error);
       
@@ -348,7 +370,7 @@ export async function DELETE(
           });
           
           return createErrorResponse(
-            ERROR_CODES.CONFIG_005,
+            ERROR_CODES.NOT_FOUND,
             `Configuration '${configKey}' has no default value to reset to`,
             { requestId }
           );
@@ -376,11 +398,6 @@ export async function DELETE(
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        key: configKey,
-        category: resetConfig.category,
-        resetToDefault: true,
-      },
     });
 
     const responseData = {

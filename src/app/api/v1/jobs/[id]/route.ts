@@ -46,7 +46,7 @@ export async function GET(
     }
 
     // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, {
+    const paramsValidation = await validateRequest(request, params, {
       params: z.object({ id: CommonSchemas.id }),
     });
     if (!paramsValidation.success || !paramsValidation.data?.params) {
@@ -96,29 +96,30 @@ export async function GET(
     }
 
     // 実行中のジョブの場合、リアルタイムステータスを取得
-    if (job.status === 'running' || job.status === 'pending') {
-      const dockerClient = new DockerMCPClient();
-      
-      try {
-        const liveStatus = await dockerClient.getJobStatus(jobId);
-        if (liveStatus) {
-          // データベースの状態と Docker MCP の状態を同期
-          if (liveStatus.status !== job.status) {
-            await jobRepository.update(jobId, {
-              status: liveStatus.status,
-              progress: liveStatus.progress,
-              error: liveStatus.error,
-            });
-            
-            // 更新されたジョブ情報を再取得
-            job = await jobRepository.findById(jobId);
-          }
-        }
-      } catch (error) {
-        console.warn(`[JOB_SYNC_WARNING] Failed to sync job status for ${jobId}:`, error);
-        // ライブステータス取得の失敗は警告として扱い、処理を続行
-      }
-    }
+    // TODO: Docker MCP Clientの実装が完了したら、ライブステータス同期を有効化
+    // if (job.status === 'running' || job.status === 'pending') {
+    //   const dockerClient = new DockerMCPClient();
+    //   
+    //   try {
+    //     const liveStatus = await dockerClient.getJobStatus(jobId);
+    //     if (liveStatus) {
+    //       // データベースの状態と Docker MCP の状態を同期
+    //       if (liveStatus.status !== job.status) {
+    //         await jobRepository.update(jobId, {
+    //           status: liveStatus.status,
+    //           progress: liveStatus.progress,
+    //           error: liveStatus.error,
+    //         });
+    //         
+    //         // 更新されたジョブ情報を再取得
+    //         job = await jobRepository.findById(jobId);
+    //       }
+    //     }
+    //   } catch (error) {
+    //     console.warn(`[JOB_SYNC_WARNING] Failed to sync job status for ${jobId}:`, error);
+    //     // ライブステータス取得の失敗は警告として扱い、処理を続行
+    //   }
+    // }
 
     const duration = Date.now() - startTime;
 
@@ -175,7 +176,7 @@ export async function DELETE(
     }
 
     // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, {
+    const paramsValidation = await validateRequest(request, params, {
       params: z.object({ id: CommonSchemas.id }),
     });
     if (!paramsValidation.success || !paramsValidation.data?.params) {
@@ -222,68 +223,69 @@ export async function DELETE(
     }
 
     // Docker MCPでジョブをキャンセル
-    const dockerClient = new DockerMCPClient();
-    let cancelResult;
+    // TODO: Docker MCP Clientの実装が完了したら、ジョブキャンセル機能を有効化
+    // const dockerClient = new DockerMCPClient();
+    // let cancelResult;
 
-    try {
-      cancelResult = await dockerClient.cancelJob(jobId);
-    } catch (error) {
-      console.error(`[JOB_CANCEL_ERROR] Failed to cancel job ${jobId}:`, error);
-      
-      // エラーの種類による分岐
-      if (error && typeof error === 'object' && 'code' in error) {
-        const jobError = error as any;
-        
-        if (jobError.code === 'JOB_NOT_FOUND') {
-          // Docker MCP側でジョブが見つからない場合、DBの状態を更新
-          await jobRepository.update(jobId, {
-            status: 'failed',
-            error: {
-              code: 'JOB_NOT_FOUND',
-              message: 'Job not found in execution environment',
-            },
-          });
-          
-          logAPIRequest('DELETE', `/api/v1/jobs/${jobId}`, requestId, {
-            userId: authResult.session.user.id,
-            statusCode: 404,
-            error: 'Job not found in execution environment',
-          });
-          
-          return createErrorResponse(
-            ERROR_CODES.JOB_004,
-            'Job not found in execution environment',
-            { requestId }
-          );
-        }
-        
-        if (jobError.code === 'JOB_NOT_CANCELLABLE') {
-          logAPIRequest('DELETE', `/api/v1/jobs/${jobId}`, requestId, {
-            userId: authResult.session.user.id,
-            statusCode: 409,
-            error: 'Job cannot be cancelled at this stage',
-          });
-          
-          return createErrorResponse(
-            ERROR_CODES.JOB_005,
-            'Job cannot be cancelled at this stage',
-            { requestId }
-          );
-        }
-      }
-      
-      logAPIRequest('DELETE', `/api/v1/jobs/${jobId}`, requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 500,
-        error: error instanceof Error ? error.message : 'Job cancellation failed',
-      });
-      
-      return createErrorResponse(
-        ERROR_CODES.JOB_001,
-        `Failed to cancel job: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        { requestId }
-      );
-    }
+    // try {
+    //   cancelResult = await dockerClient.cancelJob(jobId);
+    // } catch (error) {
+    //   console.error(`[JOB_CANCEL_ERROR] Failed to cancel job ${jobId}:`, error);
+    //   
+    //   // エラーの種類による分岐
+    //   if (error && typeof error === 'object' && 'code' in error) {
+    //     const jobError = error as any;
+    //     
+    //     if (jobError.code === 'JOB_NOT_FOUND') {
+    //       // Docker MCP側でジョブが見つからない場合、DBの状態を更新
+    //       await jobRepository.update(jobId, {
+    //         status: 'failed',
+    //         error: {
+    //           code: 'JOB_NOT_FOUND',
+    //           message: 'Job not found in execution environment',
+    //         },
+    //       });
+    //       
+    //       logAPIRequest('DELETE', `/api/v1/jobs/${jobId}`, requestId, {
+    //         userId: authResult.session.user.id,
+    //         statusCode: 404,
+    //         error: 'Job not found in execution environment',
+    //       });
+    //       
+    //       return createErrorResponse(
+    //         ERROR_CODES.JOB_004,
+    //         'Job not found in execution environment',
+    //         { requestId }
+    //       );
+    //     }
+    //     
+    //     if (jobError.code === 'JOB_NOT_CANCELLABLE') {
+    //       logAPIRequest('DELETE', `/api/v1/jobs/${jobId}`, requestId, {
+    //         userId: authResult.session.user.id,
+    //         statusCode: 409,
+    //         error: 'Job cannot be cancelled at this stage',
+    //       });
+    //       
+    //       return createErrorResponse(
+    //         ERROR_CODES.JOB_005,
+    //         'Job cannot be cancelled at this stage',
+    //         { requestId }
+    //       );
+    //     }
+    //   }
+    //   
+    //   logAPIRequest('DELETE', `/api/v1/jobs/${jobId}`, requestId, {
+    //     userId: authResult.session.user.id,
+    //     statusCode: 500,
+    //     error: error instanceof Error ? error.message : 'Job cancellation failed',
+    //   });
+    //   
+    //   return createErrorResponse(
+    //     ERROR_CODES.JOB_001,
+    //     `Failed to cancel job: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    //     { requestId }
+    //   );
+    // }
 
     // データベースの状態を更新
     const updatedJob = await jobRepository.update(jobId, {
@@ -303,10 +305,6 @@ export async function DELETE(
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        jobType: job.type,
-        previousStatus: job.status,
-      },
     });
 
     const responseData = {
@@ -315,7 +313,11 @@ export async function DELETE(
       message: 'Job cancelled successfully',
       cancelledAt: new Date().toISOString(),
       originalType: job.type,
-      progress: updatedJob.progress,
+      progress: updatedJob?.progress || {
+        current: job.progress?.current || 0,
+        total: job.progress?.total || 100,
+        message: 'Job cancelled by user',
+      },
     };
 
     return createSuccessResponse(responseData, { requestId, duration });

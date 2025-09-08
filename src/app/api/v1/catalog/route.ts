@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       .merge(CommonSchemas.sorting)
       .merge(CatalogSchemas.catalogSearch);
 
-    const validation = validateRequest(request, undefined, { query: querySchema });
+    const validation = await validateRequest(request, undefined, { query: querySchema });
     if (!validation.success || !validation.data?.query) {
       return createErrorResponse(
         ERROR_CODES.VALIDATION_ERROR,
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         category: searchParams.category,
         search: searchParams.query,
         verified: searchParams.verified,
-        sortBy: sortBy === 'lastUpdated' ? 'updated' : sortBy,
+        sortBy: (sortBy === 'lastUpdated' ? 'updated' : sortBy) as 'name' | 'verified' | 'updated' | 'popularity',
         sortOrder,
       });
 

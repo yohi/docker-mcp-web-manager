@@ -47,12 +47,26 @@ export async function GET(
     const validation = await validateRequest(request, params, {
       params: z.object({ id: CommonSchemas.id }),
     });
-    if (!validation.success) {
-      const error = validation.errors!.params!;
-      return createValidationErrorResponse(error, requestId);
+    if (!validation.success || !validation.data) {
+      if (validation.errors?.params) {
+        return createValidationErrorResponse(validation.errors.params, requestId);
+      } else {
+        return createErrorResponse(
+          ERROR_CODES.VALIDATION_ERROR,
+          'Invalid parameters',
+          { requestId }
+        );
+      }
     }
 
-    const serverId = validation.data!.params.id;
+    const serverId = validation.data?.params?.id;
+    if (!serverId) {
+      return createErrorResponse(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Invalid server ID',
+        { requestId }
+      );
+    }
 
     // カタログクライアントでサーバー詳細を取得
     const catalogClient = new CatalogClient();
@@ -66,11 +80,6 @@ export async function GET(
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        serverId,
-        serverName: serverDetails.name,
-        version: serverDetails.version,
-      },
     });
 
     return Response.json({

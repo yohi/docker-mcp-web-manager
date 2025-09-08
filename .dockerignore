@@ -16,3 +16,26 @@ build
 coverage
 data
 *.log
+
+# テストファイル
+tests/
+test-results/
+playwright-report/
+jest.config.js
+playwright.config.ts
+
+# 開発用ファイル  
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ドキュメント
+docs/
+*.md
+!package*.json
+
+# その他の不要ファイル
+.DS_Store
+Thumbs.db
+.specs/

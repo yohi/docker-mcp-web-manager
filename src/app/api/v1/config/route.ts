@@ -15,6 +15,7 @@ import {
   PERMISSIONS,
 } from '@/lib/auth';
 import { ConfigRepository } from '@/db/repositories/config-repository';
+import { z } from 'zod';
 
 // =============================================================================
 // /api/v1/config - システム設定API
@@ -42,20 +43,23 @@ export async function GET(request: NextRequest) {
 
     // クエリパラメータのバリデーション（オプション）
     const validation = await validateRequest(request, undefined, {
-      query: ConfigSchemas.configQuery,
+      query: z.object({
+        category: z.string().optional(),
+        search: z.string().optional()
+      }),
     });
     if (!validation.success) {
       return createValidationErrorResponse(validation.errors!.query!, requestId);
     }
 
-    const queryParams = validation.data!.query;
+    const queryParams = validation.data?.query;
 
     // 設定リポジトリから設定を取得
     const configRepository = new ConfigRepository();
     let configs;
 
     try {
-      if (queryParams.category) {
+      if (queryParams?.category) {
         configs = await configRepository.findByCategory(queryParams.category);
       } else {
         configs = await configRepository.findAll();
@@ -89,7 +93,7 @@ export async function GET(request: NextRequest) {
     const responseData = {
       configurations: configs,
       totalCount: configs.length,
-      category: queryParams.category,
+      category: queryParams?.category,
       timestamp: new Date().toISOString(),
     };
 
@@ -125,7 +129,7 @@ export async function PUT(request: NextRequest) {
   
   try {
     // 認証・認可チェック（管理者権限が必要）
-    const authResult = await requirePermissions([PERMISSIONS.CONFIG_WRITE], request);
+    const authResult = await requirePermissions([PERMISSIONS.ADMIN_ALL], request);
     if (!authResult.valid || !authResult.session) {
       logAPIRequest('PUT', '/api/v1/config', requestId, {
         statusCode: 401,
@@ -214,10 +218,6 @@ export async function PUT(request: NextRequest) {
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        updatedKeys: updatedConfigs.map(c => c.key),
-        categories: [...new Set(updatedConfigs.map(c => c.category))],
-      },
     });
 
     const responseData = {

@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       .merge(CommonSchemas.sorting)
       .merge(JobSchemas.jobQuery);
 
-    const validation = validateRequest(request, undefined, { query: querySchema });
+    const validation = await validateRequest(request, undefined, { query: querySchema });
     if (!validation.success || !validation.data?.query) {
       return createErrorResponse(
         ERROR_CODES.VALIDATION_ERROR,

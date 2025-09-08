@@ -60,7 +60,14 @@ export async function POST(request: NextRequest) {
       return createValidationErrorResponse(error, requestId);
     }
 
-    const { serverId, name, version, config, secrets } = validation.data!.body;
+    const { serverId, name, version, config, secrets } = validation.data?.body || {};
+    if (!serverId) {
+      return createErrorResponse(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Server ID is required',
+        { requestId }
+      );
+    }
 
     // カタログクライアントでサーバーをインストール
     const catalogClient = new CatalogClient();
@@ -79,14 +86,6 @@ export async function POST(request: NextRequest) {
       userRole: authResult.session.user.role,
       duration,
       statusCode: 202,
-      details: {
-        serverId,
-        installationId,
-        customName: name,
-        version,
-        hasConfig: !!config,
-        hasSecrets: !!secrets,
-      },
     });
 
     // 非同期処理のため202 Acceptedを返す

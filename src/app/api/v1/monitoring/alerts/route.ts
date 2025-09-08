@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
-import { createApiResponse, createErrorResponse } from '@/lib/api/response';
+import { createSuccessResponse, createErrorResponse } from '@/lib/api/response';
 import { alertNotificationSystem, AlertSeverity, NotificationChannel } from '@/lib/alerts/notification-system';
 import { logger } from '@/lib/logging/structured-logger';
 
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
       requestId,
     });
 
-    return createApiResponse(responseData);
+    return createSuccessResponse(responseData);
 
   } catch (error) {
     logger.error('Error fetching alerts', error as Error, {
@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
       requestId,
     });
 
-    return createApiResponse({
+    return createSuccessResponse({
       message: 'Manual alert created successfully',
       alert: {
         ...alertEvent,
