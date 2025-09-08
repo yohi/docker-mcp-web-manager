@@ -17,7 +17,7 @@ RUN apk add --no-cache \
 COPY package*.json ./
 
 # 依存関係をインストール
-RUN npm ci --only=production --omit=dev
+RUN npm install --only=production --omit=dev --legacy-peer-deps
 
 # Stage 2: Builder (アプリケーションのビルド)
 FROM node:24.7.0-alpine AS builder
@@ -35,7 +35,7 @@ RUN apk add --no-cache \
 COPY package*.json ./
 
 # 開発用依存関係を含めてインストール
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # ソースコードをコピー
 COPY . .
@@ -58,13 +58,11 @@ RUN apk add --no-cache \
     build-base \
     sqlite
 
-# 開発用の非rootユーザーを作成
-RUN addgroup -g 1000 -S appuser && \
-    adduser -u 1000 -S appuser -G appuser
+# 開発用に既存のnodeユーザーを使用（UID/GID: 1000）
 
 # パッケージファイルをコピーして依存関係をインストール
 COPY package*.json ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # ソースコードをコピー
 COPY . .
@@ -72,10 +70,10 @@ COPY .env.example .env.local
 
 # データディレクトリを作成し、権限を設定
 RUN mkdir -p /app/data && \
-    chown -R appuser:appuser /app && \
+    chown -R node:node /app && \
     chmod -R 755 /app
 
-USER appuser
+USER node
 
 # 開発用ポートを公開
 EXPOSE 3000
@@ -93,9 +91,7 @@ RUN apk add --no-cache \
     curl \
     dumb-init
 
-# 本番用の非rootユーザーを作成
-RUN addgroup -g 1000 -S appuser && \
-    adduser -u 1000 -S appuser -G appuser
+# 本番用に既存のnodeユーザーを使用（UID/GID: 1000）
 
 # 本番用依存関係をコピー
 COPY --from=deps /app/node_modules ./node_modules
@@ -109,11 +105,11 @@ COPY drizzle.config.ts ./
 
 # データディレクトリを作成し、権限を設定
 RUN mkdir -p /app/data && \
-    chown -R appuser:appuser /app && \
+    chown -R node:node /app && \
     chmod -R 755 /app
 
 # セキュリティ強化: 不要な権限を削除
-USER appuser
+USER node
 
 # ヘルスチェック設定
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
