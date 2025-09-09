@@ -52,13 +52,13 @@ export async function POST(
       params: z.object({ id: CommonSchemas.id }),
       body: TestSchemas.executeTest,
     });
-    if (!validation.success) {
+    if (!validation.success || !validation.data?.params || !validation.data?.body) {
       const error = validation.errors!.params || validation.errors!.body!;
       return createValidationErrorResponse(error, requestId);
     }
 
-    const serverId = validation.data!.params.id;
-    const testData = validation.data!.body;
+    const serverId = validation.data.params.id;
+    const testData = validation.data.body;
 
     // サーバーの存在確認
     const serverRepository = new ServerRepository();
@@ -156,8 +156,7 @@ export async function POST(
     }
 
     // テスト結果をデータベースに記録
-    const testResultRepository = new TestResultRepository();
-    const savedTestResult = await testResultRepository.create({
+    const savedTestResult = await TestResultRepository.create({
       serverId,
       toolName: testData.toolName,
       input: testData.input || {},

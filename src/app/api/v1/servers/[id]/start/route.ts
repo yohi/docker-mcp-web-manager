@@ -45,7 +45,7 @@ export async function POST(
     }
 
     // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, { 
+    const paramsValidation = await validateRequest(request, params, { 
       params: z.object({ id: CommonSchemas.id }) 
     });
     if (!paramsValidation.success || !paramsValidation.data?.params) {

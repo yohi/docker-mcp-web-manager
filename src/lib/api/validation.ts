@@ -208,6 +208,7 @@ export const JobSchemas = {
   jobQuery: z.object({
     status: z.enum(['pending', 'running', 'completed', 'failed', 'cancelled']).optional(),
     type: z.string().max(50).optional(),
+    serverId: CommonSchemas.id.optional(),
     since: CommonSchemas.datetime.optional(),
     until: CommonSchemas.datetime.optional(),
   }),

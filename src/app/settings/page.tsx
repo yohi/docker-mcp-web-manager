@@ -356,8 +356,8 @@ export default function SettingsPage() {
 
         {/* メインシステム設定 */}
         <SystemSettings
-          settings={settings}
-          systemInfo={systemInfo}
+          settings={settings || undefined}
+          systemInfo={systemInfo || undefined}
           isLoading={isLoading}
           error={error}
           onSave={handleSaveSettings}

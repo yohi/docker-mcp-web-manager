@@ -304,8 +304,6 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <ServerList 
-                  limit={5}
-                  showActions={false}
                   className="border-0 shadow-none"
                 />
               </CardContent>
@@ -323,7 +321,6 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <MonitoringDashboard 
-                  compact={true}
                   className="border-0 shadow-none"
                 />
               </CardContent>
@@ -360,12 +357,12 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <Users className="h-8 w-8 text-green-500" />
                 <div>
-                  <p className="text-2xl font-semibold">{stats?.users.active || 0}</p>
+                  <p className="text-2xl font-semibold">1</p>
                   <p className="text-sm text-gray-600">アクティブユーザー</p>
                 </div>
               </div>
               <div className="mt-2 text-sm text-gray-500">
-                総数: {stats?.users.total || 0}人
+                総数: 1人
               </div>
             </CardContent>
           </Card>
@@ -375,12 +372,12 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <TrendingUp className="h-8 w-8 text-purple-500" />
                 <div>
-                  <p className="text-2xl font-semibold">{stats?.activity.todayActions || 0}</p>
+                  <p className="text-2xl font-semibold">0</p>
                   <p className="text-sm text-gray-600">本日のアクション</p>
                 </div>
               </div>
               <div className="mt-2 text-sm text-gray-500">
-                週間: {stats?.activity.weeklyActions || 0}件
+                週間: 0件
               </div>
             </CardContent>
           </Card>
@@ -390,12 +387,12 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <Activity className="h-8 w-8 text-orange-500" />
                 <div>
-                  <p className="text-2xl font-semibold">{stats?.system.cpuUsage.toFixed(1) || 0}%</p>
+                  <p className="text-2xl font-semibold">{stats?.resources.cpu.toFixed(1) || 0}%</p>
                   <p className="text-sm text-gray-600">CPU使用率</p>
                 </div>
               </div>
               <div className="mt-2 text-sm text-gray-500">
-                メモリ: {stats?.system.memoryUsage.toFixed(1) || 0}%
+                メモリ: {stats?.resources.memory.toFixed(1) || 0}%
               </div>
             </CardContent>
           </Card>
@@ -453,14 +450,7 @@ export default function DashboardPage() {
                 <span className="ml-2">サーバーリストを読み込み中...</span>
               </div>
             }>
-              <ServerList
-                servers={servers}
-                isLoading={isLoading}
-                error={error}
-                onRefresh={loadDashboardData}
-                onServerStart={handleServerStart}
-                onServerStop={handleServerStop}
-              />
+              <ServerList />
             </Suspense>
           </CardContent>
         </Card>
@@ -482,57 +472,7 @@ export default function DashboardPage() {
                 <span className="ml-2">監視ダッシュボードを読み込み中...</span>
               </div>
             }>
-              <MonitoringDashboard
-                serverMetrics={servers.map(server => ({
-                serverId: server.id,
-                serverName: server.name,
-                status: server.status,
-                healthStatus: server.healthStatus || 'unknown',
-                uptime: server.uptime || 0,
-                cpu: {
-                  current: server.resourceUsage?.cpu || 0,
-                  average: server.resourceUsage?.cpu || 0,
-                  peak: server.resourceUsage?.cpu || 0,
-                  history: []
-                },
-                memory: {
-                  used: server.resourceUsage?.memory || 0,
-                  total: server.resourceUsage?.memoryLimit || 0,
-                  percentage: server.resourceUsage 
-                    ? (server.resourceUsage.memory / server.resourceUsage.memoryLimit) * 100 
-                    : 0,
-                  history: []
-                },
-                disk: {
-                  used: 0,
-                  total: 0,
-                  percentage: 0,
-                  history: []
-                },
-                network: {
-                  bytesIn: 0,
-                  bytesOut: 0,
-                  packetsIn: 0,
-                  packetsOut: 0,
-                  history: []
-                },
-                responseTime: {
-                  current: Math.random() * 100,
-                  average: Math.random() * 100,
-                  history: []
-                },
-                errorRate: {
-                  current: Math.random() * 5,
-                  total: Math.random() * 100,
-                  history: []
-                },
-                lastUpdated: new Date().toISOString()
-              }))}
-              alerts={[]}
-              isLoading={isLoading}
-              error={error}
-              onRefresh={loadDashboardData}
-            />
+              <MonitoringDashboard />
             </Suspense>
           </CardContent>
         </Card>

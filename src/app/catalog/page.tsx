@@ -111,7 +111,7 @@ export default function CatalogPage() {
       }
       
       // カテゴリの抽出
-      const allCategories = Array.from(new Set(entries.map((e: CatalogEntry) => e.category).filter(Boolean)));
+      const allCategories = Array.from(new Set(entries.map((e: CatalogEntry) => e.category).filter(Boolean))) as string[];
       setCategories(allCategories);
       
     } catch (error) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
-import { createSuccessResponse, createErrorResponse } from '@/lib/api/response';
+import { createSuccessResponse, createErrorResponse, ERROR_CODES } from '@/lib/api/response';
 import { alertNotificationSystem, AlertSeverity, NotificationChannel } from '@/lib/alerts/notification-system';
 import { logger } from '@/lib/logging/structured-logger';
 
@@ -61,10 +61,14 @@ export async function GET(request: NextRequest) {
     // 認証チェック
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return createErrorResponse({
-        message: 'Authentication required',
-        details: 'Valid session required to access alerts',
-      }, 401);
+      return createErrorResponse(
+        ERROR_CODES.UNAUTHORIZED,
+        'Authentication required',
+        {
+          details: 'Valid session required to access alerts',
+          statusCode: 401,
+        }
+      );
     }
 
     // クエリパラメータ解析
@@ -79,10 +83,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!queryResult.success) {
-      return createErrorResponse({
-        message: 'Invalid query parameters',
-        details: queryResult.error.errors,
-      }, 400);
+      return createErrorResponse(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Invalid query parameters',
+        {
+          details: queryResult.error.errors,
+          statusCode: 400,
+        }
+      );
     }
 
     const query = queryResult.data;
@@ -155,10 +163,14 @@ export async function GET(request: NextRequest) {
       requestId,
     });
 
-    return createErrorResponse({
-      message: 'Failed to fetch alerts',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, 500);
+    return createErrorResponse(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Failed to fetch alerts',
+      {
+        details: error instanceof Error ? error.message : 'Unknown error',
+        statusCode: 500,
+      }
+    );
   }
 }
 
@@ -172,18 +184,26 @@ export async function POST(request: NextRequest) {
     // 認証チェック
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return createErrorResponse({
-        message: 'Authentication required',
-        details: 'Valid session required to create alerts',
-      }, 401);
+      return createErrorResponse(
+        ERROR_CODES.UNAUTHORIZED,
+        'Authentication required',
+        {
+          details: 'Valid session required to create alerts',
+          statusCode: 401,
+        }
+      );
     }
 
     // 管理者権限チェック
     if (session.user.role !== 'admin') {
-      return createErrorResponse({
-        message: 'Administrator access required',
-        details: 'Only administrators can create manual alerts',
-      }, 403);
+      return createErrorResponse(
+        ERROR_CODES.FORBIDDEN,
+        'Administrator access required',
+        {
+          details: 'Only administrators can create manual alerts',
+          statusCode: 403,
+        }
+      );
     }
 
     // リクエストボディ解析
@@ -269,10 +289,14 @@ export async function POST(request: NextRequest) {
       requestId,
     });
 
-    return createErrorResponse({
-      message: 'Failed to create manual alert',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, 500);
+    return createErrorResponse(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Failed to create manual alert',
+      {
+        details: error instanceof Error ? error.message : 'Unknown error',
+        statusCode: 500,
+      }
+    );
   }
 }
 

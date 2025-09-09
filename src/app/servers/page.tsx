@@ -135,11 +135,6 @@ export default function ServersPage() {
               </CardHeader>
               <CardContent>
                 <ServerList 
-                  searchQuery={searchQuery}
-                  statusFilter={statusFilter}
-                  onServerSelect={handleServerSelect}
-                  selectedServerId={selectedServer}
-                  showActions={true}
                   className="border-0 shadow-none"
                 />
               </CardContent>

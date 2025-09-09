@@ -48,7 +48,7 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
       const rows = await db
         .select()
         .from(this.table)
-        .where(eq(this.table[this.primaryKey as string], id))
+        .where(eq((this.table as any)[this.primaryKey as string], id))
         .limit(1)
         .execute();
 
@@ -77,11 +77,11 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
       let query = db.select().from(this.table);
       
       if (whereConditions.length > 0) {
-        query = query.where(and(...whereConditions));
+        query = query.where(and(...whereConditions)) as any;
       }
       
       if (orderByConditions.length > 0) {
-        query = query.orderBy(...orderByConditions);
+        query = query.orderBy(...orderByConditions) as any;
       }
 
       const rows = await query.limit(limit).offset(offset).execute();
@@ -92,7 +92,7 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
         .from(this.table);
       
       if (whereConditions.length > 0) {
-        countQuery = countQuery.where(and(...whereConditions));
+        countQuery = countQuery.where(and(...whereConditions)) as any;
       }
 
       const [{ count: total }] = await countQuery.execute();
@@ -118,11 +118,12 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
   async create(model: Partial<TModel>): Promise<TModel> {
     try {
       const row = this.mapModelToRow(model);
-      const [insertedRow] = await db
+      const insertResult = await db
         .insert(this.table)
-        .values(row)
+        .values(row as any)
         .returning()
         .execute();
+      const [insertedRow] = insertResult as any[];
 
       return this.mapRowToModel(insertedRow as TRow);
     } catch (error) {
@@ -142,12 +143,13 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
         row.updatedAt = new Date().toISOString() as any;
       }
 
-      const [updatedRow] = await db
+      const updateResult = await db
         .update(this.table)
-        .set(row)
-        .where(eq(this.table[this.primaryKey as string], id))
+        .set(row as any)
+        .where(eq((this.table as any)[this.primaryKey as string], id))
         .returning()
         .execute();
+      const [updatedRow] = updateResult as any[];
 
       return updatedRow ? this.mapRowToModel(updatedRow as TRow) : null;
     } catch (error) {
@@ -163,7 +165,7 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
     try {
       const result = await db
         .delete(this.table)
-        .where(eq(this.table[this.primaryKey as string], id))
+        .where(eq((this.table as any)[this.primaryKey as string], id))
         .execute();
 
       return result.changes > 0;
@@ -179,9 +181,9 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
   async exists(id: string): Promise<boolean> {
     try {
       const rows = await db
-        .select({ id: this.table[this.primaryKey as string] })
+        .select({ id: (this.table as any)[this.primaryKey as string] })
         .from(this.table)
-        .where(eq(this.table[this.primaryKey as string], id))
+        .where(eq((this.table as any)[this.primaryKey as string], id))
         .limit(1)
         .execute();
 
@@ -246,9 +248,9 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
       for (const [key, value] of Object.entries(filters)) {
         if (value !== undefined && value !== null && key in this.table) {
           if (Array.isArray(value)) {
-            conditions.push(sql`${this.table[key]} IN ${value}`);
+            conditions.push(sql`${(this.table as any)[key]} IN ${value}`);
           } else {
-            conditions.push(eq(this.table[key], value));
+            conditions.push(eq((this.table as any)[key], value));
           }
         }
       }
@@ -257,7 +259,7 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
     // 検索条件の処理
     if (search && this.searchColumns.length > 0) {
       const searchConditions = this.searchColumns.map((column) =>
-        like(this.table[column as string], `%${search}%`)
+        like((this.table as any)[column as string], `%${search}%`)
       );
       conditions.push(or(...searchConditions));
     }
@@ -272,12 +274,12 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
     if (!sort || !(sort in this.table)) {
       // デフォルトソート（作成日時の降順）
       if ('createdAt' in this.table) {
-        return [desc(this.table.createdAt)];
+        return [desc((this.table as any).createdAt)];
       }
       return [];
     }
 
-    const column = this.table[sort];
+    const column = (this.table as any)[sort];
     return [order === 'asc' ? asc(column) : desc(column)];
   }
 
@@ -285,7 +287,7 @@ export abstract class BaseRepository<TTable extends SQLiteTable, TRow, TModel> {
    * トランザクション実行のヘルパーメソッド
    */
   protected async transaction<T>(
-    callback: (tx: typeof db) => Promise<T>
+    callback: (tx: any) => Promise<T>
   ): Promise<T> {
     return db.transaction(callback);
   }

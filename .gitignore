@@ -197,3 +197,6 @@ coverage/
 
 # npm
 .npmrc.local
+
+
+.serena

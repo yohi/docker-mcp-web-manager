@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, Activity, Clock, Users, Server, Shield, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 
 // =============================================================================
@@ -233,34 +233,32 @@ const LogViewer: React.FC<LogViewerProps> = ({ logs, onRefresh, onFilter }) => {
       {/* フィルターコントロール */}
       <div className="flex flex-wrap gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-2">
-          <Select value={levelFilter} onValueChange={setLevelFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="レベル" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">全レベル</SelectItem>
-              <SelectItem value="FATAL">FATAL</SelectItem>
-              <SelectItem value="ERROR">ERROR</SelectItem>
-              <SelectItem value="WARN">WARN</SelectItem>
-              <SelectItem value="INFO">INFO</SelectItem>
-              <SelectItem value="DEBUG">DEBUG</SelectItem>
-              <SelectItem value="TRACE">TRACE</SelectItem>
-            </SelectContent>
-          </Select>
+          <select 
+            value={levelFilter} 
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">全レベル</option>
+            <option value="FATAL">FATAL</option>
+            <option value="ERROR">ERROR</option>
+            <option value="WARN">WARN</option>
+            <option value="INFO">INFO</option>
+            <option value="DEBUG">DEBUG</option>
+            <option value="TRACE">TRACE</option>
+          </select>
 
-          <Select value={componentFilter} onValueChange={setComponentFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="コンポーネント" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">全コンポーネント</SelectItem>
-              {uniqueComponents.map(component => (
-                <SelectItem key={component} value={component}>
-                  {component}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <select 
+            value={componentFilter} 
+            onChange={(e) => setComponentFilter(e.target.value)}
+            className="w-48 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">全コンポーネント</option>
+            {uniqueComponents.map(component => (
+              <option key={component} value={component}>
+                {component}
+              </option>
+            ))}
+          </select>
 
           <Input
             placeholder="検索..."

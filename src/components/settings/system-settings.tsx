@@ -725,7 +725,7 @@ export function SystemSettings({
                       >
                         {testResults.slack === null ? 'テスト' :
                          testResults.slack ? <CheckCircle className="h-4 w-4 text-green-500" /> :
-                         <XCircle className="h-4 w-4 text-red-500" />}
+                         <X className="h-4 w-4 text-red-500" />}
                       </Button>
                     </div>
                     {errors.slackWebhookUrl && (

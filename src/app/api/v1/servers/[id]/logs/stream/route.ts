@@ -49,15 +49,19 @@ export async function GET(
     // パラメータとクエリのバリデーション
     const validation = await validateRequest(request, params, {
       params: z.object({ id: CommonSchemas.id }),
-      query: LogSchemas.streamQuery,
+      query: LogSchemas.getServerLogs,
     });
     if (!validation.success) {
       const error = validation.errors!.params || validation.errors!.query!;
       return createValidationErrorResponse(error, requestId);
     }
 
-    const serverId = validation.data!.params.id;
-    const queryParams = validation.data!.query;
+    if (!validation.data || !validation.data.params || !validation.data.query) {
+      return createErrorResponse(ERROR_CODES.VALIDATION_ERROR, 'Invalid request data', { requestId });
+    }
+
+    const serverId = validation.data.params.id;
+    const queryParams = validation.data.query;
 
     // サーバーの存在確認
     const serverRepository = new ServerRepository();
@@ -130,18 +134,13 @@ export async function GET(
       userId: authResult.session.user.id,
       userRole: authResult.session.user.role,
       statusCode: 200,
-      details: { 
-        action: 'stream_started',
-        connectionId,
-        clientIp,
-      },
     });
 
     // ReadableStreamを作成してSSEレスポンスを構築
     const stream = new ReadableStream({
       start(controller) {
-        // 接続状態を「アクティブ」に更新
-        sseSecurityManager.updateConnectionState(connectionId, 'active');
+        // 接続状態を「接続中」に更新
+        sseSecurityManager.updateConnectionState(connectionId, 'connected');
         
         // 初期接続確認メッセージ
         const initMessage = sseSecurityManager.formatSSEMessage({
@@ -161,7 +160,7 @@ export async function GET(
         const startLogStream = async () => {
           try {
             const logs = await dockerClient.getServerLogs(serverId, {
-              lines: queryParams.tail || 100,
+              lines: queryParams.lines || 100,
               since: queryParams.since,
               follow: true,
             });
@@ -242,13 +241,9 @@ export async function GET(
         sseSecurityManager.updateConnectionState(connectionId, 'closed');
         
         logAPIRequest('GET', `/api/v1/servers/${serverId}/logs/stream`, requestId, {
-          userId: authResult.session.user.id,
+          userId: authResult.session?.user.id,
           duration,
           statusCode: 200,
-          details: { 
-            action: 'stream_cancelled',
-            connectionId,
-          },
         });
       },
     });

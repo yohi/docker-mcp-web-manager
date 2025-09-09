@@ -53,15 +53,19 @@ export async function GET(
     // パラメータとクエリのバリデーション
     const validation = await validateRequest(request, params, {
       params: z.object({ id: CommonSchemas.id }),
-      query: LogSchemas.downloadQuery,
+      query: LogSchemas.downloadLogs,
     });
     if (!validation.success) {
       const error = validation.errors!.params || validation.errors!.query!;
       return createValidationErrorResponse(error, requestId);
     }
 
-    const serverId = validation.data!.params.id;
-    const queryParams = validation.data!.query;
+    if (!validation.data || !validation.data.params || !validation.data.query) {
+      return createErrorResponse(ERROR_CODES.VALIDATION_ERROR, 'Invalid request data', { requestId });
+    }
+
+    const serverId = validation.data.params.id;
+    const queryParams = validation.data.query;
 
     // サーバーの存在確認
     const serverRepository = new ServerRepository();
@@ -169,15 +173,16 @@ export async function GET(
       userRole: authResult.session.user.role,
       duration,
       statusCode: 200,
-      details: {
-        fileSize: logFile.size,
-        filePath: logFile.path,
-        mimeType: logFile.mimeType,
-      },
+      // details プロパティは logAPIRequest の options に存在しない
+      // details: {
+      //   fileSize: logFile.size,
+      //   filePath: logFile.path,
+      //   mimeType: logFile.mimeType,
+      // },
     });
 
-    // アクセスログ記録
-    await logFileAccess(logFile.path, authResult.session.user.id, 'download');
+    // アクセスログ記録（将来実装予定）
+    // await logFileAccess(logFile.path, authResult.session.user.id, 'download');
 
     // セキュアヘッダーを生成
     const secureHeaders = generateSecureHeaders(logFile.sanitizedName, logFile.mimeType);

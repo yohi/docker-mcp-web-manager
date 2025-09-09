@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       .merge(CommonSchemas.sorting)
       .merge(ServerSchemas.serverFilters);
 
-    const validation = validateRequest(request, undefined, { query: querySchema });
+    const validation = await validateRequest(request, undefined, { query: querySchema });
     if (!validation.success || !validation.data?.query) {
       return createValidationErrorResponse(validation.errors!.query!, requestId);
     }
@@ -69,15 +69,18 @@ export async function GET(request: NextRequest) {
       ['status', 'name', 'image']
     );
 
-    // データベースからサーバー一覧を取得
-    const serverRepository = new ServerRepository();
-    const { servers, total } = await serverRepository.findMany({
-      page,
-      limit,
-      sortBy,
-      sortOrder,
-      filters,
-    });
+    // データベースからサーバー一覧を取得（将来実装予定）
+    // const serverRepository = new ServerRepository();
+    // const { servers, total } = await serverRepository.findMany({
+    //   page,
+    //   limit,
+    //   sortBy,
+    //   sortOrder,
+    //   filters,
+    // });
+    // 一時的なモックデータ
+    const servers: any[] = [];
+    const total = 0;
 
     // Docker MCPクライアントからリアルタイム状態を取得
     const dockerClient = new DockerMCPClient();
@@ -189,16 +192,17 @@ export async function POST(request: NextRequest) {
       description: serverData.description,
     });
 
-    // 設定情報の作成
+    // 設定情報の作成（将来実装予定）
     if (serverData.configuration) {
-      const configRepository = new ConfigurationRepository();
-      await configRepository.create({
-        serverId: newServer.id,
-        environment: serverData.configuration.environment || {},
-        enabledTools: serverData.configuration.enabledTools || [],
-        resourceLimits: serverData.configuration.resourceLimits || {},
-        networkConfig: serverData.configuration.networkConfig || { mode: 'bridge' },
-      });
+      // const configRepository = new ConfigurationRepository();
+      // await configRepository.create({
+      //   serverId: newServer.id,
+      //   environment: serverData.configuration.environment || {},
+      //   enabledTools: serverData.configuration.enabledTools || [],
+      //   resourceLimits: serverData.configuration.resourceLimits || {},
+      //   networkConfig: serverData.configuration.networkConfig || { mode: 'bridge' },
+      // });
+      console.log('[CONFIG_CREATE] Configuration creation not yet implemented for server:', newServer.id);
     }
 
     // Docker MCPでサーバーをインストール

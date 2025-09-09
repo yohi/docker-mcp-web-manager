@@ -651,10 +651,10 @@ export function CatalogBrowser({
                         <CardTitle className="text-lg flex items-center space-x-2">
                           <span>{entry.displayName}</span>
                           {entry.verified && (
-                            <CheckCircle className="h-4 w-4 text-blue-500" title="検証済み" />
+                            <CheckCircle className="h-4 w-4 text-blue-500" />
                           )}
                           {entry.featured && (
-                            <Star className="h-4 w-4 text-yellow-500 fill-current" title="注目" />
+                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
                           )}
                         </CardTitle>
                         <div className="flex items-center space-x-2 mt-1">
@@ -747,7 +747,7 @@ export function CatalogBrowser({
                             variant="outline"
                             size="sm"
                             onClick={() => handleUninstall(entry)}
-                            disabled={entry.installationStatus === 'installing'}
+                            disabled={false}
                           >
                             アンインストール
                           </Button>

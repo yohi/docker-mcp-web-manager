@@ -49,7 +49,7 @@ export async function GET(
     }
 
     // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, { 
+    const paramsValidation = await validateRequest(request, params, { 
       params: z.object({ id: CommonSchemas.id }) 
     });
     if (!paramsValidation.success || !paramsValidation.data?.params) {
@@ -152,13 +152,13 @@ export async function PUT(
       params: z.object({ id: CommonSchemas.id }),
       body: ServerSchemas.updateServer,
     });
-    if (!validation.success) {
+    if (!validation.success || !validation.data?.params || !validation.data?.body) {
       const error = validation.errors!.params || validation.errors!.body!;
       return createValidationErrorResponse(error, requestId);
     }
 
-    const serverId = validation.data!.params.id;
-    const updateData = validation.data!.body;
+    const serverId = validation.data.params.id;
+    const updateData = validation.data.body;
 
     // サーバーの存在確認
     const serverRepository = new ServerRepository();
@@ -200,15 +200,16 @@ export async function PUT(
       description: updateData.description,
     });
 
-    // 設定情報の更新
+    // 設定情報の更新（将来実装予定）
     if (updateData.configuration) {
-      const configRepository = new ConfigurationRepository();
-      await configRepository.updateByServerId(serverId, {
-        environment: updateData.configuration.environment,
-        enabledTools: updateData.configuration.enabledTools,
-        resourceLimits: updateData.configuration.resourceLimits,
-        networkConfig: updateData.configuration.networkConfig,
-      });
+      // const configRepository = new ConfigurationRepository();
+      // await configRepository.updateByServerId(serverId, {
+      //   environment: updateData.configuration.environment,
+      //   enabledTools: updateData.configuration.enabledTools,
+      //   resourceLimits: updateData.configuration.resourceLimits,
+      //   networkConfig: updateData.configuration.networkConfig,
+      // });
+      console.log('[CONFIG_UPDATE] Configuration update not yet implemented for server:', serverId);
     }
 
     const duration = Date.now() - startTime;
@@ -266,7 +267,7 @@ export async function DELETE(
     }
 
     // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, { 
+    const paramsValidation = await validateRequest(request, params, { 
       params: z.object({ id: CommonSchemas.id }) 
     });
     if (!paramsValidation.success || !paramsValidation.data?.params) {

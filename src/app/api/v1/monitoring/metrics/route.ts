@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
-import { createSuccessResponse, createErrorResponse } from '@/lib/api/response';
+import { createSuccessResponse, createErrorResponse, ERROR_CODES } from '@/lib/api/response';
 import { metricsCollector } from '@/lib/performance/monitoring';
 import { logAnalyzer } from '@/lib/logging/log-aggregation';
 import { logger } from '@/lib/logging/structured-logger';
@@ -40,10 +40,14 @@ export async function GET(request: NextRequest) {
     // 認証チェック
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return createErrorResponse({
-        message: 'Authentication required',
-        details: 'Valid session required to access monitoring metrics',
-      }, 401);
+      return createErrorResponse(
+        ERROR_CODES.UNAUTHORIZED,
+        'Authentication required',
+        {
+          details: 'Valid session required to access monitoring metrics',
+          statusCode: 401,
+        }
+      );
     }
 
     // クエリパラメータ解析
@@ -55,10 +59,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!queryResult.success) {
-      return createErrorResponse({
-        message: 'Invalid query parameters',
-        details: queryResult.error.errors,
-      }, 400);
+      return createErrorResponse(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Invalid query parameters',
+        {
+          details: queryResult.error.errors,
+          statusCode: 400,
+        }
+      );
     }
 
     const { timeRange, metrics: requestedMetrics, aggregation } = queryResult.data;
@@ -79,10 +87,14 @@ export async function GET(request: NextRequest) {
     // 現在のメトリクス取得
     const currentMetrics = metricsCollector.getCurrentMetrics();
     if (!currentMetrics) {
-      return createErrorResponse({
-        message: 'Metrics not available',
-        details: 'No metrics data available at this time',
-      }, 503);
+      return createErrorResponse(
+        ERROR_CODES.SERVICE_UNAVAILABLE,
+        'Metrics not available',
+        {
+          details: 'No metrics data available at this time',
+          statusCode: 503,
+        }
+      );
     }
 
     // メトリクス履歴取得
@@ -117,10 +129,15 @@ export async function GET(request: NextRequest) {
       requestId,
     });
 
-    return createErrorResponse({
-      message: 'Failed to fetch monitoring metrics',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, 500);
+    return createErrorResponse(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Failed to fetch monitoring metrics',
+      {
+        details: error instanceof Error ? error.message : 'Unknown error',
+        requestId,
+        statusCode: 500,
+      }
+    );
   }
 }
 
@@ -134,10 +151,14 @@ export async function POST(request: NextRequest) {
     // 認証チェック
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return createErrorResponse({
-        message: 'Authentication required',
-        details: 'Valid session required to submit custom metrics',
-      }, 401);
+      return createErrorResponse(
+        ERROR_CODES.UNAUTHORIZED,
+        'Authentication required',
+        {
+          details: 'Valid session required to submit custom metrics',
+          statusCode: 401,
+        }
+      );
     }
 
     // リクエストボディ解析
@@ -156,14 +177,14 @@ export async function POST(request: NextRequest) {
       requestId,
     });
 
-    // メトリクス記録
-    metricsCollector.recordCustomMetrics({
-      component: customMetrics.component,
-      metrics: customMetrics.metrics,
-      timestamp: customMetrics.timestamp ? new Date(customMetrics.timestamp) : new Date(),
-      metadata: customMetrics.metadata,
-      userId: session.user.id,
-    });
+    // メトリクス記録（カスタムメトリクス機能は将来実装予定）
+    // metricsCollector.recordCustomMetrics({
+    //   component: customMetrics.component,
+    //   metrics: customMetrics.metrics,
+    //   timestamp: customMetrics.timestamp ? new Date(customMetrics.timestamp) : new Date(),
+    //   metadata: customMetrics.metadata,
+    //   userId: session.user.id,
+    // });
 
     logger.info('Successfully recorded custom metrics', {
       userId: session.user.id,
@@ -182,10 +203,15 @@ export async function POST(request: NextRequest) {
       requestId,
     });
 
-    return createErrorResponse({
-      message: 'Failed to record custom metrics',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, 500);
+    return createErrorResponse(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Failed to record custom metrics',
+      {
+        details: error instanceof Error ? error.message : 'Unknown error',
+        requestId,
+        statusCode: 500,
+      }
+    );
   }
 }
 

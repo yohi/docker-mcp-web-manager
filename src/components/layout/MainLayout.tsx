@@ -8,13 +8,13 @@ import { usePathname } from 'next/navigation';
 import {
   HomeIcon,
   ServerIcon,
-  CatalogIcon,
-  LogsIcon,
-  SettingsIcon,
+  RectangleGroupIcon,
+  DocumentTextIcon,
+  Cog6ToothIcon,
   KeyIcon,
   BellIcon,
   UserIcon,
-  MenuIcon,
+  Bars3Icon,
   XMarkIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
@@ -55,19 +55,19 @@ const navigation: NavigationItem[] = [
   { 
     name: 'カタログ', 
     href: '/catalog', 
-    icon: CatalogIcon,
+    icon: RectangleGroupIcon,
     children: [
-      { name: 'カタログ一覧', href: '/catalog', icon: CatalogIcon },
-      { name: 'インストール履歴', href: '/catalog/history', icon: CatalogIcon },
+      { name: 'カタログ一覧', href: '/catalog', icon: RectangleGroupIcon },
+      { name: 'インストール履歴', href: '/catalog/history', icon: RectangleGroupIcon },
     ]
   },
   { 
     name: 'ログ・監視', 
     href: '/logs', 
-    icon: LogsIcon,
+    icon: DocumentTextIcon,
     children: [
-      { name: 'ログ一覧', href: '/logs', icon: LogsIcon },
-      { name: 'リアルタイム監視', href: '/logs/realtime', icon: LogsIcon },
+      { name: 'ログ一覧', href: '/logs', icon: DocumentTextIcon },
+      { name: 'リアルタイム監視', href: '/logs/realtime', icon: DocumentTextIcon },
     ]
   },
   { 
@@ -82,9 +82,9 @@ const navigation: NavigationItem[] = [
   { 
     name: '設定', 
     href: '/settings', 
-    icon: SettingsIcon,
+    icon: Cog6ToothIcon,
     children: [
-      { name: 'システム設定', href: '/settings', icon: SettingsIcon },
+      { name: 'システム設定', href: '/settings', icon: Cog6ToothIcon },
       { name: 'ユーザー管理', href: '/settings/users', icon: UserIcon },
       { name: 'セキュリティ設定', href: '/settings/security', icon: KeyIcon },
     ]
@@ -195,13 +195,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <div className="flex-shrink-0">
                 <img
                   className="h-8 w-8 rounded-full"
-                  src={session.user?.image || '/default-avatar.png'}
+                  src={'/default-avatar.png'}
                   alt=""
                 />
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-gray-700">
-                  {session.user?.name}
+                  {session.user?.email}
                 </p>
                 <p className="text-xs text-gray-500">
                   {session.user?.email}
@@ -221,7 +221,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             onClick={() => setSidebarOpen(true)}
           >
             <span className="sr-only">Open sidebar</span>
-            <MenuIcon className="h-6 w-6" />
+            <Bars3Icon className="h-6 w-6" />
           </button>
           
           <div className="flex-1 px-4 flex justify-between items-center">
@@ -247,13 +247,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 <div className="flex items-center text-sm text-gray-700">
                   <span className="inline-block h-6 w-6 rounded-full overflow-hidden bg-gray-100 mr-2">
                     <img
-                      src={session.user?.image || '/default-avatar.png'}
+                      src={'/default-avatar.png'}
                       alt=""
                       className="h-full w-full"
                     />
                   </span>
                   <span className="hidden md:block">
-                    {session.user?.name}
+                    {session.user?.email}
                   </span>
                 </div>
               </div>

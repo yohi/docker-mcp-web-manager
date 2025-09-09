@@ -55,7 +55,6 @@ function InternalAuthProvider({ children }: { children: ReactNode }) {
   const user = session?.user ? {
     id: session.user.id || '',
     email: session.user.email || '',
-    name: session.user.name || undefined,
     role: session.user.role || 'viewer',
     permissions: session.user.permissions || [],
   } : null;

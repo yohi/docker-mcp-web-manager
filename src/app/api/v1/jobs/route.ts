@@ -74,15 +74,16 @@ export async function GET(request: NextRequest) {
         type: queryParams.type,
         status: queryParams.status,
         serverId: queryParams.serverId,
-        createdAfter: queryParams.createdAfter,
-        createdBefore: queryParams.createdBefore,
+        createdAfter: queryParams.since,
+        createdBefore: queryParams.until,
       };
 
-      jobResult = await jobRepository.findWithFilters(filters, {
+      jobResult = await jobRepository.findAll({
         page,
         limit,
-        sortBy,
-        sortOrder,
+        sort: sortBy,
+        order: sortOrder,
+        filters,
       });
     } catch (error) {
       console.error('[JOB_ERROR] Failed to fetch jobs:', error);
@@ -110,14 +111,11 @@ export async function GET(request: NextRequest) {
       statusCode: 200,
     });
 
-    return createSuccessResponse(jobResult.jobs, {
+    return createSuccessResponse(jobResult.data, {
       pagination: {
         page,
         limit,
-        total: jobResult.total,
-        totalPages: Math.ceil(jobResult.total / limit),
-        hasNext: page * limit < jobResult.total,
-        hasPrev: page > 1,
+        total: jobResult.pagination.total,
       },
       requestId,
       duration,

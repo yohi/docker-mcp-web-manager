@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth-options';
-import { createSuccessResponse, createErrorResponse } from '@/lib/api/response';
+import { createSuccessResponse, createErrorResponse, ERROR_CODES } from '@/lib/api/response';
 import { logAnalyzer } from '@/lib/logging/log-aggregation';
 import { LogLevel } from '@/lib/logging/structured-logger';
 import { logger } from '@/lib/logging/structured-logger';
@@ -47,10 +47,15 @@ export async function GET(request: NextRequest) {
     // 認証チェック
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return createErrorResponse({
-        message: 'Authentication required',
-        details: 'Valid session required to access logs',
-      }, 401);
+      return createErrorResponse(
+        ERROR_CODES.UNAUTHORIZED,
+        'Authentication required',
+        {
+          details: 'Valid session required to access logs',
+          requestId,
+          statusCode: 401,
+        }
+      );
     }
 
     // クエリパラメータ解析
@@ -77,10 +82,15 @@ export async function GET(request: NextRequest) {
     });
 
     if (!queryResult.success) {
-      return createErrorResponse({
-        message: 'Invalid query parameters',
-        details: queryResult.error.errors,
-      }, 400);
+      return createErrorResponse(
+        ERROR_CODES.VALIDATION_ERROR,
+        'Invalid query parameters',
+        {
+          details: queryResult.error.errors,
+          requestId,
+          statusCode: 400,
+        }
+      );
     }
 
     const query = queryResult.data;
@@ -149,10 +159,15 @@ export async function GET(request: NextRequest) {
       requestId,
     });
 
-    return createErrorResponse({
-      message: 'Failed to query logs',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, 500);
+    return createErrorResponse(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Failed to query logs',
+      {
+        details: error instanceof Error ? error.message : 'Unknown error',
+        requestId,
+        statusCode: 500,
+      }
+    );
   }
 }
 
@@ -173,10 +188,14 @@ async function handleLogAnalysis(
   });
 
   if (!queryResult.success) {
-    return createErrorResponse({
-      message: 'Invalid analysis parameters',
-      details: queryResult.error.errors,
-    }, 400);
+    return createErrorResponse(
+      ERROR_CODES.VALIDATION_ERROR,
+      'Invalid analysis parameters',
+      {
+        details: queryResult.error.errors,
+        statusCode: 400,
+      }
+    );
   }
 
   const { startTime, endTime, includeDetails } = queryResult.data;
@@ -208,12 +227,12 @@ async function handleLogAnalysis(
       additionalData = {
         recentErrors: recentErrors.map(log => ({
           ...log,
-          timestamp: log.timestamp.toISOString(),
+          timestamp: typeof log.timestamp === 'string' ? log.timestamp : (log.timestamp as Date).toISOString(),
           level: LogLevel[log.level],
         })),
         slowRequests: slowRequests.map(log => ({
           ...log,
-          timestamp: log.timestamp.toISOString(),
+          timestamp: typeof log.timestamp === 'string' ? log.timestamp : (log.timestamp as Date).toISOString(),
           level: LogLevel[log.level],
         })),
         activeUsers,
@@ -247,10 +266,14 @@ async function handleLogAnalysis(
       requestId,
     });
 
-    return createErrorResponse({
-      message: 'Failed to analyze logs',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, 500);
+    return createErrorResponse(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Failed to analyze logs',
+      {
+        details: error instanceof Error ? error.message : 'Unknown error',
+        statusCode: 500,
+      }
+    );
   }
 }
 
@@ -264,10 +287,15 @@ export async function POST(request: NextRequest) {
     // 認証チェック
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return createErrorResponse({
-        message: 'Authentication required',
-        details: 'Valid session required to export logs',
-      }, 401);
+      return createErrorResponse(
+        ERROR_CODES.UNAUTHORIZED,
+        'Authentication required',
+        {
+          details: 'Valid session required to export logs',
+          requestId,
+          statusCode: 401,
+        }
+      );
     }
 
     // リクエストボディ解析
@@ -358,10 +386,15 @@ export async function POST(request: NextRequest) {
       requestId,
     });
 
-    return createErrorResponse({
-      message: 'Failed to export logs',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, 500);
+    return createErrorResponse(
+      ERROR_CODES.INTERNAL_ERROR,
+      'Failed to export logs',
+      {
+        details: error instanceof Error ? error.message : 'Unknown error',
+        requestId,
+        statusCode: 500,
+      }
+    );
   }
 }
 
