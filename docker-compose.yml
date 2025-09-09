@@ -3,31 +3,24 @@
 
 services:
   # データベース移行サービス（初期化とマイグレーション実行）
-  # db-migrate:
-  #   build:
-  #     context: .
-  #     target: development
-  #   volumes:
-  #     - app-data:/app/data
-  #   environment:
-  #     - DATABASE_URL=file:/app/data/app.db
-  #     - NODE_ENV=development
-  #   command: >
-  #     sh -c "
-  #       mkdir -p /app/data && 
-  #       chown -R 1000:1000 /app/data && 
-  #       chmod 750 /app/data &&
-  #       npx drizzle-kit generate &&
-  #       npx drizzle-kit migrate
-  #     "
-  #   restart: "no"
-  #   user: "1000:1000"
-  #   security_opt:
-  #     - no-new-privileges:true
-  #   cap_drop:
-  #     - ALL
-  #   networks:
-  #     - app-network
+  db-migrate:
+    build:
+      context: .
+      target: development
+    volumes:
+      - app-data:/app/data
+    environment:
+      - DATABASE_URL=file:/app/data/app.db
+      - NODE_ENV=development
+    command: ["/app/scripts/init-db.sh"]
+    restart: "no"
+    user: "root"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - app-network
 
   # メインWebアプリケーション
   web:
@@ -40,6 +33,7 @@ services:
       - NODE_ENV=development
       - DATABASE_URL=file:/app/data/app.db
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dev-secret-change-in-production}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-key-change-in-production-with-strong-key}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
       - SERVER_RATE_USER_RPM=${SERVER_RATE_USER_RPM:-1000}
@@ -62,16 +56,9 @@ services:
       - ./postcss.config.mjs:/app/postcss.config.mjs:ro
       - ./package.json:/app/package.json:ro
       - ./tsconfig.json:/app/tsconfig.json:ro
-    # command: >
-    #   sh -c "
-    #     mkdir -p /app/data && 
-    #     chown -R node:node /app/data && 
-    #     chmod 755 /app/data &&
-    #     npm run dev
-    #   "
-    # depends_on:
-    #   db-migrate:
-    #     condition: service_completed_successfully
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     user: "node:node"
     security_opt:

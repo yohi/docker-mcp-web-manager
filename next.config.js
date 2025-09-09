@@ -134,6 +134,8 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
     optimizeServerReact: true,
+    // ハイドレーションエラーの軽減
+    suppressHydrationWarning: true,
   },
   
   // Turbopack設定（deprecated turbo設定の代替）

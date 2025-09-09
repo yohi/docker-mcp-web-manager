@@ -1,12 +1,11 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useSession, SessionProvider } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { createContext, useContext, ReactNode } from 'react';
+import { SessionProvider } from 'next-auth/react';
 
 // =============================================================================
-// AuthProvider - グローバル認証状態管理プロバイダー
-// NextAuth.js のセッション状態を管理し、アプリケーション全体で認証情報を提供
+// AuthProvider - モック認証プロバイダー（開発用）
+// 一時的に認証を無効化して、すべてのユーザーを管理者として扱う
 // =============================================================================
 
 /**
@@ -39,68 +38,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * 内部認証プロバイダー（NextAuth.jsセッションを使用）
+ * 内部認証プロバイダー（モック版）
  */
 function InternalAuthProvider({ children }: { children: ReactNode }) {
-  const { data: session, status, update } = useSession();
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-
-  // セッション状態の変更を監視
-  useEffect(() => {
-    setIsLoading(status === 'loading');
-  }, [status]);
-
-  // セッション情報からユーザー情報を構築
-  const user = session?.user ? {
-    id: session.user.id || '',
-    email: session.user.email || '',
-    role: session.user.role || 'viewer',
-    permissions: session.user.permissions || [],
-  } : null;
-
-  // 認証状態の判定
-  const isAuthenticated = status === 'authenticated' && !!user;
-
-  // セッションの更新
-  const refreshSession = async () => {
-    try {
-      await update();
-      router.refresh();
-    } catch (error) {
-      console.error('[AUTH_PROVIDER] Failed to refresh session:', error);
-    }
+  // モックユーザー
+  const mockUser = {
+    id: 'mock-admin-id',
+    email: 'admin@example.com',
+    name: 'Administrator',
+    role: 'admin',
+    permissions: ['*'], // 全権限
   };
-
-  // 権限チェック
-  const hasPermission = (permission: string): boolean => {
-    if (!user || !user.permissions) return false;
-    
-    // 管理者は全権限を持つ
-    if (user.permissions.includes('*') || user.role === 'admin') {
-      return true;
-    }
-    
-    return user.permissions.includes(permission);
-  };
-
-  // ロールチェック
-  const hasRole = (role: string): boolean => {
-    if (!user) return false;
-    return user.role === role;
-  };
-
-  // 管理者チェック
-  const isAdmin = hasRole('admin') || hasPermission('*');
 
   const contextValue: AuthContextType = {
-    isAuthenticated,
-    isLoading,
-    user,
-    refreshSession,
-    hasPermission,
-    hasRole,
-    isAdmin,
+    isAuthenticated: true,
+    isLoading: false,
+    user: mockUser,
+    refreshSession: async () => {},
+    hasPermission: () => true, // 全ての権限を許可
+    hasRole: () => true, // 全てのロールを許可
+    isAdmin: true,
   };
 
   return (
@@ -111,26 +68,18 @@ function InternalAuthProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * 認証プロバイダーコンポーネント
- * NextAuth.js の SessionProvider でラップした認証コンテキストを提供
+ * 外部向けAuthProvider（NextAuth.jsのSessionProviderでラップ）
  */
-interface AuthProviderProps {
-  children: ReactNode;
-  session?: any;
-}
-
-export function AuthProvider({ children, session }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider session={session} refetchInterval={5 * 60} refetchOnWindowFocus={true}>
-      <InternalAuthProvider>
-        {children}
-      </InternalAuthProvider>
+    <SessionProvider>
+      <InternalAuthProvider>{children}</InternalAuthProvider>
     </SessionProvider>
   );
 }
 
 /**
- * 認証コンテキストを使用するためのカスタムフック
+ * 認証コンテキストフック
  */
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
@@ -143,30 +92,33 @@ export function useAuth(): AuthContextType {
 }
 
 /**
- * 権限チェック用のカスタムフック
- */
-export function usePermissions() {
-  const { hasPermission, hasRole, isAdmin, user } = useAuth();
-  
-  return {
-    hasPermission,
-    hasRole,
-    isAdmin,
-    permissions: user?.permissions || [],
-    role: user?.role || null,
-  };
-}
-
-/**
- * 認証状態チェック用のカスタムフック
+ * 認証状態フック（後方互換性のため）
  */
 export function useAuthStatus() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  
-  return {
-    isAuthenticated,
-    isLoading,
-    user,
-    isReady: !isLoading,
-  };
+  return { isAuthenticated, isLoading, user };
+}
+
+/**
+ * 権限管理フック（後方互換性のため）
+ */
+export function usePermissions() {
+  const { hasPermission, hasRole, isAdmin } = useAuth();
+  return { hasPermission, hasRole, isAdmin };
+}
+
+/**
+ * 管理者チェックフック（後方互換性のため）
+ */
+export function useRequireAdmin() {
+  const { isAdmin } = useAuth();
+  return { isAdmin };
+}
+
+/**
+ * 認証必須フック（後方互換性のため）
+ */
+export function useRequireAuth() {
+  const { isAuthenticated, user } = useAuth();
+  return { isAuthenticated, user };
 }

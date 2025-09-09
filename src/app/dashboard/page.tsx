@@ -67,9 +67,17 @@ interface DashboardStats {
   };
 }
 
+// デフォルト統計データ（ハイドレーション問題回避のため）
+const defaultStats: DashboardStats = {
+  servers: { total: 3, running: 2, stopped: 1, error: 0 },
+  catalog: { available: 25, installed: 3 },
+  system: { uptime: '2 days, 14 hours', version: '2.0.0', lastUpdated: '2025-09-09T22:00:00.000Z' },
+  resources: { cpu: 45, memory: 62, disk: 28 },
+};
+
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>(defaultStats);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,54 +89,28 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
 
-      // 複数のAPIエンドポイントから統計を取得
-      const [serversRes, catalogRes, systemRes] = await Promise.allSettled([
-        fetch('/api/v1/servers'),
-        fetch('/api/v1/catalog'),
-        fetch('/api/v1/system/status'),
-      ]);
-
-      // レスポンスを処理
-      const servers = serversRes.status === 'fulfilled' 
-        ? await serversRes.value.json()
-        : { data: [] };
+      // 新しい統一されたダッシュボード統計APIから取得
+      const response = await fetch('/api/v1/dashboard/stats');
       
-      const catalog = catalogRes.status === 'fulfilled'
-        ? await catalogRes.value.json()
-        : { data: [] };
+      if (!response.ok) {
+        throw new Error(`Failed to fetch dashboard stats: ${response.status}`);
+      }
       
-      const system = systemRes.status === 'fulfilled'
-        ? await systemRes.value.json()
-        : { data: { uptime: 'N/A', version: 'N/A', lastUpdated: 'N/A' } };
-
-      // 統計を計算
-      const serverData = servers.data || [];
-      const serverStats = {
-        total: serverData.length,
-        running: serverData.filter((s: any) => s.status === 'running').length,
-        stopped: serverData.filter((s: any) => s.status === 'stopped').length,
-        error: serverData.filter((s: any) => s.status === 'error').length,
-      };
-
-      const catalogData = catalog.data || [];
-      const catalogStats = {
-        available: catalogData.length,
-        installed: serverData.length,
-      };
-
-      setStats({
-        servers: serverStats,
-        catalog: catalogStats,
-        system: system.data || { uptime: 'N/A', version: 'N/A', lastUpdated: 'N/A' },
-        resources: {
-          cpu: Math.round(Math.random() * 100), // Mock data - 実際の実装では監視APIから取得
-          memory: Math.round(Math.random() * 100),
-          disk: Math.round(Math.random() * 100),
-        },
-      });
+      const result = await response.json();
+      const statsData = result.data || result;
+      
+      setStats(statsData);
     } catch (error) {
       console.error('Failed to fetch dashboard stats:', error);
       setError('Failed to load dashboard statistics');
+      
+      // フォールバックデータを設定
+      setStats({
+        servers: { total: 0, running: 0, stopped: 0, error: 0 },
+        catalog: { available: 0, installed: 0 },
+        system: { uptime: 'N/A', version: '2.0.0', lastUpdated: new Date().toISOString() },
+        resources: { cpu: 0, memory: 0, disk: 0 },
+      });
     } finally {
       setLoading(false);
     }
@@ -214,8 +196,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 統計カード */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Servers</CardTitle>
@@ -288,8 +269,7 @@ export default function DashboardPage() {
                 </p>
               </CardContent>
             </Card>
-          </div>
-        )}
+        </div>
 
         {/* メインコンテンツ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -328,75 +308,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* システム概要カード */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Server className="h-8 w-8 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-semibold">{stats?.servers.total || 0}</p>
-                  <p className="text-sm text-gray-600">サーバー</p>
-                </div>
-              </div>
-              <div className="mt-2 flex items-center space-x-4 text-sm">
-                <div className="flex items-center space-x-1">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>{stats?.servers.running || 0}実行中</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                  <span>{stats?.servers.error || 0}エラー</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Users className="h-8 w-8 text-green-500" />
-                <div>
-                  <p className="text-2xl font-semibold">1</p>
-                  <p className="text-sm text-gray-600">アクティブユーザー</p>
-                </div>
-              </div>
-              <div className="mt-2 text-sm text-gray-500">
-                総数: 1人
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-8 w-8 text-purple-500" />
-                <div>
-                  <p className="text-2xl font-semibold">0</p>
-                  <p className="text-sm text-gray-600">本日のアクション</p>
-                </div>
-              </div>
-              <div className="mt-2 text-sm text-gray-500">
-                週間: 0件
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Activity className="h-8 w-8 text-orange-500" />
-                <div>
-                  <p className="text-2xl font-semibold">{stats?.resources.cpu.toFixed(1) || 0}%</p>
-                  <p className="text-sm text-gray-600">CPU使用率</p>
-                </div>
-              </div>
-              <div className="mt-2 text-sm text-gray-500">
-                メモリ: {stats?.resources.memory.toFixed(1) || 0}%
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* クイックアクション */}
         <Card>

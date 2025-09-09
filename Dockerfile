@@ -1,44 +1,57 @@
 # Multi-stage Dockerfile for Docker MCP Web Manager
-# Ubuntu base image for better compatibility with native binaries
-FROM node:20 AS deps
+# 戦略: Ubuntu/Debianベースでbetter-sqlite3をビルドし、軽量Alpineにコピー
+
+# Stage 1: Builder (Ubuntu/Debianベースで依存関係とビルド)
+FROM node:20-bookworm AS builder
 WORKDIR /app
 
-# package.json と package-lock.json をコピー（キャッシュ最適化）
-COPY package*.json ./
-
-# 依存関係をインストール（本番用）
-ENV NODE_ENV=production
-RUN npm install --only=production --legacy-peer-deps
-
-# Stage 2: Builder (アプリケーションのビルド)
-FROM node:20 AS builder
-WORKDIR /app
+# システム依存関係をインストール（better-sqlite3ビルド用）
+RUN apt-get update && apt-get install -y \
+    sqlite3 \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # package.json をコピー
 COPY package*.json ./
 
-# 開発用依存関係を含めてインストール
-ENV NODE_ENV=development
+# 全依存関係をインストール（better-sqlite3含む）
 RUN npm install --legacy-peer-deps
 
-# ソースコードをコピー
-COPY . .
-COPY .env.example .env.local
+# better-sqlite3のビルドテスト
+RUN node -e "console.log('Testing better-sqlite3...'); const db = require('better-sqlite3')(':memory:'); console.log('better-sqlite3 build successful!');"
 
-# TypeScript型チェックとビルド（型エラーは後で修正するためスキップ）
-# RUN npm run type-check
-RUN npm run build
-
-# Stage 3: Development (開発環境)
-FROM node:20 AS development
+# Stage 2: Production Dependencies（本番用依存関係のみ）
+FROM node:20-bookworm AS prod-deps
 WORKDIR /app
 
-# 必要最小限のパッケージのみインストール
+# システム依存関係をインストール
 RUN apt-get update && apt-get install -y \
     sqlite3 \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# builderステージからnode_modulesをコピー（better-sqlite3バイナリ込み）
+# package.json をコピー
+COPY package*.json ./
+
+# 本番用依存関係のみインストール
+RUN npm install --only=production --legacy-peer-deps
+
+# Stage 3: Development (Ubuntu/Debianベース - ビルドと実行環境を統一)
+FROM node:20-bookworm-slim AS development
+WORKDIR /app
+
+# 軽量システム依存関係をインストール（better-sqlite3実行に必要）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sqlite3 \
+    curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
+
+# ビルド済みnode_modulesをコピー（同じLinux環境なので互換性あり）
 COPY --from=builder /app/node_modules ./node_modules
 
 # パッケージファイルをコピー
@@ -48,12 +61,23 @@ COPY package*.json ./
 COPY . .
 COPY .env.example .env.local
 
-# データディレクトリを作成し、権限を設定
+# スクリプトディレクトリに実行権限を付与
+RUN chmod +x /app/scripts/*.sh
+
+# better-sqlite3の動作テスト
+RUN node -e "console.log('Testing better-sqlite3 in Debian...'); const db = require('better-sqlite3')(':memory:'); console.log('better-sqlite3 works in Debian!');"
+
+# データディレクトリを作成し、権限を設定（rootユーザーで実行）
 RUN mkdir -p /app/data && \
     chown -R node:node /app && \
-    chmod -R 755 /app
+    chmod -R 755 /app && \
+    chmod 777 /app/data
 
+# ユーザー切り替え前にnodeユーザーでアクセス可能な状態を確保
 USER node
+
+# nodeユーザーでデータベースファイルの作成テスト
+RUN touch /app/data/test.db && rm /app/data/test.db && echo "データベースディレクトリへの書き込み権限確認完了"
 
 # 開発用ポートを公開
 EXPOSE 3000
@@ -62,15 +86,14 @@ EXPOSE 3000
 CMD ["npm", "run", "dev"]
 
 # Stage 4: Production (本番環境)
-FROM node:20-slim AS production
+FROM node:20-alpine AS production
 WORKDIR /app
 
 # 本番環境で必要な最小限のパッケージをインストール
-RUN apt-get update && apt-get install -y \
-    sqlite3 \
+RUN apk add --no-cache \
+    sqlite \
     curl \
-    dumb-init \
-    && rm -rf /var/lib/apt/lists/*
+    dumb-init
 
 # 本番用依存関係をコピー
 COPY --from=deps /app/node_modules ./node_modules

@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { configurations, secretReferences } from '../schema';
 import { BaseRepository } from './base-repository';
 import db from '../connection';
@@ -46,10 +46,10 @@ export class ConfigurationRepository extends BaseRepository<
     return {
       id: model.id,
       serverId: model.serverId,
-      environment: this.safeStringifyJson(model.environment),
-      enabledTools: this.safeStringifyJson(model.enabledTools),
-      resourceLimits: this.safeStringifyJson(model.resourceLimits),
-      networkConfig: this.safeStringifyJson(model.networkConfig),
+      environment: this.safeStringifyJson(model.environment) || undefined,
+      enabledTools: this.safeStringifyJson(model.enabledTools) || undefined,
+      resourceLimits: this.safeStringifyJson(model.resourceLimits) || undefined,
+      networkConfig: this.safeStringifyJson(model.networkConfig) || undefined,
     };
   }
 
@@ -67,7 +67,7 @@ export class ConfigurationRepository extends BaseRepository<
 
       if (!configRow) return null;
 
-      const config = this.mapRowToModel(configRow);
+      const config = this.mapRowToModel(configRow as ConfigurationRow);
       
       // シークレット参照を取得
       config.secrets = await this.getSecretReferences(config.id);
@@ -286,7 +286,7 @@ export class ConfigurationRepository extends BaseRepository<
       return references.map((ref) => ({
         secretId: ref.secretId,
         environmentVariable: ref.environmentVariable,
-        required: ref.required,
+        required: ref.required ?? false,
       }));
     } catch (error) {
       console.error(`Error getting secret references for configuration ${configurationId}:`, error);
@@ -382,13 +382,16 @@ export class ConfigurationRepository extends BaseRepository<
     try {
       // 総設定数
       const [{ totalConfigurations }] = await db
-        .select({ totalConfigurations: db.sql<number>`count(*)` })
+        .select({ totalConfigurations: sql<number>`count(*)` })
         .from(configurations)
         .execute();
 
       // 平均ツール数（概算）
       const configs = await db
-        .select({ enabledTools: configurations.enabledTools })
+        .select({ 
+          enabledTools: configurations.enabledTools,
+          environment: configurations.environment
+        })
         .from(configurations)
         .execute();
 
