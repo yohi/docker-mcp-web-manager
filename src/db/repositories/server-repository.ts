@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { servers, configurations, tools, resources, prompts } from '../schema';
 import { BaseRepository } from './base-repository';
 import db from '../connection';
@@ -319,7 +319,7 @@ export class ServerRepository extends BaseRepository<
   private async getServerToolsCount(serverId: string): Promise<number> {
     try {
       const [{ count }] = await db
-        .select({ count: db.sql<number>`count(*)` })
+        .select({ count: sql<number>`count(*)` })
         .from(tools)
         .where(eq(tools.serverId, serverId))
         .execute();
@@ -337,7 +337,7 @@ export class ServerRepository extends BaseRepository<
   private async getServerResourcesCount(serverId: string): Promise<number> {
     try {
       const [{ count }] = await db
-        .select({ count: db.sql<number>`count(*)` })
+        .select({ count: sql<number>`count(*)` })
         .from(resources)
         .where(eq(resources.serverId, serverId))
         .execute();
@@ -355,7 +355,7 @@ export class ServerRepository extends BaseRepository<
   private async getServerPromptsCount(serverId: string): Promise<number> {
     try {
       const [{ count }] = await db
-        .select({ count: db.sql<number>`count(*)` })
+        .select({ count: sql<number>`count(*)` })
         .from(prompts)
         .where(eq(prompts.serverId, serverId))
         .execute();
