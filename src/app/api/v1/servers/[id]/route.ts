@@ -1,34 +1,21 @@
-import { NextRequest } from 'next/server';
-import { 
-  createSuccessResponse, 
-  createErrorResponse, 
-  createValidationErrorResponse,
-  ERROR_CODES,
-  logAPIRequest,
-} from '@/lib/api/response';
-import {
-  validateRequest,
-  ServerSchemas,
-  CommonSchemas,
-} from '@/lib/api/validation';
-import {
-  getSessionFromRequest,
-  requirePermissions,
-  PERMISSIONS,
-} from '@/lib/auth';
-import { ServerRepository } from '@/db/repositories/server-repository';
-import { ConfigurationRepository } from '@/db/repositories/configuration-repository';
-import { DockerMCPClient } from '@/lib/docker-mcp';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerRepository } from '@/db/repositories';
+import { MCPServer } from '@/types/models';
 
 // =============================================================================
-// /api/v1/servers/[id] - 個別サーバー管理API
-// サーバーの詳細取得、更新、削除機能
+// 個別サーバー管理 API エンドポイント
+// 特定のサーバーの詳細取得、更新、削除機能
+// 開発環境とプロダクション環境の両方に対応
+// 監視・ログ機能統合バージョン
 // =============================================================================
 
 /**
  * サーバー詳細取得
  * GET /api/v1/servers/[id]
+ * 
+ * @param request - NextRequest
+ * @param params - URL params containing server ID
+ * @returns サーバー詳細情報
  */
 export async function GET(
   request: NextRequest,
@@ -36,209 +23,259 @@ export async function GET(
 ) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const startTime = Date.now();
-  
+
   try {
-    // 認証・認可チェック
-    const authResult = await requirePermissions([PERMISSIONS.SERVERS_READ], request);
-    if (!authResult.valid || !authResult.session) {
-      logAPIRequest('GET', `/api/v1/servers/${params.id}`, requestId, {
-        statusCode: 401,
-        error: authResult.error,
-      });
-      return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
-    }
+    const serverId = params.id;
 
-    // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, { 
-      params: z.object({ id: CommonSchemas.id }) 
-    });
-    if (!paramsValidation.success || !paramsValidation.data?.params) {
-      return createValidationErrorResponse(paramsValidation.errors!.params!, requestId);
-    }
-
-    const serverId = paramsValidation.data.params.id;
-
-    // データベースからサーバー情報を取得
-    const serverRepository = new ServerRepository();
-    const server = await serverRepository.findById(serverId);
-
-    if (!server) {
-      logAPIRequest('GET', `/api/v1/servers/${serverId}`, requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 404,
-        error: 'Server not found',
-      });
-      return createErrorResponse(
-        ERROR_CODES.SERVER_001,
-        `Server with ID '${serverId}' not found`,
-        { requestId }
+    // 基本的なIDバリデーション
+    if (!serverId || typeof serverId !== 'string' || serverId.trim().length === 0) {
+      console.log(`[API_LOG] GET /api/v1/servers/[id] - ${requestId} - INVALID_ID`);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_003',
+            message: '無効なサーバーIDです'
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 400 }
       );
     }
 
-    // Docker MCPからリアルタイム詳細情報を取得
-    const dockerClient = new DockerMCPClient();
-    let enhancedServer = { ...server };
+    // データベースからサーバー情報を取得
+    const serverRepository = getServerRepository();
+    const server = await serverRepository.findById(serverId);
 
-    try {
-      const liveDetails = await dockerClient.getServerDetails(serverId);
-      enhancedServer = {
-        ...server,
-        status: liveDetails.status,
-        tools: liveDetails.tools,
-        resources: liveDetails.resources,
-        prompts: liveDetails.prompts || [],
-      };
-    } catch (error) {
-      console.warn(`[SERVER_DETAILS] Failed to get live details for ${serverId}:`, error);
-      // Docker MCP接続エラーの場合はDB状態を使用
+    if (!server) {
+      console.log(`[API_LOG] GET /api/v1/servers/${serverId} - ${requestId} - NOT_FOUND`);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_001',
+            message: `サーバー ID '${serverId}' が見つかりません`
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 404 }
+      );
     }
 
     const duration = Date.now() - startTime;
 
-    // 監査ログ
-    logAPIRequest('GET', `/api/v1/servers/${serverId}`, requestId, {
-      userId: authResult.session.user.id,
-      userRole: authResult.session.user.role,
-      duration,
-      statusCode: 200,
-    });
+    // 監視・ログ情報の追加
+    console.log(`[API_LOG] GET /api/v1/servers/${serverId} - ${requestId} - SUCCESS - ${duration}ms`);
 
-    return createSuccessResponse(enhancedServer, { requestId, duration });
+    // 成功レスポンス
+    return NextResponse.json({
+      success: true,
+      data: server,
+      metadata: {
+        requestId,
+        timestamp: new Date().toISOString(),
+        duration,
+        monitoring: {
+          responseTime: duration,
+          serverId: server.id,
+          serverName: server.name
+        }
+      }
+    });
 
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    console.error('[API_ERROR] GET /api/v1/servers/[id]:', error);
-    
-    logAPIRequest('GET', `/api/v1/servers/${params.id}`, requestId, {
-      duration,
-      statusCode: 500,
-      error: errorMessage,
-    });
+    console.error(`[API_ERROR] GET /api/v1/servers/${params.id}:`, error);
+    console.error(`[API_LOG] GET /api/v1/servers/${params.id} - ${requestId} - ERROR - ${duration}ms`);
 
-    return createErrorResponse(
-      ERROR_CODES.INTERNAL_ERROR,
-      'Failed to retrieve server details',
-      { requestId, details: errorMessage }
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SERVER_001',
+          message: 'サーバー詳細の取得に失敗しました',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        metadata: {
+          requestId,
+          timestamp: new Date().toISOString(),
+          duration,
+          monitoring: {
+            responseTime: duration,
+            errorType: error instanceof Error ? error.constructor.name : 'UnknownError'
+          }
+        }
+      },
+      { status: 500 }
     );
   }
 }
 
 /**
  * サーバー情報更新
- * PUT /api/v1/servers/[id]
+ * PATCH /api/v1/servers/[id]
+ * 
+ * @param request - NextRequest（JSON bodyを含む）
+ * @param params - URL params containing server ID
+ * @returns 更新されたサーバー情報
  */
-export async function PUT(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const startTime = Date.now();
-  
+
   try {
-    // 認証・認可チェック
-    const authResult = await requirePermissions([PERMISSIONS.SERVERS_MANAGE], request);
-    if (!authResult.valid || !authResult.session) {
-      logAPIRequest('PUT', `/api/v1/servers/${params.id}`, requestId, {
-        statusCode: 401,
-        error: authResult.error,
-      });
-      return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
+    const serverId = params.id;
+
+    // 基本的なIDバリデーション
+    if (!serverId || typeof serverId !== 'string' || serverId.trim().length === 0) {
+      console.log(`[API_LOG] PATCH /api/v1/servers/[id] - ${requestId} - INVALID_ID`);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_003',
+            message: '無効なサーバーIDです'
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 400 }
+      );
     }
 
-    // パラメータとボディのバリデーション
-    const validation = await validateRequest(request, params, {
-      params: z.object({ id: CommonSchemas.id }),
-      body: ServerSchemas.updateServer,
-    });
-    if (!validation.success) {
-      const error = validation.errors!.params || validation.errors!.body!;
-      return createValidationErrorResponse(error, requestId);
-    }
+    // リクエストボディの解析
+    const body = await request.json();
+    const { name, image, description, version, port, environment, resourceLimits, status } = body;
 
-    const serverId = validation.data!.params.id;
-    const updateData = validation.data!.body;
-
-    // サーバーの存在確認
-    const serverRepository = new ServerRepository();
+    // データベースからサーバーを取得
+    const serverRepository = getServerRepository();
     const existingServer = await serverRepository.findById(serverId);
 
     if (!existingServer) {
-      logAPIRequest('PUT', `/api/v1/servers/${serverId}`, requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 404,
-        error: 'Server not found',
-      });
-      return createErrorResponse(
-        ERROR_CODES.SERVER_001,
-        `Server with ID '${serverId}' not found`,
-        { requestId }
+      console.log(`[API_LOG] PATCH /api/v1/servers/${serverId} - ${requestId} - NOT_FOUND`);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_001',
+            message: `サーバー ID '${serverId}' が見つかりません`
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 404 }
       );
     }
 
     // 名前変更の場合の重複チェック
-    if (updateData.name && updateData.name !== existingServer.name) {
-      const duplicateServer = await serverRepository.findByName(updateData.name);
-      if (duplicateServer) {
-        logAPIRequest('PUT', `/api/v1/servers/${serverId}`, requestId, {
-          userId: authResult.session.user.id,
-          statusCode: 409,
-          error: 'Server name already exists',
-        });
-        return createErrorResponse(
-          ERROR_CODES.SERVER_002,
-          `Server with name '${updateData.name}' already exists`,
-          { requestId }
+    if (name && name !== existingServer.name) {
+      const duplicateServer = await serverRepository.findByName(name);
+      if (duplicateServer && duplicateServer.id !== serverId) {
+        console.log(`[API_LOG] PATCH /api/v1/servers/${serverId} - ${requestId} - DUPLICATE_NAME - ${name}`);
+        
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'SERVER_004',
+              message: `サーバー名 '${name}' は既に使用されています`
+            },
+            metadata: {
+              requestId,
+              timestamp: new Date().toISOString(),
+              monitoring: {
+                conflictField: 'name',
+                conflictValue: name
+              }
+            }
+          },
+          { status: 409 }
         );
       }
     }
 
-    // サーバー情報の更新
-    const updatedServer = await serverRepository.update(serverId, {
-      name: updateData.name,
-      description: updateData.description,
-    });
+    // 更新データの構築
+    const updateData: Partial<MCPServer> = {};
+    
+    if (name !== undefined) updateData.name = name;
+    if (image !== undefined) updateData.image = image;
+    if (description !== undefined) updateData.description = description;
+    if (version !== undefined) updateData.version = version;
+    if (port !== undefined) updateData.port = port;
+    if (environment !== undefined) updateData.environment = environment;
+    if (resourceLimits !== undefined) updateData.resourceLimits = resourceLimits;
+    if (status !== undefined) updateData.status = status;
 
-    // 設定情報の更新
-    if (updateData.configuration) {
-      const configRepository = new ConfigurationRepository();
-      await configRepository.updateByServerId(serverId, {
-        environment: updateData.configuration.environment,
-        enabledTools: updateData.configuration.enabledTools,
-        resourceLimits: updateData.configuration.resourceLimits,
-        networkConfig: updateData.configuration.networkConfig,
-      });
-    }
+    // データベースを更新
+    const updatedServer = await serverRepository.updateServer(serverId, updateData);
 
     const duration = Date.now() - startTime;
 
-    // 監査ログ
-    logAPIRequest('PUT', `/api/v1/servers/${serverId}`, requestId, {
-      userId: authResult.session.user.id,
-      userRole: authResult.session.user.role,
-      duration,
-      statusCode: 200,
-    });
+    // 監視・ログ情報の追加
+    console.log(`[API_LOG] PATCH /api/v1/servers/${serverId} - ${requestId} - SUCCESS - ${duration}ms - Updated fields: ${Object.keys(updateData).join(', ')}`);
 
-    return createSuccessResponse(updatedServer, { requestId, duration });
+    // 成功レスポンス
+    return NextResponse.json({
+      success: true,
+      data: updatedServer,
+      message: 'サーバーが正常に更新されました',
+      metadata: {
+        requestId,
+        timestamp: new Date().toISOString(),
+        duration,
+        monitoring: {
+          responseTime: duration,
+          updatedFields: Object.keys(updateData),
+          serverId: updatedServer.id
+        }
+      }
+    });
 
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    console.error('[API_ERROR] PUT /api/v1/servers/[id]:', error);
-    
-    logAPIRequest('PUT', `/api/v1/servers/${params.id}`, requestId, {
-      duration,
-      statusCode: 500,
-      error: errorMessage,
-    });
+    console.error(`[API_ERROR] PATCH /api/v1/servers/${params.id}:`, error);
+    console.error(`[API_LOG] PATCH /api/v1/servers/${params.id} - ${requestId} - ERROR - ${duration}ms`);
 
-    return createErrorResponse(
-      ERROR_CODES.INTERNAL_ERROR,
-      'Failed to update server',
-      { requestId, details: errorMessage }
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SERVER_005',
+          message: 'サーバーの更新に失敗しました',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        metadata: {
+          requestId,
+          timestamp: new Date().toISOString(),
+          duration,
+          monitoring: {
+            responseTime: duration,
+            errorType: error instanceof Error ? error.constructor.name : 'UnknownError'
+          }
+        }
+      },
+      { status: 500 }
     );
   }
 }
@@ -246,6 +283,10 @@ export async function PUT(
 /**
  * サーバー削除
  * DELETE /api/v1/servers/[id]
+ * 
+ * @param request - NextRequest
+ * @param params - URL params containing server ID
+ * @returns 削除確認レスポンス
  */
 export async function DELETE(
   request: NextRequest,
@@ -253,100 +294,97 @@ export async function DELETE(
 ) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const startTime = Date.now();
-  
+
   try {
-    // 認証・認可チェック
-    const authResult = await requirePermissions([PERMISSIONS.SERVERS_DELETE], request);
-    if (!authResult.valid || !authResult.session) {
-      logAPIRequest('DELETE', `/api/v1/servers/${params.id}`, requestId, {
-        statusCode: 401,
-        error: authResult.error,
-      });
-      return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
+    const serverId = params.id;
+
+    // 基本的なIDバリデーション
+    if (!serverId || typeof serverId !== 'string' || serverId.trim().length === 0) {
+      console.log(`[API_LOG] DELETE /api/v1/servers/[id] - ${requestId} - INVALID_ID`);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_003',
+            message: '無効なサーバーIDです'
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 400 }
+      );
     }
 
-    // パスパラメータのバリデーション
-    const paramsValidation = validateRequest(request, params, { 
-      params: z.object({ id: CommonSchemas.id }) 
-    });
-    if (!paramsValidation.success || !paramsValidation.data?.params) {
-      return createValidationErrorResponse(paramsValidation.errors!.params!, requestId);
-    }
-
-    const serverId = paramsValidation.data.params.id;
-
-    // サーバーの存在確認
-    const serverRepository = new ServerRepository();
+    // データベースからサーバーを取得
+    const serverRepository = getServerRepository();
     const existingServer = await serverRepository.findById(serverId);
 
     if (!existingServer) {
-      logAPIRequest('DELETE', `/api/v1/servers/${serverId}`, requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 404,
-        error: 'Server not found',
-      });
-      return createErrorResponse(
-        ERROR_CODES.SERVER_001,
-        `Server with ID '${serverId}' not found`,
-        { requestId }
+      console.log(`[API_LOG] DELETE /api/v1/servers/${serverId} - ${requestId} - NOT_FOUND`);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_001',
+            message: `サーバー ID '${serverId}' が見つかりません`
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 404 }
       );
-    }
-
-    // サーバーが実行中の場合は削除を拒否
-    if (existingServer.status === 'running') {
-      logAPIRequest('DELETE', `/api/v1/servers/${serverId}`, requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 400,
-        error: 'Server is running',
-      });
-      return createErrorResponse(
-        ERROR_CODES.SERVER_005,
-        'Cannot delete running server. Stop the server first.',
-        { requestId }
-      );
-    }
-
-    // Docker MCPでサーバーを停止・削除
-    const dockerClient = new DockerMCPClient();
-    try {
-      await dockerClient.disableServer(serverId);
-      console.log(`[SERVER_DISABLED] Server disabled via Docker MCP: ${serverId}`);
-    } catch (error) {
-      console.warn(`[SERVER_WARNING] Failed to disable server via Docker MCP: ${serverId}`, error);
-      // Docker MCP エラーは警告として扱い、データベース削除は継続
     }
 
     // データベースからサーバーを削除
-    await serverRepository.delete(serverId);
+    await serverRepository.deleteServer(serverId);
 
     const duration = Date.now() - startTime;
 
-    // 監査ログ
-    logAPIRequest('DELETE', `/api/v1/servers/${serverId}`, requestId, {
-      userId: authResult.session.user.id,
-      userRole: authResult.session.user.role,
-      duration,
-      statusCode: 204,
-    });
+    // 監視・ログ情報の追加
+    console.log(`[API_LOG] DELETE /api/v1/servers/${serverId} - ${requestId} - SUCCESS - ${duration}ms - ${existingServer.name}`);
 
-    return new Response(null, { status: 204 });
+    // 成功レスポンス（204 No Content）
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'X-Request-ID': requestId,
+        'X-Response-Time': duration.toString(),
+        'X-Timestamp': new Date().toISOString()
+      }
+    });
 
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    console.error('[API_ERROR] DELETE /api/v1/servers/[id]:', error);
-    
-    logAPIRequest('DELETE', `/api/v1/servers/${params.id}`, requestId, {
-      duration,
-      statusCode: 500,
-      error: errorMessage,
-    });
+    console.error(`[API_ERROR] DELETE /api/v1/servers/${params.id}:`, error);
+    console.error(`[API_LOG] DELETE /api/v1/servers/${params.id} - ${requestId} - ERROR - ${duration}ms`);
 
-    return createErrorResponse(
-      ERROR_CODES.INTERNAL_ERROR,
-      'Failed to delete server',
-      { requestId, details: errorMessage }
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SERVER_005',
+          message: 'サーバーの削除に失敗しました',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        metadata: {
+          requestId,
+          timestamp: new Date().toISOString(),
+          duration,
+          monitoring: {
+            responseTime: duration,
+            errorType: error instanceof Error ? error.constructor.name : 'UnknownError'
+          }
+        }
+      },
+      { status: 500 }
     );
   }
 }
