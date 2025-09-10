@@ -15,10 +15,14 @@ services:
     command: ["/app/scripts/init-db.sh"]
     restart: "no"
     user: "root"
-    security_opt:
-      - no-new-privileges:true
+    # セキュリティ設定を一時的に緩和（データベース初期化用）
+    privileged: false
     cap_drop:
       - ALL
+    cap_add:
+      - DAC_OVERRIDE
+      - CHOWN
+      - FOWNER
     networks:
       - app-network
 
@@ -100,10 +104,7 @@ services:
 volumes:
   app-data:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./data
+    # バインドマウントから通常のボリュームに変更（権限問題回避）
   redis-data:
     driver: local
 

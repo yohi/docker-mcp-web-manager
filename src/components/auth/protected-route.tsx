@@ -34,12 +34,6 @@ export function ProtectedRoute({
   allowedRoles = [],
 }: ProtectedRouteProps) {
   const router = useRouter();
-  
-  // 開発環境での認証バイパス
-  if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
-    return <>{children}</>;
-  }
-  
   const { isAuthenticated, isLoading, user } = useAuthStatus();
   const { hasPermission, hasRole, isAdmin } = usePermissions();
 
@@ -50,6 +44,11 @@ export function ProtectedRoute({
       router.push(fallbackUrl);
     }
   }, [isAuthenticated, isLoading, router, fallbackUrl]);
+
+  // 開発環境での認証バイパス
+  if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
+    return <>{children}</>;
+  }
 
   // ローディング中の表示
   if (isLoading) {
@@ -75,19 +74,19 @@ export function ProtectedRoute({
   }
 
   // 権限チェック
-  const hasRequiredPermissions = requiredPermissions.length === 0 || 
+  const hasRequiredPermissions = requiredPermissions.length === 0 ||
     requiredPermissions.every(permission => hasPermission(permission));
 
   const hasRequiredRole = !requiredRole || hasRole(requiredRole);
 
-  const hasAllowedRole = allowedRoles.length === 0 || 
+  const hasAllowedRole = allowedRoles.length === 0 ||
     allowedRoles.some(role => hasRole(role));
 
   // 管理者は常にアクセス許可（特定のロール制限がある場合を除く）
   const hasAdminAccess = isAdmin && allowedRoles.length === 0;
 
   // アクセス許可の判定
-  const hasAccess = hasAdminAccess || 
+  const hasAccess = hasAdminAccess ||
     (hasRequiredPermissions && hasRequiredRole && hasAllowedRole);
 
   // アクセス拒否の場合
@@ -105,7 +104,7 @@ export function ProtectedRoute({
                   <Lock className="h-6 w-6 text-red-600" />
                 </div>
               </div>
-              
+
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
                   アクセスが拒否されました
@@ -122,19 +121,19 @@ export function ProtectedRoute({
                     <p>
                       <strong>現在のロール:</strong> {currentRole}
                     </p>
-                    
+
                     {requiredRole && !hasRequiredRole && (
                       <p>
                         <strong>必要なロール:</strong> {requiredRole}
                       </p>
                     )}
-                    
+
                     {allowedRoles.length > 0 && !hasAllowedRole && (
                       <p>
                         <strong>許可されたロール:</strong> {allowedRoles.join(', ')}
                       </p>
                     )}
-                    
+
                     {missingPermissions.length > 0 && (
                       <div>
                         <p><strong>不足している権限:</strong></p>
@@ -183,17 +182,17 @@ export function ConditionalRender({
 }: ConditionalRenderProps) {
   const { hasPermission, hasRole, isAdmin } = usePermissions();
 
-  const hasRequiredPermissions = requiredPermissions.length === 0 || 
+  const hasRequiredPermissions = requiredPermissions.length === 0 ||
     requiredPermissions.every(permission => hasPermission(permission));
 
   const hasRequiredRole = !requiredRole || hasRole(requiredRole);
 
-  const hasAllowedRole = allowedRoles.length === 0 || 
+  const hasAllowedRole = allowedRoles.length === 0 ||
     allowedRoles.some(role => hasRole(role));
 
   const hasAdminAccess = isAdmin && allowedRoles.length === 0;
 
-  const hasAccess = hasAdminAccess || 
+  const hasAccess = hasAdminAccess ||
     (hasRequiredPermissions && hasRequiredRole && hasAllowedRole);
 
   return hasAccess ? <>{children}</> : <>{fallback}</>;

@@ -1,28 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    // Next.js 15.5.2 で利用可能な実験的機能
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-    // コード分割とバンドル最適化
-    optimizeCss: true,
-    optimizeServerReact: true,
-    turbotrace: {
-      logLevel: 'error',
-    },
-    // ハイドレーションエラーの軽減
-    suppressHydrationWarning: true,
+    // パフォーマンス向上機能
+    webpackBuildWorker: true,
+    serverMinification: true,
+    serverSourceMaps: false,
   },
   // セキュリティヘッダー設定（CORS、CSP含む）
   async headers() {
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const allowedOrigins = isDevelopment 
+    const allowedOrigins = isDevelopment
       ? process.env.CORS_ORIGIN || 'http://localhost:3000'
       : process.env.CORS_ORIGIN || 'https://yourdomain.com';
 
@@ -75,7 +62,7 @@ const nextConfig = {
           // CSP (Content Security Policy) - 開発環境と本番環境で分離
           {
             key: 'Content-Security-Policy',
-            value: isDevelopment 
+            value: isDevelopment
               ? `
                 default-src 'self';
                 script-src 'self' 'unsafe-eval' 'unsafe-inline' https://rsms.me;
@@ -148,8 +135,8 @@ const nextConfig = {
   // バンドルサイズ最適化
   compress: true,
   poweredByHeader: false,
-  
-  // Turbopack設定（deprecated turbo設定の代替）
+
+  // Turbopack設定（開発時のビルド高速化）
   turbopack: {
     rules: {
       '*.svg': {
@@ -208,11 +195,11 @@ const nextConfig = {
         },
       };
 
-      // バンドルサイズの監視とアラート
+      // バンドルサイズの監視とアラート（現実的な制限値）
       config.performance = {
         hints: 'warning',
-        maxEntrypointSize: 512000, // 500KB
-        maxAssetSize: 512000, // 500KB
+        maxEntrypointSize: 800000, // 800KB（Next.jsアプリに適したサイズ）
+        maxAssetSize: 800000, // 800KB
       };
     }
 

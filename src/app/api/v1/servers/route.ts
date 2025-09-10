@@ -12,7 +12,7 @@ import { MCPServer } from '@/types/models';
 /**
  * サーバー一覧取得
  * GET /api/v1/servers
- * 
+ *
  * @param request - NextRequest
  * @returns サーバー一覧データ（ページネーション付き）
  */
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     // サーバーリポジトリからデータ取得
     const serverRepository = getServerRepository();
-    
+
     // 検索・フィルター条件の構築
     const filters: any = {};
     if (search) {
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     console.error('[API_ERROR] GET /api/v1/servers:', error);
     console.error(`[API_LOG] GET /api/v1/servers - ${requestId} - ERROR - ${duration}ms`);
 
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 /**
  * 新しいサーバー作成
  * POST /api/v1/servers
- * 
+ *
  * @param request - NextRequest（JSON bodyを含む）
  * @returns 作成されたサーバー情報
  */
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     // バリデーションエラーがある場合
     if (validationErrors.length > 0) {
       console.log(`[API_LOG] POST /api/v1/servers - ${requestId} - VALIDATION_ERROR - ${validationErrors.join(', ')}`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -179,10 +179,10 @@ export async function POST(request: NextRequest) {
     // 同名サーバーの存在確認
     const serverRepository = getServerRepository();
     const existingServer = await serverRepository.findByName(serverName);
-    
+
     if (existingServer) {
       console.log(`[API_LOG] POST /api/v1/servers - ${requestId} - DUPLICATE_NAME - ${serverName}`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -235,7 +235,9 @@ export async function POST(request: NextRequest) {
       }
     };
 
-<<<<<<< HEAD
+    // データベースに保存
+    const newServer = await serverRepository.createServer(serverData);
+
     // 設定情報の作成（将来実装予定）
     if (serverData.configuration) {
       // const configRepository = new ConfigurationRepository();
@@ -250,17 +252,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Docker MCPでサーバーをインストール
-    const dockerClient = new DockerMCPClient();
     try {
       // ここでは作成のみで、実際のインストールは別途カタログAPIで実行
       console.log(`[SERVER_CREATED] New server created: ${newServer.id}`);
     } catch (error) {
       console.warn('[SERVER_WARNING] Docker MCP integration failed:', error);
     }
-=======
-    // データベースに保存
-    const newServer = await serverRepository.createServer(serverData);
->>>>>>> feature/v2/task11-final_integration_testing
 
     const duration = Date.now() - startTime;
 
@@ -290,7 +287,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     console.error('[API_ERROR] POST /api/v1/servers:', error);
     console.error(`[API_LOG] POST /api/v1/servers - ${requestId} - ERROR - ${duration}ms`);
 

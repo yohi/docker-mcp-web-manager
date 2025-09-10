@@ -55,7 +55,7 @@ export function generateEncryptionKey(length: number = ENCRYPTION_CONFIG.keyLeng
   if (length <= 0 || length > 1024) {
     throw new Error('Invalid key length. Must be between 1 and 1024 bytes.');
   }
-  
+
   return randomBytes(length);
 }
 
@@ -68,7 +68,7 @@ export function generateIV(length: number = ENCRYPTION_CONFIG.ivLength): Buffer 
   if (length <= 0 || length > 64) {
     throw new Error('Invalid IV length. Must be between 1 and 64 bytes.');
   }
-  
+
   return randomBytes(length);
 }
 
@@ -89,45 +89,45 @@ export function encryptData(
     if (!data) {
       throw new Error('Data cannot be empty');
     }
-    
+
     if (!key || key.length !== ENCRYPTION_CONFIG.keyLength) {
       throw new Error(`Key must be exactly ${ENCRYPTION_CONFIG.keyLength} bytes`);
     }
 
     // IVを生成（各暗号化で一意）
     const iv = generateIV();
-    
+
     // 暗号化器を作成
     const cipher = createCipherGCM(ENCRYPTION_CONFIG.algorithm, key, iv);
-    
+
     // 追加認証データ（AAD）を設定
     if (options.associatedData) {
       cipher.setAAD(Buffer.from(options.associatedData, 'utf8'));
     }
-    
+
     // データを暗号化
     const encoding = options.encoding || 'utf8';
     let encrypted = cipher.update(data, encoding);
     encrypted = Buffer.concat([encrypted, cipher.final()]);
-    
+
     // 認証タグを取得
     const tag = cipher.getAuthTag();
-    
+
     // 結果を構築
     const result: EncryptedData = {
       data: encrypted.toString('base64'),
       iv: iv.toString('base64'),
       tag: tag.toString('base64'),
     };
-    
+
     // バリデーション
     const validation = EncryptedDataSchema.safeParse(result);
     if (!validation.success) {
       throw new Error(`Encryption result validation failed: ${validation.error.message}`);
     }
-    
+
     return result;
-    
+
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Encryption failed: ${error.message}`);
@@ -154,7 +154,7 @@ export function decryptData(
     if (!validation.success) {
       throw new Error(`Invalid encrypted data format: ${validation.error.message}`);
     }
-    
+
     if (!key || key.length !== ENCRYPTION_CONFIG.keyLength) {
       throw new Error(`Key must be exactly ${ENCRYPTION_CONFIG.keyLength} bytes`);
     }
@@ -163,33 +163,33 @@ export function decryptData(
     const data = Buffer.from(encryptedData.data, 'base64');
     const iv = Buffer.from(encryptedData.iv, 'base64');
     const tag = Buffer.from(encryptedData.tag, 'base64');
-    
+
     // IV長の検証
     if (iv.length !== ENCRYPTION_CONFIG.ivLength) {
       throw new Error(`Invalid IV length: expected ${ENCRYPTION_CONFIG.ivLength}, got ${iv.length}`);
     }
-    
+
     // タグ長の検証
     if (tag.length !== ENCRYPTION_CONFIG.tagLength) {
       throw new Error(`Invalid tag length: expected ${ENCRYPTION_CONFIG.tagLength}, got ${tag.length}`);
     }
-    
+
     // 復号化器を作成
     const decipher = createDecipherGCM(ENCRYPTION_CONFIG.algorithm, key, iv);
     decipher.setAuthTag(tag);
-    
+
     // 追加認証データ（AAD）を設定
     if (options.associatedData) {
       decipher.setAAD(Buffer.from(options.associatedData, 'utf8'));
     }
-    
+
     // データを復号化
     const encoding = options.encoding || 'utf8';
     let decrypted = decipher.update(data, undefined, encoding);
     decrypted += decipher.final(encoding);
-    
+
     return decrypted;
-    
+
   } catch (error) {
     if (error instanceof Error) {
       // 認証失敗の場合は詳細を隠す
@@ -218,14 +218,14 @@ export function deriveKeyFromPassword(
     if (!password) {
       throw new Error('Password cannot be empty');
     }
-    
+
     if (iterations < 10000) {
       throw new Error('Iterations must be at least 10000 for security');
     }
-    
+
     // ソルトを生成または使用
     const derivedSalt = salt || randomBytes(ENCRYPTION_CONFIG.saltLength);
-    
+
     // PBKDF2でキーを導出
     const crypto = require('crypto');
     const key = crypto.pbkdf2Sync(
@@ -235,9 +235,9 @@ export function deriveKeyFromPassword(
       ENCRYPTION_CONFIG.keyLength,
       'sha256'
     );
-    
+
     return { key, salt: derivedSalt };
-    
+
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Key derivation failed: ${error.message}`);
@@ -260,7 +260,7 @@ export function encryptWithPassword(
 ): EncryptedData {
   const { key, salt } = deriveKeyFromPassword(password);
   const encrypted = encryptData(data, key, options);
-  
+
   return {
     ...encrypted,
     salt: salt.toString('base64'),
@@ -282,11 +282,33 @@ export function decryptWithPassword(
   if (!encryptedData.salt) {
     throw new Error('Salt is required for password-based decryption');
   }
-  
+
   const salt = Buffer.from(encryptedData.salt, 'base64');
   const { key } = deriveKeyFromPassword(password, salt);
-  
+
   return decryptData(encryptedData, key, options);
+}
+
+/**
+ * 機密データを暗号化（設定などで使用）
+ * @param data 暗号化するデータ
+ * @param associatedData 関連データ（オプション）
+ * @returns 暗号化されたデータ
+ */
+export function encryptSensitiveData(data: string, associatedData?: string): EncryptedData {
+  const masterKey = getMasterKey();
+  return encryptData(data, masterKey, { associatedData });
+}
+
+/**
+ * 機密データを復号化（設定などで使用）
+ * @param encryptedData 暗号化されたデータ
+ * @param associatedData 関連データ（オプション）
+ * @returns 復号化されたデータ
+ */
+export function decryptSensitiveData(encryptedData: EncryptedData, associatedData?: string): string {
+  const masterKey = getMasterKey();
+  return decryptData(encryptedData, masterKey, { associatedData });
 }
 
 /**

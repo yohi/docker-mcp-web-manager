@@ -3,11 +3,13 @@ set -e
 
 echo "🚀 データベース初期化を開始します..."
 
-# データベースディレクトリの準備（rootユーザーで実行）
+# データベースディレクトリの準備（エラー対応強化）
 echo "📁 データベースディレクトリの準備..."
 mkdir -p /app/data
-chown 1000:1000 /app/data || echo "所有者変更をスキップ"
-chmod 755 /app/data
+
+# 権限設定をしてからアクセスを試行（エラー無視）
+chown 1000:1000 /app/data 2>/dev/null || echo "所有者変更をスキップ（権限制限）"
+chmod 777 /app/data 2>/dev/null || echo "権限変更をスキップ（権限制限）"
 
 # データベースファイルの作成（存在しない場合のみ）
 if [ ! -f /app/data/app.db ]; then
@@ -29,9 +31,16 @@ if [ ! -f /app/data/app.db ]; then
   touch /app/data/app.db
 fi
 
-# 全てのユーザーがアクセス可能にする（一時的解決策）
-chmod 666 /app/data/app.db || echo "ファイル権限設定をスキップ"
-chmod 777 /app/data || echo "ディレクトリ権限設定をスキップ"
+# 全てのユーザーがアクセス可能にする（権限エラー対応）
+chmod 666 /app/data/app.db 2>/dev/null || echo "ファイル権限設定をスキップ（権限制限）"
+chmod 777 /app/data 2>/dev/null || echo "ディレクトリ権限設定をスキップ（権限制限）"
+
+# データベースファイルが読み書き可能かテスト
+if [ -r /app/data/app.db ] && [ -w /app/data/app.db ]; then
+  echo "✅ データベースファイルアクセス確認済み"
+else
+  echo "⚠️  データベースファイルアクセスに制限があります"
+fi
 
 # マイグレーション実行
 npx drizzle-kit push --force

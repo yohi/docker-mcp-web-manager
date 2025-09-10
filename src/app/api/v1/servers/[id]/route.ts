@@ -12,7 +12,7 @@ import { MCPServer } from '@/types/models';
 /**
  * サーバー詳細取得
  * GET /api/v1/servers/[id]
- * 
+ *
  * @param request - NextRequest
  * @param params - URL params containing server ID
  * @returns サーバー詳細情報
@@ -30,7 +30,7 @@ export async function GET(
     // 基本的なIDバリデーション
     if (!serverId || typeof serverId !== 'string' || serverId.trim().length === 0) {
       console.log(`[API_LOG] GET /api/v1/servers/[id] - ${requestId} - INVALID_ID`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -53,7 +53,7 @@ export async function GET(
 
     if (!server) {
       console.log(`[API_LOG] GET /api/v1/servers/${serverId} - ${requestId} - NOT_FOUND`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -94,7 +94,7 @@ export async function GET(
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     console.error(`[API_ERROR] GET /api/v1/servers/${params.id}:`, error);
     console.error(`[API_LOG] GET /api/v1/servers/${params.id} - ${requestId} - ERROR - ${duration}ms`);
 
@@ -124,7 +124,7 @@ export async function GET(
 /**
  * サーバー情報更新
  * PATCH /api/v1/servers/[id]
- * 
+ *
  * @param request - NextRequest（JSON bodyを含む）
  * @param params - URL params containing server ID
  * @returns 更新されたサーバー情報
@@ -142,7 +142,7 @@ export async function PATCH(
     // 基本的なIDバリデーション
     if (!serverId || typeof serverId !== 'string' || serverId.trim().length === 0) {
       console.log(`[API_LOG] PATCH /api/v1/servers/[id] - ${requestId} - INVALID_ID`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -159,35 +159,17 @@ export async function PATCH(
       );
     }
 
-<<<<<<< HEAD
-    // パラメータとボディのバリデーション
-    const validation = await validateRequest(request, params, {
-      params: z.object({ id: CommonSchemas.id }),
-      body: ServerSchemas.updateServer,
-    });
-    if (!validation.success || !validation.data?.params || !validation.data?.body) {
-      const error = validation.errors!.params || validation.errors!.body!;
-      return createValidationErrorResponse(error, requestId);
-    }
-
-    const serverId = validation.data.params.id;
-    const updateData = validation.data.body;
-
-    // サーバーの存在確認
-    const serverRepository = new ServerRepository();
-=======
     // リクエストボディの解析
     const body = await request.json();
     const { name, image, description, version, port, environment, resourceLimits, status } = body;
 
     // データベースからサーバーを取得
     const serverRepository = getServerRepository();
->>>>>>> feature/v2/task11-final_integration_testing
     const existingServer = await serverRepository.findById(serverId);
 
     if (!existingServer) {
       console.log(`[API_LOG] PATCH /api/v1/servers/${serverId} - ${requestId} - NOT_FOUND`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -209,7 +191,7 @@ export async function PATCH(
       const duplicateServer = await serverRepository.findByName(name);
       if (duplicateServer && duplicateServer.id !== serverId) {
         console.log(`[API_LOG] PATCH /api/v1/servers/${serverId} - ${requestId} - DUPLICATE_NAME - ${name}`);
-        
+
         return NextResponse.json(
           {
             success: false,
@@ -233,7 +215,7 @@ export async function PATCH(
 
     // 更新データの構築
     const updateData: Partial<MCPServer> = {};
-    
+
     if (name !== undefined) updateData.name = name;
     if (image !== undefined) updateData.image = image;
     if (description !== undefined) updateData.description = description;
@@ -243,22 +225,8 @@ export async function PATCH(
     if (resourceLimits !== undefined) updateData.resourceLimits = resourceLimits;
     if (status !== undefined) updateData.status = status;
 
-<<<<<<< HEAD
-    // 設定情報の更新（将来実装予定）
-    if (updateData.configuration) {
-      // const configRepository = new ConfigurationRepository();
-      // await configRepository.updateByServerId(serverId, {
-      //   environment: updateData.configuration.environment,
-      //   enabledTools: updateData.configuration.enabledTools,
-      //   resourceLimits: updateData.configuration.resourceLimits,
-      //   networkConfig: updateData.configuration.networkConfig,
-      // });
-      console.log('[CONFIG_UPDATE] Configuration update not yet implemented for server:', serverId);
-    }
-=======
     // データベースを更新
     const updatedServer = await serverRepository.updateServer(serverId, updateData);
->>>>>>> feature/v2/task11-final_integration_testing
 
     const duration = Date.now() - startTime;
 
@@ -285,7 +253,7 @@ export async function PATCH(
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     console.error(`[API_ERROR] PATCH /api/v1/servers/${params.id}:`, error);
     console.error(`[API_LOG] PATCH /api/v1/servers/${params.id} - ${requestId} - ERROR - ${duration}ms`);
 
@@ -315,7 +283,7 @@ export async function PATCH(
 /**
  * サーバー削除
  * DELETE /api/v1/servers/[id]
- * 
+ *
  * @param request - NextRequest
  * @param params - URL params containing server ID
  * @returns 削除確認レスポンス
@@ -333,7 +301,7 @@ export async function DELETE(
     // 基本的なIDバリデーション
     if (!serverId || typeof serverId !== 'string' || serverId.trim().length === 0) {
       console.log(`[API_LOG] DELETE /api/v1/servers/[id] - ${requestId} - INVALID_ID`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -350,28 +318,13 @@ export async function DELETE(
       );
     }
 
-<<<<<<< HEAD
-    // パスパラメータのバリデーション
-    const paramsValidation = await validateRequest(request, params, { 
-      params: z.object({ id: CommonSchemas.id }) 
-    });
-    if (!paramsValidation.success || !paramsValidation.data?.params) {
-      return createValidationErrorResponse(paramsValidation.errors!.params!, requestId);
-    }
-
-    const serverId = paramsValidation.data.params.id;
-
-    // サーバーの存在確認
-    const serverRepository = new ServerRepository();
-=======
     // データベースからサーバーを取得
     const serverRepository = getServerRepository();
->>>>>>> feature/v2/task11-final_integration_testing
     const existingServer = await serverRepository.findById(serverId);
 
     if (!existingServer) {
       console.log(`[API_LOG] DELETE /api/v1/servers/${serverId} - ${requestId} - NOT_FOUND`);
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -409,7 +362,7 @@ export async function DELETE(
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     console.error(`[API_ERROR] DELETE /api/v1/servers/${params.id}:`, error);
     console.error(`[API_LOG] DELETE /api/v1/servers/${params.id} - ${requestId} - ERROR - ${duration}ms`);
 

@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useSession } from 'next-auth/react';
 import { ServerList } from '../server-list';
 import { AuthProvider } from '@/components/auth/auth-provider';
-import type { MCPServer } from '@/types/mcp';
+import { MCPServer } from '@/types/models';
 
 // Next.js のルーターをモック
 jest.mock('next/navigation', () => ({
@@ -115,7 +115,7 @@ describe('ServerList Component', () => {
 
   it('shows loading state', () => {
     renderServerList({ isLoading: true });
-    
+
     // ローディング状態の確認（スケルトンローダーなど）
     expect(screen.getByText('サーバーを読み込み中...')).toBeInTheDocument();
   });
@@ -123,13 +123,13 @@ describe('ServerList Component', () => {
   it('shows error message', () => {
     const errorMessage = 'Failed to load servers';
     renderServerList({ error: errorMessage });
-    
+
     expect(screen.getByText(errorMessage)).toBeInTheDocument();
   });
 
   it('shows empty state when no servers', () => {
     renderServerList({ servers: [] });
-    
+
     expect(screen.getByText('サーバーがありません')).toBeInTheDocument();
   });
 
@@ -139,10 +139,10 @@ describe('ServerList Component', () => {
     // ステータスバッジの確認
     const runningBadge = screen.getByText('実行中');
     const stoppedBadge = screen.getByText('停止中');
-    
+
     expect(runningBadge).toBeInTheDocument();
     expect(stoppedBadge).toBeInTheDocument();
-    
+
     expect(runningBadge.closest('.bg-green-100')).toBeTruthy();
     expect(stoppedBadge.closest('.bg-gray-100')).toBeTruthy();
   });
@@ -235,7 +235,7 @@ describe('ServerList Component', () => {
 
     // 削除ボタンを探してクリック
     const deleteButtons = screen.getAllByRole('button');
-    const deleteButton = deleteButtons.find(btn => 
+    const deleteButton = deleteButtons.find(btn =>
       btn.textContent?.includes('削除') || btn.querySelector('[data-testid="delete-icon"]')
     );
 
@@ -262,7 +262,7 @@ describe('ServerList Component', () => {
 
     // 詳細表示ボタンを探してクリック
     const expandButtons = screen.getAllByRole('button');
-    const expandButton = expandButtons.find(btn => 
+    const expandButton = expandButtons.find(btn =>
       btn.querySelector('[data-testid="expand-icon"]')
     );
 

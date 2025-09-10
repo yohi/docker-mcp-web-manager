@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { MonitoringDashboard } from '@/components/monitoring/monitoring-dashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   Activity,
   Server,
   AlertTriangle,
@@ -112,25 +112,25 @@ export default function MonitoringPage() {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // データ取得
-  const loadMonitoringData = async () => {
+  const loadMonitoringData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // サーバー情報の取得
       const serversRes = await fetch('/api/v1/servers');
       if (!serversRes.ok) throw new Error('サーバー情報の取得に失敗しました');
-      
+
       const serversData = await serversRes.json();
       const servers = serversData.success ? serversData.data : [];
-      
+
       // メトリクスデータの生成（本来はAPIから取得）
       const mockMetrics: ServerMetrics[] = servers.map((server: any) => ({
         serverId: server.id,
         serverName: server.name,
         status: server.status,
-        healthStatus: server.status === 'running' ? 'healthy' : 
-                     server.status === 'error' ? 'unhealthy' : 'unknown',
+        healthStatus: server.status === 'running' ? 'healthy' :
+          server.status === 'error' ? 'unhealthy' : 'unknown',
         uptime: server.uptime || Math.random() * 86400, // 24時間以内のランダム値
         cpu: {
           current: Math.random() * 100,
@@ -203,43 +203,43 @@ export default function MonitoringPage() {
       setServerMetrics(mockMetrics);
       setAlerts(mockAlerts);
       setLastUpdated(new Date());
-      
+
     } catch (error) {
       console.error('Failed to load monitoring data:', error);
       setError(error instanceof Error ? error.message : '監視データ読み込みエラー');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadMonitoringData();
-  }, []);
+  }, [loadMonitoringData]);
 
   // モックデータ生成用のヘルパー関数
   const generateMockHistory = (type: string) => {
     const points = 24; // 過去24時間
     const history = [];
-    
+
     for (let i = points; i >= 0; i--) {
       const timestamp = new Date(Date.now() - i * 60 * 60 * 1000); // 1時間間隔
       let value = Math.random() * 100;
-      
+
       if (type === 'memory') value = Math.random() * 8000000000;
       if (type === 'network') value = Math.random() * 1000000;
       if (type === 'response') value = Math.random() * 1000;
       if (type === 'error') value = Math.random() * 10;
-      
+
       history.push({
         timestamp: timestamp.toISOString(),
         value,
-        unit: type === 'memory' ? 'bytes' : 
-              type === 'network' ? 'bytes/s' : 
-              type === 'response' ? 'ms' : 
+        unit: type === 'memory' ? 'bytes' :
+          type === 'network' ? 'bytes/s' :
+            type === 'response' ? 'ms' :
               type === 'error' ? 'count' : '%'
       });
     }
-    
+
     return history;
   };
 
@@ -247,8 +247,8 @@ export default function MonitoringPage() {
   const handleAcknowledgeAlert = async (alertId: string) => {
     try {
       // 本来はAPIを呼び出し
-      setAlerts(prev => prev.map(alert => 
-        alert.id === alertId 
+      setAlerts(prev => prev.map(alert =>
+        alert.id === alertId
           ? { ...alert, status: 'acknowledged' }
           : alert
       ));
@@ -260,8 +260,8 @@ export default function MonitoringPage() {
   const handleResolveAlert = async (alertId: string) => {
     try {
       // 本来はAPIを呼び出し
-      setAlerts(prev => prev.map(alert => 
-        alert.id === alertId 
+      setAlerts(prev => prev.map(alert =>
+        alert.id === alertId
           ? { ...alert, status: 'resolved', resolvedAt: new Date().toISOString() }
           : alert
       ));
@@ -286,7 +286,7 @@ export default function MonitoringPage() {
               </p>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={loadMonitoringData} disabled={isLoading}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -361,7 +361,7 @@ export default function MonitoringPage() {
                 <TrendingUp className="h-8 w-8 text-purple-500" />
                 <div>
                   <p className="text-2xl font-semibold">
-                    {serverMetrics.length > 0 
+                    {serverMetrics.length > 0
                       ? (serverMetrics.reduce((sum, m) => sum + m.cpu.current, 0) / serverMetrics.length).toFixed(1)
                       : 0}%
                   </p>
