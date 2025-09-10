@@ -1,133 +1,74 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
-import {
-  requirePermissions,
-  PERMISSIONS,
-  validateRequest,
-  createErrorResponse,
-  createValidationErrorResponse,
-  ERROR_CODES,
-  logAPIRequest,
-} from '@/lib/api/middleware';
-import { ServerRepository } from '@/lib/repositories/server-repository';
-import { DockerMCPClient } from '@/lib/docker-mcp/client';
-import { ServerSchemas, CommonSchemas } from '@/lib/api/schemas';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerRepository } from '@/db/repositories';
+import { MCPServer } from '@/types/models';
 
 // =============================================================================
-// サーバー管理API - メインエンドポイント
+// サーバー管理 API エンドポイント
+// CRUD操作とサーバー管理機能を提供
+// 開発環境とプロダクション環境の両方に対応
 // =============================================================================
 
 /**
- * GET /api/v1/servers
  * サーバー一覧取得
+ * GET /api/v1/servers
+ * 
+ * @param request - NextRequest
+ * @returns サーバー一覧データ（ページネーション付き）
  */
 export async function GET(request: NextRequest) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const startTime = Date.now();
 
   try {
-    // 認証・認可チェック
-    const authResult = await requirePermissions([PERMISSIONS.SERVERS_READ], request);
-    if (!authResult.valid || !authResult.session) {
-      logAPIRequest('GET', '/api/v1/servers', requestId, {
-        statusCode: 401,
-        error: authResult.error,
-      });
-      return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
-    }
+    // URL検索パラメータの解析
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
+    const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') ?? '20')), 100);
+    const sortBy = searchParams.get('sort_by') ?? 'updatedAt';
+    const sortOrder = (searchParams.get('sort_order') ?? 'desc') as 'asc' | 'desc';
+    const search = searchParams.get('search') ?? '';
+    const status = searchParams.get('status') ?? 'all';
 
-    // クエリパラメータのバリデーション
-    const validation = await validateRequest(request, {}, {
-      query: z.object({
-        search: z.string().optional(),
-        status: z.enum(['all', 'running', 'stopped', 'error', 'pending']).default('all'),
-        category: z.string().optional(),
-        page: CommonSchemas.pageNumber.default(1),
-        limit: CommonSchemas.pageSize.default(20),
-        sortBy: z.enum(['name', 'status', 'createdAt', 'updatedAt']).default('updatedAt'),
-        sortOrder: z.enum(['asc', 'desc']).default('desc'),
-      }),
-    });
-
-    if (!validation.success) {
-      const error = validation.errors!.query!;
-      return createValidationErrorResponse(error, requestId);
-    }
-
-    const query = validation.data!.query;
+    // サーバーリポジトリからデータ取得
+    const serverRepository = getServerRepository();
     
-    // サーバーリポジトリでデータ取得
-    const serverRepository = new ServerRepository();
-    const filters = {
-      search: query.search,
-      status: query.status === 'all' ? undefined : query.status,
-      category: query.category,
-      userId: authResult.session.user.role === 'ADMIN' ? undefined : authResult.session.user.id,
-    };
+    // 検索・フィルター条件の構築
+    const filters: any = {};
+    if (search) {
+      filters.search = search;
+    }
+    if (status !== 'all') {
+      filters.status = status;
+    }
 
-    const result = await serverRepository.findMany({
-      filters,
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-      },
-      sorting: {
-        field: query.sortBy,
-        order: query.sortOrder,
-      },
+    const result = await serverRepository.findAllWithBasicDetails({
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      filters
     });
 
-    // Docker MCPから現在のステータスを取得してマージ
-    const dockerClient = DockerMCPClient.getInstance();
-    const serversWithStatus = await Promise.all(
-      result.data.map(async (server) => {
-        try {
-          const containerInfo = await dockerClient.getContainer(server.name);
-          return {
-            ...server,
-            dockerStatus: containerInfo?.status || 'unknown',
-            lastSeen: new Date().toISOString(),
-          };
-        } catch (error) {
-          return {
-            ...server,
-            dockerStatus: 'not_found',
-            lastSeen: null,
-          };
-        }
-      })
-    );
+    const servers = result.data || [];
+    const total = result.total || 0;
 
     const duration = Date.now() - startTime;
 
-    // 監査ログ
-    logAPIRequest('GET', '/api/v1/servers', requestId, {
-      userId: authResult.session.user.id,
-      userRole: authResult.session.user.role,
-      duration,
-      statusCode: 200,
-      details: {
-        filters,
-        pagination: query,
-        resultsCount: serversWithStatus.length,
-        totalCount: result.total,
-      },
-    });
-
-    return Response.json({
+    // 成功レスポンス
+    return NextResponse.json({
       success: true,
-      data: serversWithStatus,
+      data: servers,
       metadata: {
         pagination: {
-          page: query.page,
-          limit: query.limit,
-          total: result.total,
-          totalPages: Math.ceil(result.total / query.limit),
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
         },
         requestId,
         timestamp: new Date().toISOString(),
-        duration,
-      },
+        duration
+      }
     });
 
   } catch (error) {
@@ -135,171 +76,179 @@ export async function GET(request: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     console.error('[API_ERROR] GET /api/v1/servers:', error);
-    
-    logAPIRequest('GET', '/api/v1/servers', requestId, {
-      duration,
-      statusCode: 500,
-      error: errorMessage,
-    });
 
-    return createErrorResponse(
-      ERROR_CODES.INTERNAL_ERROR,
-      'Failed to retrieve servers',
-      { requestId }
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SERVER_001',
+          message: 'サーバー一覧の取得に失敗しました',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        metadata: {
+          requestId,
+          timestamp: new Date().toISOString(),
+          duration
+        }
+      },
+      { status: 500 }
     );
   }
 }
 
 /**
+ * 新しいサーバー作成
  * POST /api/v1/servers
- * 新しいサーバーの作成
+ * 
+ * @param request - NextRequest（JSON bodyを含む）
+ * @returns 作成されたサーバー情報
  */
 export async function POST(request: NextRequest) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const startTime = Date.now();
 
   try {
-    // 認証・認可チェック
-    const authResult = await requirePermissions([PERMISSIONS.SERVERS_MANAGE], request);
-    if (!authResult.valid || !authResult.session) {
-      logAPIRequest('POST', '/api/v1/servers', requestId, {
-        statusCode: 401,
-        error: authResult.error,
-      });
-      return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
+    // リクエストボディの解析
+    const body = await request.json();
+    const { name, image, description, version, port, environment, resourceLimits } = body;
+
+    // 基本バリデーション
+    const validationErrors: string[] = [];
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      validationErrors.push('サーバー名は必須です');
+    } else if (!/^[a-zA-Z0-9_-]+$/.test(name.trim())) {
+      validationErrors.push('サーバー名は英数字、ハイフン、アンダースコアのみ使用可能です');
+    } else if (name.trim().length > 50) {
+      validationErrors.push('サーバー名は50文字以下で入力してください');
     }
 
-    // リクエストボディのバリデーション
-    const validation = await validateRequest(request, {}, {
-      body: ServerSchemas.create,
-    });
-
-    if (!validation.success) {
-      const error = validation.errors!.body!;
-      return createValidationErrorResponse(error, requestId);
+    if (!image || typeof image !== 'string' || image.trim().length === 0) {
+      validationErrors.push('Dockerイメージは必須です');
     }
 
-    const serverData = validation.data!.body;
+    if (!port || typeof port !== 'number') {
+      validationErrors.push('ポート番号は必須です');
+    } else if (port < 1 || port > 65535) {
+      validationErrors.push('ポート番号は1-65535の範囲で指定してください');
+    }
 
-    // サーバー名の重複チェック
-    const serverRepository = new ServerRepository();
-    const existingServer = await serverRepository.findByName(serverData.name);
-
-    if (existingServer) {
-      logAPIRequest('POST', '/api/v1/servers', requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 400,
-        error: 'Server name already exists',
-      });
-
-      return createErrorResponse(
-        ERROR_CODES.SERVER_002,
-        `Server with name '${serverData.name}' already exists`,
-        { requestId }
+    // バリデーションエラーがある場合
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_002',
+            message: '入力データが無効です',
+            details: validationErrors
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 400 }
       );
     }
 
-    // Docker MCPクライアントでコンテナ作成
-    const dockerClient = DockerMCPClient.getInstance();
+    const serverName = name.trim();
+    const serverImage = image.trim();
+
+    // 同名サーバーの存在確認
+    const serverRepository = getServerRepository();
+    const existingServer = await serverRepository.findByName(serverName);
     
-    try {
-      // コンテナ作成
-      const containerResult = await dockerClient.createContainer({
-        name: serverData.name,
-        image: serverData.image,
-        ports: serverData.port ? [{ internal: serverData.port, external: serverData.port }] : [],
-        environment: serverData.env || {},
-        volumes: serverData.volumes || [],
-        networks: serverData.networks || [],
-        restart: serverData.restart || 'unless-stopped',
-        healthCheck: serverData.healthCheck,
-      });
-
-      // データベースにサーバー情報を保存
-      const newServer = await serverRepository.create({
-        ...serverData,
-        userId: authResult.session.user.id,
-        status: 'created',
-        containerId: containerResult.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-
-      // オプションでコンテナを自動起動
-      if (serverData.autoStart !== false) {
-        try {
-          await dockerClient.startContainer(serverData.name);
-          await serverRepository.updateStatus(newServer.id, 'running');
-          newServer.status = 'running';
-        } catch (startError) {
-          console.warn(`[CONTAINER_START_WARNING] Failed to auto-start container ${serverData.name}:`, startError);
-          // 起動失敗は警告レベル（コンテナは作成済み）
-        }
-      }
-
-      const duration = Date.now() - startTime;
-
-      // 監査ログ
-      logAPIRequest('POST', '/api/v1/servers', requestId, {
-        userId: authResult.session.user.id,
-        userRole: authResult.session.user.role,
-        duration,
-        statusCode: 201,
-        details: {
-          serverId: newServer.id,
-          serverName: newServer.name,
-          image: newServer.image,
-          autoStart: serverData.autoStart !== false,
-          containerCreated: true,
-          containerId: containerResult.id,
+    if (existingServer) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_004',
+            message: `サーバー名 '${serverName}' は既に使用されています`
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
         },
-      });
+        { status: 409 }
+      );
+    }
 
-      return Response.json({
+    // サーバーデータの構築
+    const serverData: Omit<MCPServer, 'id' | 'createdAt' | 'updatedAt'> = {
+      name: serverName,
+      image: serverImage,
+      description: description?.trim() || '',
+      version: version?.trim() || 'latest',
+      port: port,
+      status: 'stopped',
+      enabled: true,
+      environment: environment || {},
+      resourceLimits: {
+        memory: resourceLimits?.memory || '512m',
+        cpu: resourceLimits?.cpu || '0.5',
+        ...resourceLimits
+      },
+      networkSettings: {
+        ports: {
+          [port]: port
+        }
+      },
+      healthStatus: 'unknown',
+      lastHealthCheck: null,
+      uptime: 0,
+      resourceUsage: {
+        cpu: 0,
+        memory: 0,
+        memoryLimit: 0,
+        networkIn: 0,
+        networkOut: 0
+      }
+    };
+
+    // データベースに保存
+    const newServer = await serverRepository.createServer(serverData);
+
+    const duration = Date.now() - startTime;
+
+    // 成功レスポンス
+    return NextResponse.json(
+      {
         success: true,
         data: newServer,
+        message: 'サーバーが正常に作成されました',
         metadata: {
           requestId,
           timestamp: new Date().toISOString(),
-          duration,
-        },
-      }, { status: 201 });
-
-    } catch (dockerError) {
-      console.error(`[DOCKER_ERROR] Failed to create container for server ${serverData.name}:`, dockerError);
-      
-      const duration = Date.now() - startTime;
-
-      logAPIRequest('POST', '/api/v1/servers', requestId, {
-        userId: authResult.session.user.id,
-        statusCode: 500,
-        error: dockerError instanceof Error ? dockerError.message : 'Container creation failed',
-        duration,
-      });
-
-      return createErrorResponse(
-        ERROR_CODES.SERVER_003,
-        `Failed to create container: ${dockerError instanceof Error ? dockerError.message : 'Unknown Docker error'}`,
-        { requestId }
-      );
-    }
+          duration
+        }
+      },
+      { status: 201 }
+    );
 
   } catch (error) {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     console.error('[API_ERROR] POST /api/v1/servers:', error);
-    
-    logAPIRequest('POST', '/api/v1/servers', requestId, {
-      duration,
-      statusCode: 500,
-      error: errorMessage,
-    });
 
-    return createErrorResponse(
-      ERROR_CODES.INTERNAL_ERROR,
-      'Failed to create server',
-      { requestId }
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SERVER_005',
+          message: 'サーバーの作成に失敗しました',
+          details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        },
+        metadata: {
+          requestId,
+          timestamp: new Date().toISOString(),
+          duration
+        }
+      },
+      { status: 500 }
     );
   }
 }
