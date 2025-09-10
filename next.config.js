@@ -10,6 +10,12 @@ const nextConfig = {
         },
       },
     },
+    // コード分割とバンドル最適化
+    optimizeCss: true,
+    optimizeServerReact: true,
+    turbotrace: {
+      logLevel: 'error',
+    },
   },
   // セキュリティヘッダー設定（CORS、CSP含む）
   async headers() {
@@ -141,15 +147,7 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   
-  // コード分割とバンドル最適化
-  experimental: {
-    ...nextConfig.experimental,
-    optimizeCss: true,
-    optimizeServerReact: true,
-    turbotrace: {
-      logLevel: 'error',
-    },
-  },
+  // この部分は上のexperimentalとマージする必要があります（削除）
 
   // Webpackカスタマイズ（バンドル最適化）
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {

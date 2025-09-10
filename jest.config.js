@@ -11,27 +11,56 @@ const config = {
   // Add more setup options before each test is run
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
+  // テスト環境を設定（API routes はnode、コンポーネントはjsdom）
   testEnvironment: 'jest-environment-jsdom',
   
-  // Test directories
-  testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.(ts|tsx|js)',
-    '<rootDir>/src/**/*.(test|spec).(ts|tsx|js)',
-    '<rootDir>/tests/**/*.(test|spec).(ts|tsx|js)',
+  // プロジェクトごとに異なるテスト環境を使用
+  projects: [
+    {
+      displayName: 'components',
+      testEnvironment: 'jsdom',
+      testMatch: ['<rootDir>/src/components/**/*.(test|spec).(ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@/components/(.*)$': '<rootDir>/src/components/$1',
+        '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
+        '^@/app/(.*)$': '<rootDir>/src/app/$1',
+        '^@/types/(.*)$': '<rootDir>/src/types/$1',
+        '^@/db/(.*)$': '<rootDir>/src/db/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+        '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/__mocks__/fileMock.js',
+      },
+    },
+    {
+      displayName: 'api',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/src/app/api/**/*.(test|spec).(ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.node.js'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@/components/(.*)$': '<rootDir>/src/components/$1',
+        '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
+        '^@/app/(.*)$': '<rootDir>/src/app/$1',
+        '^@/types/(.*)$': '<rootDir>/src/types/$1',
+        '^@/db/(.*)$': '<rootDir>/src/db/$1',
+      },
+    },
+    {
+      displayName: 'lib',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/src/lib/**/*.(test|spec).(ts|tsx)'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.node.js'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@/components/(.*)$': '<rootDir>/src/components/$1',
+        '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
+        '^@/app/(.*)$': '<rootDir>/src/app/$1',
+        '^@/types/(.*)$': '<rootDir>/src/types/$1',
+        '^@/db/(.*)$': '<rootDir>/src/db/$1',
+      },
+    },
   ],
-  
-  // Module name mapping for absolute imports
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@/components/(.*)$': '<rootDir>/src/components/$1',
-    '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
-    '^@/app/(.*)$': '<rootDir>/src/app/$1',
-    '^@/types/(.*)$': '<rootDir>/src/types/$1',
-    '^@/db/(.*)$': '<rootDir>/src/db/$1',
-    // 静的ファイルのモック
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/__mocks__/fileMock.js',
-  },
   
   // Coverage settings
   collectCoverage: false,
@@ -52,16 +81,6 @@ const config = {
   
   // Clear mocks between tests
   clearMocks: true,
-  
-  // Transform settings for TypeScript and JSX
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.json'
-    }]
-  },
-  
-  // Module file extensions
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   
 };
 
