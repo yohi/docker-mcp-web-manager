@@ -1,7 +1,7 @@
-// PostCSS設定 - Tailwind CSS 4.1.13対応
+// PostCSS設定 - 従来のTailwind CSS v3設定
 export default {
   plugins: {
-    '@tailwindcss/postcss': {},
+    tailwindcss: {},
     autoprefixer: {},
   },
 };
