@@ -34,6 +34,12 @@ export function ProtectedRoute({
   allowedRoles = [],
 }: ProtectedRouteProps) {
   const router = useRouter();
+  
+  // 開発環境での認証バイパス
+  if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
+    return <>{children}</>;
+  }
+  
   const { isAuthenticated, isLoading, user } = useAuthStatus();
   const { hasPermission, hasRole, isAdmin } = usePermissions();
 
