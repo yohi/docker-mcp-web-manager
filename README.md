@@ -69,36 +69,36 @@ Docker MCP Web Manager v2は、Model Context Protocol (MCP) サーバーをDocke
 ## 🛠️ 技術スタック
 
 ### フロントエンド
-| 技術 | バージョン | 用途 |
-|------|-----------|------|
-| **Next.js** | 15.5.2 | React フレームワーク・SSR |
-| **React** | 18 | UI ライブラリ |
-| **TypeScript** | 5.9 | 静的型付け |
-| **Tailwind CSS** | 3.4 | ユーティリティファーストCSS |
-| **Radix UI** | - | アクセシブルなUIコンポーネント |
-| **React Hook Form** | 7.51 | フォーム管理 |
-| **TanStack Query** | 5.24 | サーバー状態管理 |
-| **Zod** | 3.22 | スキーマバリデーション |
+| 技術                | バージョン | 用途                           |
+| ------------------- | ---------- | ------------------------------ |
+| **Next.js**         | 15.5.2     | React フレームワーク・SSR      |
+| **React**           | 18         | UI ライブラリ                  |
+| **TypeScript**      | 5.9        | 静的型付け                     |
+| **Tailwind CSS**    | 3.4        | ユーティリティファーストCSS    |
+| **Radix UI**        | -          | アクセシブルなUIコンポーネント |
+| **React Hook Form** | 7.51       | フォーム管理                   |
+| **TanStack Query**  | 5.24       | サーバー状態管理               |
+| **Zod**             | 3.22       | スキーマバリデーション         |
 
 ### バックエンド
-| 技術 | バージョン | 用途 |
-|------|-----------|------|
-| **Next.js API Routes** | 15.5.2 | API サーバー |
-| **NextAuth.js** | 4.24.11 | 認証・セッション管理 |
-| **Drizzle ORM** | 0.44.5 | データベースORM |
-| **SQLite** | 3.45+ | データベース |
-| **Redis** | 7.0+ | セッションストア・キャッシュ |
-| **Node.js Crypto** | - | 暗号化・復号化 |
+| 技術                   | バージョン | 用途                         |
+| ---------------------- | ---------- | ---------------------------- |
+| **Next.js API Routes** | 15.5.2     | API サーバー                 |
+| **NextAuth.js**        | 4.24.11    | 認証・セッション管理         |
+| **Drizzle ORM**        | 0.44.5     | データベースORM              |
+| **SQLite**             | 3.45+      | データベース                 |
+| **Redis**              | 7.0+       | セッションストア・キャッシュ |
+| **Node.js Crypto**     | -          | 暗号化・復号化               |
 
 ### インフラ・開発
-| 技術 | バージョン | 用途 |
-|------|-----------|------|
-| **Docker** | 20.10+ | コンテナランタイム |
-| **Docker Compose** | v2.0+ | オーケストレーション |
-| **Jest** | 29.7+ | ユニット・統合テスト |
-| **Playwright** | 1.40+ | E2Eテスト |
-| **ESLint** | 8.57+ | 静的解析 |
-| **Prettier** | 3.2+ | コードフォーマット |
+| 技術               | バージョン | 用途                 |
+| ------------------ | ---------- | -------------------- |
+| **Docker**         | 20.10+     | コンテナランタイム   |
+| **Docker Compose** | v2.0+      | オーケストレーション |
+| **Jest**           | 29.7+      | ユニット・統合テスト |
+| **Playwright**     | 1.40+      | E2Eテスト            |
+| **ESLint**         | 8.57+      | 静的解析             |
+| **Prettier**       | 3.2+       | コードフォーマット   |
 
 ---
 
@@ -106,13 +106,13 @@ Docker MCP Web Manager v2は、Model Context Protocol (MCP) サーバーをDocke
 
 ### 📋 前提条件
 
-| 項目 | 要件 | 確認コマンド |
-|------|------|-------------|
-| **Docker** | 20.10.0+ | `docker --version` |
-| **Docker Compose** | v2.0+ | `docker compose version` |
-| **Git** | 2.30+ | `git --version` |
-| **メモリ** | 2GB以上 | `free -h` |
-| **ディスク** | 10GB以上 | `df -h` |
+| 項目               | 要件     | 確認コマンド             |
+| ------------------ | -------- | ------------------------ |
+| **Docker**         | 20.10.0+ | `docker --version`       |
+| **Docker Compose** | v2.0+    | `docker compose version` |
+| **Git**            | 2.30+    | `git --version`          |
+| **メモリ**         | 2GB以上  | `free -h`                |
+| **ディスク**       | 10GB以上 | `df -h`                  |
 
 ### 🚀 30秒セットアップ
 
@@ -203,7 +203,7 @@ services:
         reservations:
           memory: 1G
           cpus: '1'
-    
+
   redis:
     deploy:
       resources:
@@ -310,14 +310,14 @@ wscat -c "ws://localhost:3000/api/ws" -x '{"type":"subscribe","channel":"monitor
 
 ### 🔗 主要エンドポイント
 
-| カテゴリ | エンドポイント | 説明 |
-|----------|---------------|------|
-| **ヘルス** | `GET /api/health` | システム状態確認 |
-| **サーバー** | `GET /api/v1/servers` | サーバー一覧取得 |
-| **サーバー** | `POST /api/v1/servers` | サーバー作成 |
-| **監視** | `GET /api/v1/monitoring` | 監視データ取得 |
-| **ログ** | `GET /api/v1/servers/{id}/logs` | ログ取得 |
-| **設定** | `GET /api/v1/config` | システム設定取得 |
+| カテゴリ     | エンドポイント                  | 説明             |
+| ------------ | ------------------------------- | ---------------- |
+| **ヘルス**   | `GET /api/health`               | システム状態確認 |
+| **サーバー** | `GET /api/v1/servers`           | サーバー一覧取得 |
+| **サーバー** | `POST /api/v1/servers`          | サーバー作成     |
+| **監視**     | `GET /api/v1/monitoring`        | 監視データ取得   |
+| **ログ**     | `GET /api/v1/servers/{id}/logs` | ログ取得         |
+| **設定**     | `GET /api/v1/config`            | システム設定取得 |
 
 ### 🔌 WebSocket API
 
@@ -533,12 +533,12 @@ sudo systemctl enable grafana-server
 
 ### よくある問題と解決方法
 
-| 問題 | 原因 | 解決方法 |
-|------|------|----------|
-| コンテナが起動しない | ポート競合・権限問題 | [詳細手順](./docs/troubleshooting.md#docker関連の問題) |
-| ログインできない | NextAuth設定・Redis接続 | [認証問題の解決](./docs/troubleshooting.md#認証セッション問題) |
-| パフォーマンスが悪い | リソース不足・設定問題 | [パフォーマンス最適化](./docs/troubleshooting.md#パフォーマンス問題) |
-| データベースエラー | SQLite権限・ロック問題 | [DB問題の解決](./docs/troubleshooting.md#データベース関連の問題) |
+| 問題                 | 原因                    | 解決方法                                                             |
+| -------------------- | ----------------------- | -------------------------------------------------------------------- |
+| コンテナが起動しない | ポート競合・権限問題    | [詳細手順](./docs/troubleshooting.md#docker関連の問題)               |
+| ログインできない     | NextAuth設定・Redis接続 | [認証問題の解決](./docs/troubleshooting.md#認証セッション問題)       |
+| パフォーマンスが悪い | リソース不足・設定問題  | [パフォーマンス最適化](./docs/troubleshooting.md#パフォーマンス問題) |
+| データベースエラー   | SQLite権限・ロック問題  | [DB問題の解決](./docs/troubleshooting.md#データベース関連の問題)     |
 
 ### 🆘 緊急時対応
 
@@ -712,12 +712,12 @@ SOFTWARE.
 
 ## 📞 サポート・連絡先
 
-| 項目 | 連絡先 |
-|------|--------|
-| **🐛 バグ報告** | [GitHub Issues](https://github.com/your-org/docker-mcp-web-manager/issues) |
-| **💬 コミュニティ** | [Discord](https://discord.gg/docker-mcp) |
-| **📧 ビジネス** | business@docker-mcp.example.com |
-| **🔒 セキュリティ** | security@docker-mcp.example.com |
+| 項目               | 連絡先                                                                     |
+| ------------------ | -------------------------------------------------------------------------- |
+| **🐛 バグ報告**     | [GitHub Issues](https://github.com/your-org/docker-mcp-web-manager/issues) |
+| **💬 コミュニティ** | [Discord](https://discord.gg/docker-mcp)                                   |
+| **📧 ビジネス**     | business@docker-mcp.example.com                                            |
+| **🔒 セキュリティ** | security@docker-mcp.example.com                                            |
 | **📚 ドキュメント** | [https://docs.docker-mcp.example.com](https://docs.docker-mcp.example.com) |
 
 ---
