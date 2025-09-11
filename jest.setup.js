@@ -88,51 +88,36 @@ jest.mock('next-auth/react', () => ({
   SessionProvider: ({ children }) => children,
 }));
 
-// Drizzle ORM のモック
-jest.mock('@/db/schema', () => ({
-  servers: {
-    select: jest.fn(),
-    insert: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  },
-  users: {
-    select: jest.fn(),
-    insert: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  },
-}));
-
-// データベース接続のモック
-jest.mock('@/db/connection', () => ({
-  db: {
-    select: jest.fn(),
-    insert: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    query: jest.fn(),
-  },
-}));
-
-// 暗号化ユーティリティのモック
-jest.mock('@/lib/encryption', () => ({
-  encrypt: jest.fn((data) => `encrypted_${data}`),
-  decrypt: jest.fn((data) => data.replace('encrypted_', '')),
-  generateKey: jest.fn(() => 'test-key'),
-}));
-
-// File System のモック (Node.js APIs)
-const fs = require('fs');
-jest.mock('fs', () => ({
-  ...fs,
-  promises: {
-    readFile: jest.fn(),
-    writeFile: jest.fn(),
-    access: jest.fn(),
-    mkdir: jest.fn(),
-    readdir: jest.fn(),
-    stat: jest.fn(),
+// Next.js Server API モック
+jest.mock('next/server', () => ({
+  NextRequest: jest.fn().mockImplementation((url, init = {}) => {
+    const urlObj = new URL(url);
+    return {
+      url,
+      method: init.method || 'GET',
+      headers: new Map(Object.entries(init.headers || {})),
+      nextUrl: {
+        searchParams: urlObj.searchParams,
+        pathname: urlObj.pathname,
+        href: url,
+      },
+      json: jest.fn().mockImplementation(() => {
+        if (init.body) {
+          return Promise.resolve(typeof init.body === 'string' ? JSON.parse(init.body) : init.body);
+        }
+        return Promise.resolve({});
+      }),
+      formData: jest.fn().mockResolvedValue(new FormData()),
+      text: jest.fn().mockResolvedValue(init.body || ''),
+      blob: jest.fn().mockResolvedValue(new Blob()),
+    };
+  }),
+  NextResponse: {
+    json: jest.fn().mockImplementation((data, init = {}) => ({
+      status: init.status || 200,
+      headers: new Map(Object.entries(init.headers || {})),
+      json: jest.fn().mockResolvedValue(data),
+    })),
   },
 }));
 
