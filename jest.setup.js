@@ -146,10 +146,10 @@ afterAll(() => {
 // 各テスト実行前のクリーンアップ
 beforeEach(() => {
   jest.clearAllMocks();
-  
+
   // fetch のデフォルト実装をリセット
   global.fetch.mockClear();
-  
+
   // localStorage のモック (jsdom環境でのみ)
   if (typeof window !== 'undefined') {
     const localStorageMock = {
@@ -162,7 +162,7 @@ beforeEach(() => {
       value: localStorageMock,
       writable: true,
     });
-    
+
     // sessionStorage のモック
     const sessionStorageMock = {
       getItem: jest.fn(),
@@ -297,16 +297,16 @@ if (typeof global !== 'undefined') {
         if (this.onopen) this.onopen();
       }, 100);
     }
-    
+
     send(data) {
       // モック実装
     }
-    
+
     close() {
       this.readyState = WebSocket.CLOSED;
       if (this.onclose) this.onclose();
     }
-    
+
     static CONNECTING = 0;
     static OPEN = 1;
     static CLOSING = 2;

@@ -12,17 +12,22 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:ci": "jest --ci --coverage --watchAll=false --reporters=default --reporters=jest-junit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:e2e:ci": "playwright test --reporter=html --reporter=junit",
+    "security:scan": "npm audit --audit-level=moderate",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "build:analyze": "ANALYZE=true npm run build",
     "docker:build": "docker build -t docker-mcp-web-manager .",
+    "docker:build:test": "docker build -f Dockerfile.test -t docker-mcp-web-manager:test .",
     "docker:run": "docker-compose up -d",
     "docker:stop": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:logs": "docker-compose logs -f",
+    "export": "next export"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.1.0",
