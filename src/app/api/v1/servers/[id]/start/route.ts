@@ -15,6 +15,7 @@ import {
 } from '@/lib/auth';
 import { ServerRepository } from '@/db/repositories/server-repository';
 import { DockerMCPClient } from '@/lib/docker-mcp';
+import { sendNotificationToUser } from '@/app/api/v1/notifications/sse/route';
 import { z } from 'zod';
 
 // =============================================================================
@@ -128,6 +129,19 @@ export async function POST(
       duration,
       statusCode: 200,
     });
+
+    // リアルタイム通知を送信
+    try {
+      sendNotificationToUser(authResult.session.user.id!, {
+        type: 'server_start',
+        title: 'サーバー開始',
+        message: `サーバー "${server.name}" の開始処理を開始しました`,
+        severity: 'success',
+        data: { serverId, jobId: jobResponse.id },
+      });
+    } catch (notificationError) {
+      console.warn('通知の送信に失敗しました:', notificationError);
+    }
 
     const responseData = {
       serverId,

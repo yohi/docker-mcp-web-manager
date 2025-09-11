@@ -36,9 +36,10 @@ export default function SignInPage() {
     setError('');
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn('custom-auth', {
         email,
         password,
+        authMethod: 'local',
         redirect: false,
         callbackUrl,
       });
@@ -72,7 +73,7 @@ export default function SignInPage() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <input type="hidden" name="remember" defaultValue="true" />
-          
+
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">

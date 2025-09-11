@@ -13,8 +13,13 @@ import {
   CheckCircle,
   Download,
   Upload,
-  Shield
+  Shield,
+  Palette,
+  Globe
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { LanguageToggle } from '@/components/i18n/LanguageToggle';
+import { Separator } from '@/components/ui/separator';
 
 // =============================================================================
 // 設定ページ - 新しいコンポーネントベース実装
@@ -354,17 +359,57 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* メインシステム設定 */}
-        <SystemSettings
-          settings={settings || undefined}
-          systemInfo={systemInfo || undefined}
-          isLoading={isLoading}
-          error={error}
-          onSave={handleSaveSettings}
-          onTestConnection={handleTestConnection}
-          onBackup={handleBackup}
-          onRestore={handleRestore}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 左カラム: ユーザー設定 */}
+          <div className="lg:col-span-1">
+            {/* 表示設定 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5" />
+                  表示設定
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium">テーマ</h4>
+                    <p className="text-sm text-muted-foreground">
+                      アプリケーションの外観を設定します
+                    </p>
+                  </div>
+                  <ThemeToggle variant="dropdown" showLabel />
+                </div>
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium">言語</h4>
+                    <p className="text-sm text-muted-foreground">
+                      表示言語を設定します
+                    </p>
+                  </div>
+                  <LanguageToggle variant="dropdown" showLabel />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 右カラム: システム設定 */}
+          <div className="lg:col-span-2">
+            <SystemSettings
+              settings={settings || undefined}
+              systemInfo={systemInfo || undefined}
+              isLoading={isLoading}
+              error={error}
+              onSave={handleSaveSettings}
+              onTestConnection={handleTestConnection}
+              onBackup={handleBackup}
+              onRestore={handleRestore}
+            />
+          </div>
+        </div>
       </div>
     </ProtectedRoute>
   );

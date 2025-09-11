@@ -193,10 +193,12 @@ export default function DashboardPage() {
               Docker MCP Web Manager overview and system status
             </p>
           </div>
-          <Button className="flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Add Server</span>
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button className="flex items-center space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>Add Server</span>
+            </Button>
+          </div>
         </div>
 
         {/* 統計カード */}

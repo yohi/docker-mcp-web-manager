@@ -5,6 +5,9 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { NotificationPanel } from '@/components/notifications/NotificationPanel';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { LanguageToggle } from '@/components/i18n/LanguageToggle';
 import {
   HomeIcon,
   ServerIcon,
@@ -97,7 +100,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState(3); // 通知数の例
 
   // 認証チェック
   useEffect(() => {
@@ -228,19 +230,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <div className="flex-1" />
             
             <div className="ml-4 flex items-center md:ml-6">
-              {/* Notifications */}
-              <button
-                type="button"
-                className="relative bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <span className="sr-only">View notifications</span>
-                <BellIcon className="h-6 w-6" />
-                {notifications > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {notifications}
-                  </span>
-                )}
-              </button>
+              {/* Language Toggle */}
+              <LanguageToggle variant="compact" />
+
+              {/* Theme Toggle */}
+              <div className="ml-2">
+                <ThemeToggle variant="compact" />
+              </div>
+
+              {/* Notifications - リアルタイム通知パネル */}
+              <div className="ml-3">
+                <NotificationPanel />
+              </div>
 
               {/* Profile dropdown */}
               <div className="ml-3 relative">

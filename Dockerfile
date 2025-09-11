@@ -1,54 +1,82 @@
-# CSS問題解決版 - tailwindcss-animate含む完全なソリューション
+# =================================================================
+#  Stage 1: Builder
+#  - 役割: 依存関係のインストールとNext.jsアプリのビルド
+#  - コンテキスト: Node.js 24、ビルドツール群、better-sqlite3
+# =================================================================
+FROM node:24-slim AS builder
 
-# Stage 1: Ubuntu環境でbetter-sqlite3をビルド
-FROM node:20-bookworm-slim AS builder
-
-WORKDIR /app
-
-# ビルドに必要なパッケージをインストール
+# ビルドに必要なツールをインストール (明確な指示)
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    sqlite3 \
+    libsqlite3-dev \
     ca-certificates \
+    curl \
+    coreutils \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+WORKDIR /usr/src/app
+
+# package.jsonとpackage-lock.jsonをコピー
+COPY package*.json ./
+
+# npm設定最適化（効率的戦略）
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5 && \
+    npm config set registry https://registry.npmjs.org/ && \
+    npm config set timeout 300000
+
+# 依存関係を一括インストール（タイムアウト対策）
+RUN timeout 600 npm ci --legacy-peer-deps --prefer-offline --progress=false --no-optional || \
+    (echo "npm ci タイムアウト、fallbackでnpm installを実行..." && \
+     npm install --legacy-peer-deps --prefer-offline --progress=false --no-optional)
+
+# アプリケーションソースをコピー
+COPY . .
+
+# Next.jsアプリケーションをビルド
+RUN npm run build
+
+# better-sqlite3の動作確認
+RUN node -e "const Database = require('better-sqlite3'); console.log('✅ better-sqlite3 build successful:', typeof Database === 'function')"
+
+# =================================================================
+#  Stage 2: Runner (Development)
+#  - 役割: 開発環境でのアプリケーション実行
+#  - コンテキスト: 軽量なNode.js 24環境
+# =================================================================
+FROM node:24-slim AS development
+
+WORKDIR /usr/src/app
+
+# 実行時に必要な最小パッケージ
+RUN apt-get update && apt-get install -y \
+    dumb-init \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# package.jsonをコピー（tailwindcss-animateを含む）
-COPY package*.json ./
-
-# 高速化: ビルドキャッシュ活用 + 最小限のフラグ
-RUN npm ci --legacy-peer-deps --no-audit --no-fund --prefer-offline
-
-# Stage 2: Alpine環境でアプリケーション実行
-FROM node:20-alpine AS development
-
-WORKDIR /app
-
-# Alpineでのランタイム依存関係
-RUN apk add --no-cache \
-    libc6-compat \
-    dumb-init \
-    curl \
-    sqlite \
-    gcompat
-
-# Ubuntu環境でビルドしたnode_modulesをコピー
-COPY --from=builder /app/node_modules ./node_modules
-
+# ビルダーからビルド済みのnode_modulesをコピー
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+# ビルダーから.nextビルド結果をコピー
+COPY --from=builder /usr/src/app/.next ./.next
 # アプリケーションファイルをコピー
-COPY . .
+COPY --from=builder /usr/src/app/package.json ./package.json
+COPY --from=builder /usr/src/app/next.config.js ./next.config.js
+COPY --from=builder /usr/src/app/public ./public
+COPY --from=builder /usr/src/app/src ./src
 
 # 環境設定
-RUN cp .env.example .env.local
+RUN cp .env.example .env.local || echo "No .env.example found"
 
-# 権限設定
+# ユーザー・権限設定 (セキュリティのベストプラクティス)
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001 && \
-    mkdir -p /app/data && \
-    chown -R nextjs:nodejs /app && \
-    chmod -R 755 /app
+    mkdir -p /usr/src/app/data && \
+    chown -R nextjs:nodejs /usr/src/app && \
+    chmod -R 755 /usr/src/app
 
 USER nextjs
 EXPOSE 3000
@@ -58,3 +86,42 @@ ENV NODE_ENV=development
 # 開発サーバー起動
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "run", "dev"]
+
+# =================================================================
+#  Stage 3: Runner (Production)
+#  - 役割: 本番環境でのアプリケーション実行
+#  - コンテキスト: 最小限の実行環境
+# =================================================================
+FROM node:24-slim AS production
+
+WORKDIR /usr/src/app
+
+# 実行時に必要な最小パッケージ
+RUN apt-get update && apt-get install -y \
+    dumb-init \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 本番用にnode_modules (productionのみ) をコピー
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+# ビルド結果をコピー
+COPY --from=builder /usr/src/app/.next ./.next
+COPY --from=builder /usr/src/app/package.json ./package.json
+COPY --from=builder /usr/src/app/next.config.js ./next.config.js
+COPY --from=builder /usr/src/app/public ./public
+
+# ユーザー・権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /usr/src/app/data && \
+    chown -R nextjs:nodejs /usr/src/app && \
+    chmod -R 755 /usr/src/app
+
+USER nextjs
+EXPOSE 3000
+
+ENV NODE_ENV=production
+
+# 本番サーバー起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "start"]

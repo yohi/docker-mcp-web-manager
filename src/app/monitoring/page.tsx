@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { MonitoringDashboard } from '@/components/monitoring/monitoring-dashboard';
+import { SystemHealthDashboard } from '@/components/health/SystemHealthDashboard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -372,6 +373,9 @@ export default function MonitoringPage() {
           </Card>
         </div>
 
+        {/* システムヘルス監視 */}
+        <SystemHealthDashboard />
+        
         {/* メイン監視ダッシュボード */}
         <MonitoringDashboard
           serverMetrics={serverMetrics}
