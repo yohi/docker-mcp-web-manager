@@ -11,7 +11,7 @@ const nextConfig = {
       },
     },
     // コード分割とバンドル最適化
-    optimizeCss: true,
+    optimizeCss: false, // crittersモジュール要求を回避
     optimizeServerReact: true,
     turbotrace: {
       logLevel: 'error',

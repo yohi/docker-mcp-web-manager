@@ -16,8 +16,8 @@ services:
   #     - NODE_ENV=development
   #   command: >
   #     sh -c "
-  #       mkdir -p /app/data && 
-  #       chown -R 1000:1000 /app/data && 
+  #       mkdir -p /app/data &&
+  #       chown -R 1000:1000 /app/data &&
   #       chmod 750 /app/data &&
   #       npx drizzle-kit generate &&
   #       npx drizzle-kit migrate
@@ -55,6 +55,9 @@ services:
       - SERVER_LOG_RETENTION_DAYS=${SERVER_LOG_RETENTION_DAYS:-30}
       - SERVER_LOG_ROTATION_SIZE=${SERVER_LOG_ROTATION_SIZE:-104857600}
       - SERVER_LOG_ROTATION_INTERVAL=${SERVER_LOG_ROTATION_INTERVAL:-daily}
+      - DEFAULT_ADMIN_EMAIL=admin@example.com
+      - DEFAULT_ADMIN_PASSWORD=admin123
+      - SKIP_AUTH=${SKIP_AUTH:-true}
     volumes:
       - app-data:/app/data
       - ./src:/app/src:ro
@@ -66,8 +69,8 @@ services:
       - ./tsconfig.json:/app/tsconfig.json:ro
     # command: >
     #   sh -c "
-    #     mkdir -p /app/data && 
-    #     chown -R node:node /app/data && 
+    #     mkdir -p /app/data &&
+    #     chown -R node:node /app/data &&
     #     chmod 755 /app/data &&
     #     npm run dev
     #   "
