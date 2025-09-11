@@ -1,69 +1,112 @@
+/** @type {import('jest').Config} */
 const nextJest = require('next/jest');
 
+// Next.js設定を読み込んでJest設定を作成
 const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files
+  // Next.jsアプリケーションのディレクトリパス
   dir: './',
 });
 
-// Add any custom config to be passed to Jest
-/** @type {import('jest').Config} */
-const config = {
-  // Add more setup options before each test is run
+// カスタムJest設定
+const customJestConfig = {
+  // テスト環境の設定
+  testEnvironment: 'jsdom',
+
+  // セットアップファイル
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  
-  testEnvironment: 'jest-environment-jsdom',
-  
-  // Test directories
-  testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.(ts|tsx|js)',
-    '<rootDir>/src/**/*.(test|spec).(ts|tsx|js)',
-    '<rootDir>/tests/**/*.(test|spec).(ts|tsx|js)',
-  ],
-  
-  // Module name mapping for absolute imports
-  moduleNameMapping: {
+
+  // モジュール名の解決
+  moduleNameMapper: {
+    // path mapping for TypeScript paths
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@/components/(.*)$': '<rootDir>/src/components/$1',
     '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
     '^@/app/(.*)$': '<rootDir>/src/app/$1',
     '^@/types/(.*)$': '<rootDir>/src/types/$1',
     '^@/db/(.*)$': '<rootDir>/src/db/$1',
-    // 静的ファイルのモック
+    // 静的アセットのモック
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$': '<rootDir>/__mocks__/fileMock.js',
   },
-  
-  // Coverage settings
-  collectCoverage: false,
+
+  // テストファイルのパターン
+  testMatch: [
+    '**/__tests__/**/*.(js|jsx|ts|tsx)',
+    '**/*.(test|spec).(js|jsx|ts|tsx)',
+    '<rootDir>/src/**/__tests__/**/*.(ts|tsx|js)',
+    '<rootDir>/src/**/*.(test|spec).(ts|tsx|js)',
+    '<rootDir>/tests/**/*.(test|spec).(ts|tsx|js)',
+  ],
+
+  // 除外するディレクトリ
+  testPathIgnorePatterns: [
+    '<rootDir>/.next/',
+    '<rootDir>/node_modules/',
+    '<rootDir>/coverage/',
+    '<rootDir>/dist/',
+    '<rootDir>/e2e/',  // Playwrightテストを除外
+  ],
+
+  // 収集対象ファイル（カバレッジ）
   collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
+    'src/**/*.(js|jsx|ts|tsx)',
     '!src/**/*.d.ts',
-    '!src/**/*.stories.{ts,tsx}',
-    '!src/**/index.{ts,tsx}',
-    '!src/app/layout.tsx',
+    '!src/**/*.stories.*',
+    '!src/app/**/layout.tsx',
+    '!src/app/**/loading.tsx',
+    '!src/app/**/not-found.tsx',
+    '!src/app/**/error.tsx',
     '!src/app/globals.css',
   ],
-  
-  coverageReporters: ['text', 'lcov', 'html'],
-  coverageDirectory: 'coverage',
-  
-  // Test timeout
-  testTimeout: 10000,
-  
-  // Clear mocks between tests
-  clearMocks: true,
-  
-  // Transform settings for TypeScript and JSX
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.json'
-    }]
+
+  // カバレッジの閾値設定
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70,
+    },
   },
-  
-  // Module file extensions
+
+  // カバレッジレポーターの設定
+  coverageReporters: [
+    'text',
+    'html',
+    'lcov',
+    'json-summary',
+  ],
+
+  // トランスフォーム設定
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+  },
+
+  // モジュールファイル拡張子
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  
+
+  // テスト実行タイムアウト
+  testTimeout: 10000,
+
+  // 各テスト実行前のセットアップ
+  clearMocks: true,
+  restoreMocks: true,
+
+  // グローバル変数
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json',
+    },
+  },
+
+  // モックファイルのディレクトリ
+  moduleDirectories: ['node_modules', '<rootDir>/'],
+
+  // 追加の環境変数
+  testEnvironmentOptions: {
+    url: 'http://localhost:3000',
+  },
 };
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(config);
+// Next.js設定と組み合わせてエクスポート
+module.exports = createJestConfig(customJestConfig);
