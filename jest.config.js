@@ -16,6 +16,9 @@ const customJestConfig = {
       testEnvironment: 'jsdom',
       testMatch: ['<rootDir>/src/components/**/*.(test|spec).(ts|tsx)'],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+      },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@/components/(.*)$': '<rootDir>/src/components/$1',
@@ -32,6 +35,9 @@ const customJestConfig = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/src/app/api/**/*.(test|spec).(ts|tsx)'],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+      },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@/components/(.*)$': '<rootDir>/src/components/$1',
@@ -45,8 +51,11 @@ const customJestConfig = {
       displayName: 'pages',
       testEnvironment: 'jsdom',
       testMatch: ['<rootDir>/src/app/**/*.(test|spec).(ts|tsx)'],
-      testPathIgnorePatterns: ['<rootDir>/src/app/api/**/*'],
+      testPathIgnorePatterns: ['<rootDir>/src/app/api/'],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+      },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@/components/(.*)$': '<rootDir>/src/components/$1',
@@ -63,6 +72,9 @@ const customJestConfig = {
       testEnvironment: 'node',
       testMatch: ['<rootDir>/src/lib/**/*.(test|spec).(ts|tsx)'],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+      },
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^@/components/(.*)$': '<rootDir>/src/components/$1',

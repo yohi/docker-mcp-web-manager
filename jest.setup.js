@@ -146,33 +146,35 @@ afterAll(() => {
 // 各テスト実行前のクリーンアップ
 beforeEach(() => {
   jest.clearAllMocks();
-
+  
   // fetch のデフォルト実装をリセット
   global.fetch.mockClear();
-
-  // localStorage のモック
-  const localStorageMock = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    removeItem: jest.fn(),
-    clear: jest.fn(),
-  };
-  Object.defineProperty(window, 'localStorage', {
-    value: localStorageMock,
-    writable: true,
-  });
-
-  // sessionStorage のモック
-  const sessionStorageMock = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-    removeItem: jest.fn(),
-    clear: jest.fn(),
-  };
-  Object.defineProperty(window, 'sessionStorage', {
-    value: sessionStorageMock,
-    writable: true,
-  });
+  
+  // localStorage のモック (jsdom環境でのみ)
+  if (typeof window !== 'undefined') {
+    const localStorageMock = {
+      getItem: jest.fn(),
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+      clear: jest.fn(),
+    };
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+    });
+    
+    // sessionStorage のモック
+    const sessionStorageMock = {
+      getItem: jest.fn(),
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+      clear: jest.fn(),
+    };
+    Object.defineProperty(window, 'sessionStorage', {
+      value: sessionStorageMock,
+      writable: true,
+    });
+  }
 });
 
 // 各テスト実行後のクリーンアップ
@@ -241,25 +243,27 @@ global.ResizeObserver = class ResizeObserver {
   }
 };
 
-// Web Crypto API のモック
-Object.defineProperty(window, 'crypto', {
-  value: {
-    getRandomValues: jest.fn((arr) => {
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = Math.floor(Math.random() * 256);
-      }
-      return arr;
-    }),
-    subtle: {
-      encrypt: jest.fn(),
-      decrypt: jest.fn(),
-      generateKey: jest.fn(),
-      importKey: jest.fn(),
-      exportKey: jest.fn(),
+// Web Crypto API のモック (jsdom環境でのみ)
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'crypto', {
+    value: {
+      getRandomValues: jest.fn((arr) => {
+        for (let i = 0; i < arr.length; i++) {
+          arr[i] = Math.floor(Math.random() * 256);
+        }
+        return arr;
+      }),
+      subtle: {
+        encrypt: jest.fn(),
+        decrypt: jest.fn(),
+        generateKey: jest.fn(),
+        importKey: jest.fn(),
+        exportKey: jest.fn(),
+      },
     },
-  },
-  writable: true,
-});
+    writable: true,
+  });
+}
 
 // Web Workers のモック
 class MockWorker {
@@ -278,66 +282,72 @@ class MockWorker {
   }
 }
 
-global.Worker = MockWorker;
+if (typeof global !== 'undefined') {
+  global.Worker = MockWorker;
+}
 
 // WebSocket のモック
-global.WebSocket = class WebSocket {
-  constructor(url) {
-    this.url = url;
-    this.readyState = WebSocket.CONNECTING;
-    setTimeout(() => {
-      this.readyState = WebSocket.OPEN;
-      if (this.onopen) this.onopen();
-    }, 100);
-  }
+if (typeof global !== 'undefined') {
+  global.WebSocket = class WebSocket {
+    constructor(url) {
+      this.url = url;
+      this.readyState = WebSocket.CONNECTING;
+      setTimeout(() => {
+        this.readyState = WebSocket.OPEN;
+        if (this.onopen) this.onopen();
+      }, 100);
+    }
+    
+    send(data) {
+      // モック実装
+    }
+    
+    close() {
+      this.readyState = WebSocket.CLOSED;
+      if (this.onclose) this.onclose();
+    }
+    
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
+  };
+}
 
-  send(data) {
-    // モック実装
-  }
+// HTMLCanvasElement のモック (jsdom環境でのみ)
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+    fillRect: jest.fn(),
+    clearRect: jest.fn(),
+    getImageData: jest.fn(() => ({
+      data: new Array(4),
+    })),
+    putImageData: jest.fn(),
+    createImageData: jest.fn(() => []),
+    setTransform: jest.fn(),
+    drawImage: jest.fn(),
+    save: jest.fn(),
+    fillText: jest.fn(),
+    restore: jest.fn(),
+    beginPath: jest.fn(),
+    moveTo: jest.fn(),
+    lineTo: jest.fn(),
+    closePath: jest.fn(),
+    stroke: jest.fn(),
+    translate: jest.fn(),
+    scale: jest.fn(),
+    rotate: jest.fn(),
+    arc: jest.fn(),
+    fill: jest.fn(),
+    measureText: jest.fn(() => ({ width: 10 })),
+    transform: jest.fn(),
+    rect: jest.fn(),
+    clip: jest.fn(),
+  }));
 
-  close() {
-    this.readyState = WebSocket.CLOSED;
-    if (this.onclose) this.onclose();
-  }
-
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-};
-
-// HTMLCanvasElement のモック
-HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
-  fillRect: jest.fn(),
-  clearRect: jest.fn(),
-  getImageData: jest.fn(() => ({
-    data: new Array(4),
-  })),
-  putImageData: jest.fn(),
-  createImageData: jest.fn(() => []),
-  setTransform: jest.fn(),
-  drawImage: jest.fn(),
-  save: jest.fn(),
-  fillText: jest.fn(),
-  restore: jest.fn(),
-  beginPath: jest.fn(),
-  moveTo: jest.fn(),
-  lineTo: jest.fn(),
-  closePath: jest.fn(),
-  stroke: jest.fn(),
-  translate: jest.fn(),
-  scale: jest.fn(),
-  rotate: jest.fn(),
-  arc: jest.fn(),
-  fill: jest.fn(),
-  measureText: jest.fn(() => ({ width: 10 })),
-  transform: jest.fn(),
-  rect: jest.fn(),
-  clip: jest.fn(),
-}));
-
-// HTMLCanvasElement.prototype.toDataURL のモック
-HTMLCanvasElement.prototype.toDataURL = jest.fn(() => 'data:image/png;base64,test');
+  // HTMLCanvasElement.prototype.toDataURL のモック
+  HTMLCanvasElement.prototype.toDataURL = jest.fn(() => 'data:image/png;base64,test');
+}
 
 // テスト実行時のタイムゾーン設定
 process.env.TZ = 'Asia/Tokyo';
