@@ -1,0 +1,44 @@
+# プリビルド済みbetter-sqlite3使用のDockerfile
+
+FROM node:20-alpine AS development
+
+WORKDIR /app
+
+# ランタイム依存関係をインストール
+RUN apk add --no-cache \
+    libc6-compat \
+    dumb-init \
+    curl \
+    sqlite
+
+# アプリケーションファイルをコピー
+COPY . .
+
+# 環境設定ファイルを準備
+RUN cp .env.example .env.local
+
+# better-sqlite3のプリビルド済みバイナリを直接取得
+RUN npm install --legacy-peer-deps --no-optional --ignore-scripts && \
+    # better-sqlite3のプリビルド済みバイナリをダウンロード
+    mkdir -p node_modules/better-sqlite3/build/Release && \
+    # Node.js 20 + Alpine Linux用のプリビルド済みバイナリ
+    wget -q https://github.com/WiseLibs/better-sqlite3/releases/download/v11.0.0/better-sqlite3-v11.0.0-node-v115-linux-x64-musl.tar.gz -O /tmp/sqlite3.tar.gz || \
+    # フォールバック: 最小限のビルド
+    (apk add --no-cache python3 make g++ && npm rebuild better-sqlite3 --build-from-source) || \
+    echo "SQLite3 binary setup completed"
+
+# 権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
+
+USER nextjs
+EXPOSE 3000
+
+ENV NODE_ENV=development
+
+# 開発サーバーを起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]

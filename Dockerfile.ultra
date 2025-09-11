@@ -1,0 +1,48 @@
+# Ultra Fast Build - Cache最適化 + 段階的ビルド
+# 戦略: BuildKit cache mount + 段階的依存関係インストール
+
+# syntax=docker/dockerfile:1
+FROM node:20-alpine AS development
+
+WORKDIR /app
+
+# APKキャッシュを活用してパッケージインストール
+RUN --mount=type=cache,target=/var/cache/apk \
+    apk add --no-cache \
+    libc6-compat \
+    dumb-init \
+    curl \
+    sqlite \
+    gcompat \
+    python3 \
+    make \
+    g++
+
+# package.json のみを先にコピー (依存関係キャッシング最適化)
+COPY package*.json ./
+
+# NPMキャッシュをマウント
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps --prefer-offline --no-audit --no-fund
+
+# アプリケーションファイルをコピー
+COPY . .
+
+# 環境設定
+RUN cp .env.example .env.local
+
+# 権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
+
+USER nextjs
+EXPOSE 3000
+
+ENV NODE_ENV=development
+
+# 開発サーバー起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]

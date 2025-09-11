@@ -1,0 +1,101 @@
+# 最適化マルチステージビルド - ネットワーク問題対応
+
+# Stage 1: Base image with system packages
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# システム依存関係をインストール
+RUN apk add --no-cache \
+    libc6-compat \
+    sqlite \
+    curl \
+    dumb-init
+
+# Stage 2: Dependencies installation with optimizations
+FROM base AS deps
+
+# ビルド用パッケージをインストール
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++
+
+# package.json をコピー
+COPY package*.json ./
+
+# better-sqlite3のビルドエラー回避設定
+ENV PYTHON=/usr/bin/python3
+ENV npm_config_build_from_source=false
+ENV npm_config_cache=/tmp/.npm-cache
+
+# npmレジストリ設定のみ
+RUN npm config set registry https://registry.npmjs.org/
+
+# 依存関係インストール（フォールバック戦略）
+RUN npm ci --legacy-peer-deps --prefer-offline || \
+    (npm cache clean --force && npm ci --legacy-peer-deps --no-optional) || \
+    npm install --legacy-peer-deps --no-optional
+
+# Stage 3: Next.js Builder
+FROM base AS builder
+
+# 依存関係をコピー
+COPY --from=deps /app/node_modules ./node_modules
+
+# アプリケーションファイルをコピー
+COPY . .
+
+# 環境設定
+RUN cp .env.example .env.local
+
+# Next.jsビルド
+RUN npm run build
+
+# Stage 4: Development runtime
+FROM base AS development
+
+# ビルド済み依存関係をコピー
+COPY --from=deps /app/node_modules ./node_modules
+
+# アプリケーションコードをコピー
+COPY . .
+RUN cp .env.example .env.local
+
+# 権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
+
+USER nextjs
+EXPOSE 3000
+
+# 開発サーバー起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]
+
+# Stage 5: Production runtime  
+FROM base AS production
+
+# 本番用依存関係をコピー
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# 権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
+
+USER nextjs
+EXPOSE 3000
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# 本番サーバー起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "server.js"]
