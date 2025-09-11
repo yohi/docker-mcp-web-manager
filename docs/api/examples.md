@@ -630,7 +630,7 @@ const ws = new WebSocket('ws://localhost:3000/api/ws');
 // 接続成功時
 ws.onopen = function(event) {
   console.log('WebSocket接続が確立されました');
-  
+
   // 特定のサーバーの状態更新を購読
   ws.send(JSON.stringify({
     type: 'subscribe',
@@ -643,7 +643,7 @@ ws.onopen = function(event) {
 ws.onmessage = function(event) {
   const message = JSON.parse(event.data);
   console.log('受信メッセージ:', message);
-  
+
   switch(message.type) {
     case 'server_status_update':
       updateServerStatus(message.data);

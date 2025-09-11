@@ -15,18 +15,18 @@ MCPサーバーのライフサイクル管理を行うAPIエンドポイント�
 
 ## エンドポイント一覧
 
-| メソッド | エンドポイント | 説明 | 権限 |
-|---------|---------------|------|------|
-| GET | `/api/v1/servers` | サーバー一覧取得 | SERVER_READ |
-| POST | `/api/v1/servers` | サーバー作成 | SERVER_WRITE |
-| GET | `/api/v1/servers/{id}` | サーバー詳細取得 | SERVER_READ |
-| PUT | `/api/v1/servers/{id}` | サーバー更新 | SERVER_WRITE |
-| DELETE | `/api/v1/servers/{id}` | サーバー削除 | SERVER_WRITE |
-| POST | `/api/v1/servers/{id}/start` | サーバー開始 | SERVER_WRITE |
-| POST | `/api/v1/servers/{id}/stop` | サーバー停止 | SERVER_WRITE |
-| POST | `/api/v1/servers/{id}/restart` | サーバー再起動 | SERVER_WRITE |
-| GET | `/api/v1/servers/{id}/logs` | ログ取得 | SERVER_READ |
-| GET | `/api/v1/servers/{id}/stats` | 統計情報取得 | SERVER_READ |
+| メソッド | エンドポイント                 | 説明             | 権限         |
+| -------- | ------------------------------ | ---------------- | ------------ |
+| GET      | `/api/v1/servers`              | サーバー一覧取得 | SERVER_READ  |
+| POST     | `/api/v1/servers`              | サーバー作成     | SERVER_WRITE |
+| GET      | `/api/v1/servers/{id}`         | サーバー詳細取得 | SERVER_READ  |
+| PUT      | `/api/v1/servers/{id}`         | サーバー更新     | SERVER_WRITE |
+| DELETE   | `/api/v1/servers/{id}`         | サーバー削除     | SERVER_WRITE |
+| POST     | `/api/v1/servers/{id}/start`   | サーバー開始     | SERVER_WRITE |
+| POST     | `/api/v1/servers/{id}/stop`    | サーバー停止     | SERVER_WRITE |
+| POST     | `/api/v1/servers/{id}/restart` | サーバー再起動   | SERVER_WRITE |
+| GET      | `/api/v1/servers/{id}/logs`    | ログ取得         | SERVER_READ  |
+| GET      | `/api/v1/servers/{id}/stats`   | 統計情報取得     | SERVER_READ  |
 
 ## 詳細仕様
 
@@ -157,15 +157,15 @@ interface CreateServerRequest {
 
 #### バリデーション
 
-| フィールド | 制約 |
-|-----------|------|
-| `name` | 必須、3-50文字、`^[a-zA-Z0-9-]+$` |
-| `image` | 必須、有効なDockerイメージ名 |
-| `port` | 必須、1024-65535の範囲、重複不可 |
-| `environment` | オプション、キーは`^[A-Z][A-Z0-9_]*$` |
-| `volumes` | オプション、`host_path:container_path`形式 |
-| `healthCheck.interval` | 10-3600秒の範囲 |
-| `healthCheck.timeout` | 1-60秒の範囲 |
+| フィールド             | 制約                                       |
+| ---------------------- | ------------------------------------------ |
+| `name`                 | 必須、3-50文字、`^[a-zA-Z0-9-]+$`          |
+| `image`                | 必須、有効なDockerイメージ名               |
+| `port`                 | 必須、1024-65535の範囲、重複不可           |
+| `environment`          | オプション、キーは`^[A-Z][A-Z0-9_]*$`      |
+| `volumes`              | オプション、`host_path:container_path`形式 |
+| `healthCheck.interval` | 10-3600秒の範囲                            |
+| `healthCheck.timeout`  | 1-60秒の範囲                               |
 
 #### レスポンス
 
@@ -531,16 +531,16 @@ type MetricType = 'cpu' | 'memory' | 'network' | 'disk' | 'connections';
 
 ## エラーコード
 
-| エラーコード | HTTPステータス | 説明 |
-|-------------|---------------|------|
-| `SERVER_NOT_FOUND` | 404 | サーバーが見つからない |
-| `SERVER_NAME_DUPLICATE` | 409 | サーバー名が重複 |
-| `SERVER_PORT_IN_USE` | 409 | ポートが使用中 |
-| `SERVER_INVALID_IMAGE` | 400 | 無効なDockerイメージ |
-| `SERVER_INSUFFICIENT_RESOURCES` | 409 | リソース不足 |
-| `SERVER_START_FAILED` | 500 | サーバー開始失敗 |
-| `SERVER_STOP_FAILED` | 500 | サーバー停止失敗 |
-| `SERVER_DELETE_FAILED` | 500 | サーバー削除失敗 |
+| エラーコード                    | HTTPステータス | 説明                   |
+| ------------------------------- | -------------- | ---------------------- |
+| `SERVER_NOT_FOUND`              | 404            | サーバーが見つからない |
+| `SERVER_NAME_DUPLICATE`         | 409            | サーバー名が重複       |
+| `SERVER_PORT_IN_USE`            | 409            | ポートが使用中         |
+| `SERVER_INVALID_IMAGE`          | 400            | 無効なDockerイメージ   |
+| `SERVER_INSUFFICIENT_RESOURCES` | 409            | リソース不足           |
+| `SERVER_START_FAILED`           | 500            | サーバー開始失敗       |
+| `SERVER_STOP_FAILED`            | 500            | サーバー停止失敗       |
+| `SERVER_DELETE_FAILED`          | 500            | サーバー削除失敗       |
 
 ## WebSocket イベント
 
