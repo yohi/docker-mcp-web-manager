@@ -1,0 +1,63 @@
+# 超高速ビルド最適化 Dockerfile - better-sqlite3対応
+# 戦略: 依存関係分離 + 積極的キャッシング + 並列処理
+
+# Stage 1: Node.js 基本環境準備 (キャッシュされる)
+FROM node:20-alpine AS base
+WORKDIR /app
+RUN apk add --no-cache libc6-compat dumb-init curl
+
+# Stage 2: better-sqlite3専用ビルド環境
+FROM node:20-bookworm-slim AS sqlite-builder
+WORKDIR /app
+
+# better-sqlite3ビルドに最低限必要なパッケージのみインストール
+RUN apt-get update && apt-get install -y \
+    python3 make g++ sqlite3 ca-certificates \
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
+
+# better-sqlite3のみを分離してビルド
+COPY package*.json ./
+# better-sqlite3だけを個別にインストール
+RUN npm install better-sqlite3@11.0.0 --legacy-peer-deps --no-optional
+
+# Stage 3: その他の依存関係(軽量ビルド)
+FROM base AS deps
+COPY package*.json ./
+# better-sqlite3を除外して高速インストール
+RUN npm ci --legacy-peer-deps --omit=dev --ignore-scripts --no-optional || \
+    npm install --legacy-peer-deps --production --ignore-scripts --no-optional
+
+# Stage 4: 最終実行環境
+FROM base AS development
+
+# SQLite3ランタイム依存関係
+RUN apk add --no-cache sqlite gcompat
+
+# better-sqlite3を専用ビルドからコピー
+COPY --from=sqlite-builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+
+# その他の依存関係をコピー
+COPY --from=deps /app/node_modules ./node_modules
+
+# アプリケーションファイルをコピー
+COPY . .
+
+# 環境設定
+RUN cp .env.example .env.local
+
+# 権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
+
+USER nextjs
+EXPOSE 3000
+
+ENV NODE_ENV=development
+
+# 開発サーバー起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]

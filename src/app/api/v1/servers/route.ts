@@ -1,144 +1,170 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSuccessResponse, createErrorResponse, processPagination } from '@/lib/api/response';
+import { getServerRepository } from '@/db/repositories';
+import { MCPServer } from '@/types/models';
 
-// モックデータ
-let MOCK_SERVERS = [
-  {
-    id: '1',
-    name: 'test-server-1',
-    status: 'running' as const,
-    image: 'node:latest',
-    port: 3000,
-    createdAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'test-server-2',
-    status: 'stopped' as const,
-    image: 'nginx:latest',
-    port: 8080,
-    createdAt: '2024-01-02T00:00:00Z',
-  },
-];
+// =============================================================================
+// サーバー管理 API エンドポイント
+// CRUD操作とサーバー管理機能を提供
+// =============================================================================
 
-// テスト用にモックデータをリセットする関数
-export function resetMockServers() {
-  MOCK_SERVERS = [
-    {
-      id: '1',
-      name: 'test-server-1',
-      status: 'running' as const,
-      image: 'node:latest',
-      port: 3000,
-      createdAt: '2024-01-01T00:00:00Z',
-    },
-    {
-      id: '2',
-      name: 'test-server-2',
-      status: 'stopped' as const,
-      image: 'nginx:latest',
-      port: 8080,
-      createdAt: '2024-01-02T00:00:00Z',
-    },
-  ];
-}
-
+/**
+ * サーバー一覧取得
+ * GET /api/v1/servers
+ */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl;
-    const { page, limit, offset } = processPagination(searchParams);
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') ?? '1');
+    const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 100);
+    const sortBy = searchParams.get('sort_by') ?? 'createdAt';
+    const sortOrder = searchParams.get('sort_order') ?? 'desc';
 
-    // ページネーション適用
-    const startIndex = offset;
-    const endIndex = offset + limit;
-    const paginatedServers = MOCK_SERVERS.slice(startIndex, endIndex);
+    const serverRepository = getServerRepository();
+    const result = await serverRepository.findAllWithBasicDetails({
+      page,
+      limit,
+      sortBy,
+      sortOrder: sortOrder as 'asc' | 'desc'
+    });
 
-    return createSuccessResponse(paginatedServers, {
+    const servers = result.data;
+    const total = result.total;
+
+    return NextResponse.json({
+      success: true,
+      data: servers,
       pagination: {
         page,
         limit,
-        total: MOCK_SERVERS.length,
-        totalPages: Math.ceil(MOCK_SERVERS.length / limit),
-      },
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
     });
+
   } catch (error) {
-    console.error('GET /api/v1/servers error:', error);
-    return createErrorResponse(
-      'SERVER_001',
-      'サーバー一覧の取得に失敗しました',
-      { statusCode: 500 }
+    console.error('Failed to fetch servers:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SERVER_001',
+          message: 'サーバー一覧の取得に失敗しました'
+        }
+      },
+      { status: 500 }
     );
   }
 }
 
+/**
+ * 新しいサーバー作成
+ * POST /api/v1/servers
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // 基本的なバリデーション
-    if (!body.name || !body.image || !body.port) {
-      return createErrorResponse(
-        'SERVER_002',
-        '必須フィールドが不足しています (name, image, port)',
-        { statusCode: 400 }
+    // 入力バリデーション
+    const { name, image, description, version, port, environment, resourceLimits } = body;
+
+    if (!name || !image || !port) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_002',
+            message: '必須フィールドが不足しています (name, image, port)'
+          }
+        },
+        { status: 400 }
       );
     }
 
-    // ポート番号のバリデーション
-    if (body.port < 1 || body.port > 65535) {
-      return createErrorResponse(
-        'SERVER_003',
-        'ポート番号は1-65535の範囲で指定してください',
-        { statusCode: 400 }
+    // ポート番号の検証
+    if (port < 1 || port > 65535) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_003',
+            message: 'ポート番号は1-65535の範囲で指定してください'
+          }
+        },
+        { status: 400 }
       );
     }
 
-    // 重複チェック
-    const existingServer = MOCK_SERVERS.find(s => s.name === body.name);
+    // 同名サーバーの存在確認
+    const serverRepository = getServerRepository();
+    const existingServer = await serverRepository.findByName(name);
     if (existingServer) {
-      return createErrorResponse(
-        'SERVER_004',
-        '同じ名前のサーバーが既に存在します',
-        { statusCode: 409 }
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_004',
+            message: '同じ名前のサーバーが既に存在します'
+          }
+        },
+        { status: 409 }
       );
     }
 
-    // 新しいサーバーを作成
-    const newServer = {
-      id: `server-${Date.now()}`,
-      name: body.name,
-      image: body.image,
-      port: body.port,
-      description: body.description || '',
-      version: body.version || 'latest',
-      status: 'stopped' as const,
-      environment: body.environment || {},
-      resourceLimits: body.resourceLimits || {
-        memory: '512m',
-        cpu: '0.5',
-      },
+    // サーバーデータの作成
+    const serverData: Omit<MCPServer, 'id' | 'createdAt' | 'updatedAt'> = {
+      name,
+      image,
+      description: description || '',
+      version: version || 'latest',
+      port,
+      status: 'stopped',
       enabled: true,
-      createdAt: new Date().toISOString(),
+      environment: environment || {},
+      resourceLimits: {
+        memory: resourceLimits?.memory || '512m',
+        cpu: resourceLimits?.cpu || '0.5',
+        ...resourceLimits
+      },
+      networkSettings: {
+        ports: {
+          [port]: port
+        }
+      },
+      healthStatus: 'unknown',
+      lastHealthCheck: null,
+      uptime: 0,
+      resourceUsage: {
+        cpu: 0,
+        memory: 0,
+        memoryLimit: 0,
+        networkIn: 0,
+        networkOut: 0
+      }
     };
 
-    // モックデータに追加（重複チェックのため）
-    MOCK_SERVERS.push(newServer);
+    // データベースに保存
+    const newServer = await serverRepository.createServer(serverData);
 
-    return NextResponse.json({
-      success: true,
-      data: newServer,
-      meta: {
-        version: 'v1',
-        requestId: `req_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-        timestamp: new Date().toISOString(),
+    return NextResponse.json(
+      {
+        success: true,
+        data: newServer,
+        message: 'サーバーが正常に作成されました'
       },
-    }, { status: 201 });
+      { status: 201 }
+    );
+
   } catch (error) {
-    console.error('POST /api/v1/servers error:', error);
-    return createErrorResponse(
-      'SERVER_005',
-      'サーバーの作成に失敗しました',
-      { statusCode: 500 }
+    console.error('Failed to create server:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'SERVER_005',
+          message: 'サーバーの作成に失敗しました'
+        }
+      },
+      { status: 500 }
     );
   }
 }
