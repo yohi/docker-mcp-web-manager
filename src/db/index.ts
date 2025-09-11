@@ -4,7 +4,12 @@
 // =============================================================================
 
 // データベース接続とユーティリティ
-export { default as db, sqlite, initializeDatabase, healthCheck, closeDatabase } from './connection';
+export { 
+  default as db, 
+  initializeDatabase, 
+  closeDatabase,
+  checkDatabaseHealth as healthCheck  // エイリアス
+} from './connection';
 
 // スキーマ定義
 export * from './schema';

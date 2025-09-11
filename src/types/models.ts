@@ -404,22 +404,7 @@ export interface ErrorResponse {
 }
 
 // =============================================================================
-// Export all types
+// Export all types (models.ts固有の型のみ、重複を避ける)
 // =============================================================================
-export type {
-  JSONSchema,
-  ResourceLimits,
-  NetworkConfig,
-  Tool,
-  Resource,
-  Prompt,
-  SecretReference,
-  Secret,
-  ServerConfiguration,
-  MCPServer,
-  TestResult,
-  Job,
-  JobResponse,
-  CatalogEntry,
-  CatalogServerInfo,
-};
+// 注：既存のコードベースとの下位互換性のため、このファイルは残しますが、
+// 新しい開発では src/types/mcp.ts の型を使用してください。
