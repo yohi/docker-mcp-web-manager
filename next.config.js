@@ -5,6 +5,21 @@ const nextConfig = {
     webpackBuildWorker: true,
     serverMinification: true,
     serverSourceMaps: false,
+    // Next.js 15.5.2 で利用可能な実験的機能
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+    // コード分割とバンドル最適化
+    optimizeCss: false, // crittersモジュール要求を回避
+    optimizeServerReact: true,
+    turbotrace: {
+      logLevel: 'error',
+    },
   },
   // セキュリティヘッダー設定（CORS、CSP含む）
   async headers() {

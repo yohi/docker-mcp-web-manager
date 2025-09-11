@@ -1,0 +1,1083 @@
+openapi: 3.0.3
+info:
+  title: Docker MCP Web Manager API
+  description: |
+    Model Context Protocol (MCP) サーバーをDocker環境で管理するWebアプリケーションのREST API仕様。
+    
+    ## 主な機能
+    - MCPサーバーのライフサイクル管理
+    - サーバーカタログの閲覧・検索
+    - セキュアなシークレット管理
+    - システム監視とジョブ管理
+    
+    ## 認証
+    セッションベース認証を使用。各エンドポイントには適切な権限が必要です。
+    
+  version: 1.2.0
+  contact:
+    name: Docker MCP Team
+    url: https://github.com/yourusername/docker-mcp-web-manager
+    email: support@docker-mcp.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: 開発環境
+  - url: https://api.docker-mcp.example.com/v1
+    description: 本番環境
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.jsセッションクッキー
+
+  schemas:
+    # 共通スキーマ
+    BaseResponse:
+      type: object
+      required:
+        - success
+        - meta
+      properties:
+        success:
+          type: boolean
+          description: リクエストの成功/失敗
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+    
+    ResponseMeta:
+      type: object
+      required:
+        - requestId
+        - timestamp
+        - version
+        - duration
+      properties:
+        requestId:
+          type: string
+          description: 一意のリクエストID
+          example: "req_1703761200000_abc123"
+        timestamp:
+          type: string
+          format: date-time
+          description: レスポンス生成時刻
+        version:
+          type: string
+          description: APIバージョン
+          example: "v1"
+        duration:
+          type: integer
+          description: 処理時間（ミリ秒）
+          example: 150
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: 現在のページ番号
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: 1ページあたりの件数
+        total:
+          type: integer
+          minimum: 0
+          description: 総件数
+        hasNext:
+          type: boolean
+          description: 次のページが存在するか
+        hasPrev:
+          type: boolean
+          description: 前のページが存在するか
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/BaseResponse'
+        - type: object
+          required:
+            - error
+          properties:
+            success:
+              type: boolean
+              enum: [false]
+            error:
+              $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - VALIDATION_ERROR
+            - NOT_FOUND
+            - INTERNAL_ERROR
+            - RATE_LIMITED
+        message:
+          type: string
+          description: エラーメッセージ
+        details:
+          type: object
+          description: 詳細なエラー情報
+
+    # MCPサーバー関連
+    MCPServer:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - image
+        - port
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: サーバーの一意識別子
+        name:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9-]+$'
+          description: サーバー名
+        status:
+          type: string
+          enum: [running, stopped, error, starting, stopping]
+          description: サーバーの現在状態
+        image:
+          type: string
+          description: Dockerイメージ名
+        port:
+          type: integer
+          minimum: 1024
+          maximum: 65535
+          description: 公開ポート番号
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+          description: 環境変数
+        volumes:
+          type: array
+          items:
+            type: string
+          description: ボリュームマウント設定
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時
+        updatedAt:
+          type: string
+          format: date-time
+          description: 最終更新日時
+
+    CreateMCPServerRequest:
+      type: object
+      required:
+        - name
+        - image
+        - port
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9-]+$'
+        image:
+          type: string
+        port:
+          type: integer
+          minimum: 1024
+          maximum: 65535
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        volumes:
+          type: array
+          items:
+            type: string
+
+    # カタログ関連
+    CatalogEntry:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - version
+        - category
+        - tags
+        - author
+        - repository
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        author:
+          type: string
+        repository:
+          type: string
+          format: uri
+        dockerImage:
+          type: string
+        documentation:
+          type: string
+          format: uri
+        popularity:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ジョブ関連
+    Job:
+      type: object
+      required:
+        - id
+        - type
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [server_create, server_update, server_delete, backup, restore]
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        message:
+          type: string
+        result:
+          type: object
+        error:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # シークレット関連
+    Secret:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - tags
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        # valueは意図的に含めない（セキュリティ上の理由）
+
+    CreateSecretRequest:
+      type: object
+      required:
+        - name
+        - value
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        value:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    # 監視関連
+    MonitoringData:
+      type: object
+      required:
+        - system
+        - docker
+        - api
+      properties:
+        system:
+          type: object
+          properties:
+            cpu:
+              type: number
+              minimum: 0
+              maximum: 100
+            memory:
+              type: number
+              minimum: 0
+              maximum: 100
+            disk:
+              type: number
+              minimum: 0
+              maximum: 100
+        docker:
+          type: object
+          properties:
+            containersRunning:
+              type: integer
+              minimum: 0
+            containersStopped:
+              type: integer
+              minimum: 0
+            images:
+              type: integer
+              minimum: 0
+        api:
+          type: object
+          properties:
+            requestsPerMinute:
+              type: integer
+              minimum: 0
+            averageResponseTime:
+              type: integer
+              minimum: 0
+            errorRate:
+              type: number
+              minimum: 0
+              maximum: 1
+
+paths:
+  # ヘルスチェック
+  /health:
+    get:
+      tags:
+        - Health
+      summary: システムヘルスチェック
+      description: システムの稼働状況を確認します
+      operationId: getHealth
+      responses:
+        '200':
+          description: システム正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, unhealthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  environment:
+                    type: string
+                  uptime:
+                    type: number
+        '500':
+          description: システム異常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [unhealthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  error:
+                    type: string
+
+  # MCPサーバー管理
+  /servers:
+    get:
+      tags:
+        - Servers
+      summary: MCPサーバー一覧取得
+      description: 管理されているMCPサーバーの一覧を取得します
+      operationId: getServers
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [running, stopped, error]
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [name, status, createdAt, updatedAt]
+            default: updatedAt
+        - name: sort_order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: サーバー一覧取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MCPServer'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 権限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Servers
+      summary: MCPサーバー作成
+      description: 新しいMCPサーバーを作成します
+      operationId: createServer
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMCPServerRequest'
+      responses:
+        '201':
+          description: サーバー作成成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MCPServer'
+        '400':
+          description: リクエストデータ不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証エラー
+        '403':
+          description: 権限不足
+        '409':
+          description: 名前重複エラー
+
+  /servers/{id}:
+    get:
+      tags:
+        - Servers
+      summary: MCPサーバー詳細取得
+      description: 指定されたIDのMCPサーバー詳細を取得します
+      operationId: getServer
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: サーバー詳細取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/MCPServer'
+                          - type: object
+                            properties:
+                              logs:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    timestamp:
+                                      type: string
+                                      format: date-time
+                                    level:
+                                      type: string
+                                      enum: [debug, info, warn, error]
+                                    message:
+                                      type: string
+        '404':
+          description: サーバーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Servers
+      summary: MCPサーバー更新
+      description: MCPサーバーの設定を更新します
+      operationId: updateServer
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMCPServerRequest'
+      responses:
+        '200':
+          description: サーバー更新成功
+        '400':
+          description: リクエストデータ不正
+        '404':
+          description: サーバーが見つからない
+
+    delete:
+      tags:
+        - Servers
+      summary: MCPサーバー削除
+      description: MCPサーバーを削除します
+      operationId: deleteServer
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: サーバー削除成功
+        '404':
+          description: サーバーが見つからない
+        '409':
+          description: 実行中のサーバーは削除不可
+
+  # カタログAPI
+  /catalog:
+    get:
+      tags:
+        - Catalog
+      summary: カタログ一覧取得
+      description: MCPサーバーカタログの一覧を取得します
+      operationId: getCatalog
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: false
+      responses:
+        '200':
+          description: カタログ一覧取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CatalogEntry'
+
+  /catalog/search:
+    get:
+      tags:
+        - Catalog
+      summary: カタログ検索
+      description: キーワードでカタログを検索します
+      operationId: searchCatalog
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: tags
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [relevance, popularity, updated]
+            default: relevance
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: 検索結果取得成功
+
+  /catalog/categories:
+    get:
+      tags:
+        - Catalog
+      summary: カテゴリ一覧取得
+      description: 利用可能なカテゴリ一覧を取得します
+      operationId: getCategories
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: カテゴリ一覧取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            count:
+                              type: integer
+
+  /catalog/{id}:
+    get:
+      tags:
+        - Catalog
+      summary: カタログエントリ詳細取得
+      description: 指定されたカタログエントリの詳細を取得します
+      operationId: getCatalogEntry
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: カタログエントリ詳細取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CatalogEntry'
+
+  # ジョブ管理API
+  /jobs:
+    get:
+      tags:
+        - Jobs
+      summary: ジョブ一覧取得
+      description: システム内のジョブ一覧を取得します
+      operationId: getJobs
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, running, completed, failed, cancelled]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [server_create, server_update, server_delete, backup, restore]
+      responses:
+        '200':
+          description: ジョブ一覧取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Job'
+
+  /jobs/{id}:
+    get:
+      tags:
+        - Jobs
+      summary: ジョブ詳細取得
+      description: 指定されたジョブの詳細を取得します
+      operationId: getJob
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ジョブ詳細取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Job'
+
+  # シークレット管理API
+  /secrets:
+    get:
+      tags:
+        - Secrets
+      summary: シークレット一覧取得
+      description: 暗号化されたシークレットの一覧を取得します（値は含まれません）
+      operationId: getSecrets
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: シークレット一覧取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Secret'
+
+    post:
+      tags:
+        - Secrets
+      summary: シークレット作成
+      description: 新しいシークレットを暗号化して保存します
+      operationId: createSecret
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSecretRequest'
+      responses:
+        '201':
+          description: シークレット作成成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Secret'
+
+  /secrets/{id}:
+    get:
+      tags:
+        - Secrets
+      summary: シークレット詳細取得
+      description: 指定されたシークレットのメタデータを取得します（値は含まれません）
+      operationId: getSecret
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: シークレット詳細取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Secret'
+
+    put:
+      tags:
+        - Secrets
+      summary: シークレット更新
+      description: シークレットを更新します
+      operationId: updateSecret
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSecretRequest'
+      responses:
+        '200':
+          description: シークレット更新成功
+
+    delete:
+      tags:
+        - Secrets
+      summary: シークレット削除
+      description: シークレットを完全に削除します
+      operationId: deleteSecret
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: シークレット削除成功
+
+  # 監視API
+  /monitoring:
+    get:
+      tags:
+        - Monitoring
+      summary: 監視データ取得
+      description: システムの監視データを取得します
+      operationId: getMonitoringData
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 監視データ取得成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MonitoringData'
+
+  # 設定API
+  /config:
+    get:
+      tags:
+        - Configuration
+      summary: システム設定取得
+      description: システム設定を取得します
+      operationId: getConfig
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 設定取得成功
+
+    put:
+      tags:
+        - Configuration
+      summary: システム設定更新
+      description: システム設定を更新します
+      operationId: updateConfig
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 設定更新成功
+
+  /settings:
+    get:
+      tags:
+        - Settings
+      summary: ユーザー設定取得
+      description: ユーザー個人の設定を取得します
+      operationId: getSettings
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: ユーザー設定取得成功
+
+    put:
+      tags:
+        - Settings
+      summary: ユーザー設定更新
+      description: ユーザー個人の設定を更新します
+      operationId: updateSettings
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: ユーザー設定更新成功
+
+tags:
+  - name: Health
+    description: システムヘルスチェック
+  - name: Servers
+    description: MCPサーバー管理
+  - name: Catalog
+    description: MCPサーバーカタログ
+  - name: Jobs
+    description: ジョブ管理
+  - name: Secrets
+    description: シークレット管理
+  - name: Monitoring
+    description: システム監視
+  - name: Configuration
+    description: システム設定
+  - name: Settings
+    description: ユーザー設定

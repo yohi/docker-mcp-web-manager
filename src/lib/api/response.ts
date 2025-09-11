@@ -345,10 +345,13 @@ export function processPagination(
   query: URLSearchParams,
   defaults = { page: 1, limit: 20, maxLimit: 100 }
 ): { page: number; limit: number; offset: number } {
-  const page = Math.max(1, parseInt(query.get('page') || defaults.page.toString()));
+  const pageStr = query.get('page') || defaults.page.toString();
+  const limitStr = query.get('limit') || defaults.limit.toString();
+  
+  const page = Math.max(1, parseInt(pageStr) || defaults.page);
   const limit = Math.min(
     defaults.maxLimit,
-    Math.max(1, parseInt(query.get('limit') || defaults.limit.toString()))
+    Math.max(1, parseInt(limitStr) || defaults.limit)
   );
   const offset = (page - 1) * limit;
 

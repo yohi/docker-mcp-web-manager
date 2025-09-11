@@ -1,75 +1,89 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
+# Dependencies
+node_modules/
 /.pnp
 .pnp.js
+jspm_packages/
 
-# testing
-/coverage
-
-# next.js
+# Production builds
 /.next/
 /out/
+/build/
+/dist/
+build/Release
 
-# production
-/build
+# Testing
+/coverage/
+coverage/
+test-results/
+playwright-report/
+.nyc_output
+*.lcov
 
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
+# Environment files
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
 .env.test
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# database
+# Database files
 /data/
+data/
 *.db
 *.db-shm
 *.db-wal
 *.sqlite
 *.sqlite3
 
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# Log files
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
 # IDE and tool specific
 .vscode/
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
 *~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # OS generated files
-Thumbs.db
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+Thumbs.db
+*.pem
+
+# Vercel
+.vercel
 
 # Playwright MCP
 .playwright-mcp/
 
-# Serena
+# Cursor IDE / Serena
+.cursor/
 .serena/
-
-# Logs
-logs
-*.log
-lerna-debug.log*
 
 # Runtime data
 pids
@@ -77,46 +91,30 @@ pids
 *.seed
 *.pid.lock
 
-# Coverage directory used by tools like istanbul
-coverage
-*.lcov
+# Optional caches
+.npm
+.eslintcache
+.stylelintcache
 
-# nyc test coverage
-.nyc_output
+# Cache directories
+.cache
+.parcel-cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
 
-# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+# Grunt intermediate storage
 .grunt
 
-# Bower dependency directory (https://bower.io/)
+# Bower dependency directory
 bower_components
 
 # node-waf configuration
 .lock-wscript
 
-# Compiled binary addons (https://nodejs.org/api/addons.html)
-build/Release
-
-# Dependency directories
-node_modules/
-jspm_packages/
-
-# Snowpack dependency directory (https://snowpack.dev/)
+# Snowpack dependency directory
 web_modules/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
 
 # Optional REPL history
 .node_repl_history
@@ -127,64 +125,44 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-out
+# Temporary folders
+tmp/
+temp/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
-
-# Comment in the public line in if your project uses Gatsby and *not* Next.js
-# https://nextjs.org/blog/next-9-1#public-directory-support
-# public
 
 # Storybook build outputs
 .out
 .storybook-out
 
-# Temporary folders
-tmp/
-temp/
-
-# Test results
-test-results/
-playwright-report/
-/test-results/
-/playwright-report/
-/playwright/.cache/
-
 # Bundle analyzer
 bundle-analyzer-report.html
 
-# Lock files (keep one, remove others if not using that package manager)
-# package-lock.json  # Keep for npm
-# yarn.lock          # Keep for yarn
-# pnpm-lock.yaml     # Keep for pnpm
+# Serverless directories
+.serverless/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# FuseBox cache
+.fusebox/
 
-# Local development
-.env.example
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
 
 # Bitwarden CLI session
 bw-session
@@ -194,13 +172,19 @@ bw-session
 *.bak
 *.old
 
-# ESLint
-.eslintcache
-
 # Prettier
 .prettierignore
 
 # npm
 .npmrc.local
 
-.serena
+# Playwright cache
+/playwright/.cache/
+
+# Lock files (keep one, remove others if not using that package manager)
+# package-lock.json  # Keep for npm
+# yarn.lock          # Keep for yarn
+# pnpm-lock.yaml     # Keep for pnpm
+
+# Project documentation (exclude from git)
+todo.md
