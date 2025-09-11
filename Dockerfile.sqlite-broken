@@ -1,0 +1,39 @@
+# SQLite依存を除外した超高速ビルドDockerfile
+
+FROM node:20-alpine AS development
+
+WORKDIR /app
+
+# ランタイム依存関係のみをインストール
+RUN apk add --no-cache \
+    libc6-compat \
+    dumb-init \
+    curl
+
+# アプリケーションファイルをコピー
+COPY . .
+
+# 環境設定ファイルを準備
+RUN cp .env.example .env.local
+
+# better-sqlite3を完全にスキップしてインストール
+RUN npm install --legacy-peer-deps --ignore-scripts --no-optional --package-lock-only=false || \
+    npm install --legacy-peer-deps --force
+
+# 権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
+
+USER nextjs
+EXPOSE 3000
+
+# データベースなしモードで起動
+ENV NODE_ENV=development
+ENV DATABASE_URL=""
+
+# 開発サーバーを起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]

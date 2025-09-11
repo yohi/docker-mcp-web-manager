@@ -1,0 +1,44 @@
+# libsql (Turso) 使用の代替Dockerfile
+
+FROM node:20-alpine AS development
+
+WORKDIR /app
+
+# ランタイム依存関係をインストール
+RUN apk add --no-cache \
+    libc6-compat \
+    dumb-init \
+    curl
+
+# package.jsonを一時的に修正してlibsqlを使用
+COPY package*.json ./
+
+# better-sqlite3をlibsqlに置換
+RUN sed -i 's/"better-sqlite3": "[^"]*"/"@libsql\/client": "^0.4.0"/' package.json
+
+# アプリケーションファイルをコピー
+COPY . .
+
+# 環境設定ファイルを準備
+RUN cp .env.example .env.local
+
+# libsqlでnpmインストール
+RUN npm install --legacy-peer-deps --no-optional || \
+    npm install --legacy-peer-deps --force
+
+# 権限設定
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app && \
+    chmod -R 755 /app
+
+USER nextjs
+EXPOSE 3000
+
+ENV NODE_ENV=development
+ENV DATABASE_URL=file:/app/data/app.db
+
+# 開発サーバーを起動
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]
