@@ -1,0 +1,222 @@
+# Docker MCP Web Manager - Bitbucket Pipelines CI/CD
+# 自動テスト、ビルド、デプロイメントパイプライン
+
+image: node:24.7.0
+
+definitions:
+  services:
+    redis:
+      image: redis:7-alpine
+      memory: 256
+    docker:
+      memory: 4096
+
+  caches:
+    npm: ~/.npm
+    nextjs: .next/cache
+
+  steps:
+    - step: &install-dependencies
+        name: 📦 Install Dependencies
+        caches:
+          - npm
+        script:
+          - npm ci --prefer-offline --no-audit
+          - npm ls --depth=0
+        artifacts:
+          - node_modules/**
+
+    - step: &code-quality
+        name: 🔍 Code Quality & Linting
+        caches:
+          - npm
+        script:
+          - npm run lint
+          - npm run type-check
+        artifacts:
+          - lint-results.json
+
+    - step: &unit-tests
+        name: 🧪 Unit & Integration Tests
+        caches:
+          - npm
+        services:
+          - redis
+        script:
+          - npm run test:ci
+          - npm run test:coverage
+        artifacts:
+          - coverage/**
+          - test-results.xml
+        after-script:
+          - pipe: atlassian/bitbucket-upload-file:0.3.3
+            variables:
+              BITBUCKET_USERNAME: $BITBUCKET_USERNAME
+              BITBUCKET_APP_PASSWORD: $BITBUCKET_APP_PASSWORD
+              FILENAME: coverage/lcov-report/index.html
+              DESTINATION: coverage-report-${BITBUCKET_BUILD_NUMBER}.html
+
+    - step: &e2e-tests
+        name: 🎭 E2E Tests
+        caches:
+          - npm
+        services:
+          - redis
+          - docker
+        script:
+          - npm run build
+          - npm run docker:build:test
+          - npm run test:e2e:ci
+        artifacts:
+          - playwright-report/**
+          - test-results/**
+
+    - step: &security-scan
+        name: 🔒 Security Scan
+        caches:
+          - npm
+        script:
+          - npm audit --audit-level=moderate
+          - npm run security:scan
+        artifacts:
+          - security-report.json
+
+    - step: &build-production
+        name: 🏗️ Build Production
+        caches:
+          - npm
+          - nextjs
+        script:
+          - npm run build
+          - npm run export
+        artifacts:
+          - .next/**
+          - out/**
+
+    - step: &docker-build
+        name: 🐳 Docker Build & Push
+        services:
+          - docker
+        caches:
+          - docker
+        script:
+          - export IMAGE_NAME="docker-mcp-web-manager"
+          - export IMAGE_TAG="${BITBUCKET_BRANCH}-${BITBUCKET_BUILD_NUMBER}"
+          - echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
+          - docker build -t $IMAGE_NAME:$IMAGE_TAG -t $IMAGE_NAME:latest .
+          - docker push $IMAGE_NAME:$IMAGE_TAG
+          - docker push $IMAGE_NAME:latest
+
+    - step: &deploy-staging
+        name: 🚀 Deploy to Staging
+        deployment: staging
+        script:
+          - echo "Deploying to staging environment..."
+          - curl -X POST $STAGING_WEBHOOK_URL -H "Content-Type:application/json" -d '{"image":"'$IMAGE_NAME:$IMAGE_TAG'"}'
+
+    - step: &deploy-production
+        name: 🌟 Deploy to Production
+        deployment: production
+        trigger: manual
+        script:
+          - echo "Deploying to production environment..."
+          - curl -X POST $PRODUCTION_WEBHOOK_URL -H "Content-Type:application/json" -d '{"image":"'$IMAGE_NAME:$IMAGE_TAG'"}'
+
+pipelines:
+  # デフォルトパイプライン（すべてのブランチ）
+  default:
+    - step: *install-dependencies
+    - parallel:
+        - step: *code-quality
+        - step: *unit-tests
+        - step: *security-scan
+    - step: *build-production
+
+  # メインブランチ（本格的な CI/CD）
+  branches:
+    main:
+      - step: *install-dependencies
+      - parallel:
+          - step: *code-quality
+          - step: *unit-tests
+          - step: *security-scan
+      - step: *e2e-tests
+      - step: *build-production
+      - step: *docker-build
+      - step: *deploy-staging
+      - step: *deploy-production
+
+    develop:
+      - step: *install-dependencies
+      - parallel:
+          - step: *code-quality
+          - step: *unit-tests
+          - step: *security-scan
+      - step: *e2e-tests
+      - step: *build-production
+      - step: *docker-build
+      - step: *deploy-staging
+
+  # フィーチャーブランチ
+  feature/*:
+    - step: *install-dependencies
+    - parallel:
+        - step: *code-quality
+        - step: *unit-tests
+        - step: *security-scan
+    - step: *build-production
+
+  # リリースブランチ
+  release/*:
+    - step: *install-dependencies
+    - parallel:
+        - step: *code-quality
+        - step: *unit-tests
+        - step: *security-scan
+    - step: *e2e-tests
+    - step: *build-production
+    - step: *docker-build
+
+  # ホットフィックス
+  hotfix/*:
+    - step: *install-dependencies
+    - parallel:
+        - step: *code-quality
+        - step: *unit-tests
+        - step: *security-scan
+    - step: *e2e-tests
+    - step: *build-production
+    - step: *docker-build
+    - step: *deploy-staging
+    - step: *deploy-production
+
+  # プルリクエスト
+  pull-requests:
+    "**":
+      - step: *install-dependencies
+      - parallel:
+          - step: *code-quality
+          - step: *unit-tests
+          - step: *security-scan
+      - step: *build-production
+
+  # タグベースデプロイ
+  tags:
+    v*:
+      - step: *install-dependencies
+      - parallel:
+          - step: *code-quality
+          - step: *unit-tests
+          - step: *security-scan
+      - step: *e2e-tests
+      - step: *build-production
+      - step: *docker-build
+      - step: *deploy-production
+# カスタム環境変数（Bitbucketリポジトリ設定で管理）
+# DOCKER_USERNAME: Docker Hubユーザー名
+# DOCKER_PASSWORD: Docker Hubパスワード
+# STAGING_WEBHOOK_URL: ステージング環境デプロイWebhook
+# PRODUCTION_WEBHOOK_URL: 本番環境デプロイWebhook
+# DATABASE_URL: データベース接続URL
+# NEXTAUTH_SECRET: NextAuth.js認証シークレット
+# NEXTAUTH_URL: NextAuth.js認証URL

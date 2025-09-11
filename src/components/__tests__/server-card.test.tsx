@@ -94,7 +94,7 @@ describe('ServerCard Component', () => {
 
     it('shows start button for stopped server', () => {
         const stoppedServer = { ...mockServer, status: 'stopped' as const };
-        
+
         render(
             <AuthProvider>
                 <ServerCard {...defaultProps} server={stoppedServer} />
