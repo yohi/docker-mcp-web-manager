@@ -26,8 +26,7 @@ COPY package*.json ./
 RUN npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set fetch-retries 5 && \
-    npm config set registry https://registry.npmjs.org/ && \
-    npm config set timeout 300000
+    npm config set registry https://registry.npmjs.org/
 
 # 依存関係を一括インストール（タイムアウト対策）
 RUN timeout 600 npm ci --legacy-peer-deps --prefer-offline --progress=false --no-optional || \
@@ -37,7 +36,11 @@ RUN timeout 600 npm ci --legacy-peer-deps --prefer-offline --progress=false --no
 # アプリケーションソースをコピー
 COPY . .
 
-# Next.jsアプリケーションをビルド
+# Next.jsアプリケーションをビルド（ダミー環境変数でビルド時エラーを回避）
+ENV NEXTAUTH_SECRET="dummy-build-secret-for-docker-build-only-32chars" \
+    NEXTAUTH_URL="http://localhost:3000" \
+    JWT_SECRET="dummy-jwt-secret-for-docker-build-only-very-long-secret" \
+    DATABASE_URL="file:./dev.db"
 RUN npm run build
 
 # better-sqlite3の動作確認
@@ -46,17 +49,21 @@ RUN node -e "const Database = require('better-sqlite3'); console.log('✅ better
 # =================================================================
 #  Stage 2: Runner (Development)
 #  - 役割: 開発環境でのアプリケーション実行
-#  - コンテキスト: 軽量なNode.js 24環境
+#  - コンテキスト: 軽量なNode.js 24環境、Bitwarden CLI統合
 # =================================================================
 FROM node:24-slim AS development
 
 WORKDIR /usr/src/app
 
-# 実行時に必要な最小パッケージ
+# 実行時に必要な最小パッケージ（Bitwarden CLI含む）
 RUN apt-get update && apt-get install -y \
     dumb-init \
     curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Bitwarden CLI のインストール（npm経由）
+RUN npm install -g @bitwarden/cli
 
 # ビルダーからビルド済みのnode_modulesをコピー
 COPY --from=builder /usr/src/app/node_modules ./node_modules
@@ -65,6 +72,10 @@ COPY --from=builder /usr/src/app/.next ./.next
 # アプリケーションファイルをコピー
 COPY --from=builder /usr/src/app/package.json ./package.json
 COPY --from=builder /usr/src/app/next.config.js ./next.config.js
+COPY --from=builder /usr/src/app/tailwind.config.js ./tailwind.config.js
+COPY --from=builder /usr/src/app/postcss.config.js ./postcss.config.js
+COPY --from=builder /usr/src/app/postcss.config.mjs ./postcss.config.mjs
+COPY --from=builder /usr/src/app/tsconfig.json ./tsconfig.json
 COPY --from=builder /usr/src/app/public ./public
 COPY --from=builder /usr/src/app/src ./src
 
@@ -72,11 +83,15 @@ COPY --from=builder /usr/src/app/src ./src
 RUN cp .env.example .env.local || echo "No .env.example found"
 
 # ユーザー・権限設定 (セキュリティのベストプラクティス)
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001 && \
+RUN addgroup --gid 1001 --system nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs nextjs && \
     mkdir -p /usr/src/app/data && \
     chown -R nextjs:nodejs /usr/src/app && \
     chmod -R 755 /usr/src/app
+
+# Bitwarden CLIへのアクセス権限設定
+RUN ln -s /usr/local/lib/node_modules/@bitwarden/cli/build/bw.js /usr/local/bin/bw && \
+    chmod +x /usr/local/bin/bw
 
 USER nextjs
 EXPOSE 3000

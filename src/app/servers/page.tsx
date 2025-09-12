@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { ServerList } from '@/components/servers/server-list';
 import { ServerDetail } from '@/components/servers/server-detail';
@@ -8,7 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Server,
   Plus,
   Search,
@@ -26,6 +27,7 @@ import {
 // =============================================================================
 
 export default function ServersPage() {
+  const router = useRouter();
   const [selectedServer, setSelectedServer] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -65,8 +67,8 @@ export default function ServersPage() {
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleRefresh}
               disabled={refreshing}
               className="flex items-center space-x-2"
@@ -74,7 +76,10 @@ export default function ServersPage() {
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span>Refresh</span>
             </Button>
-            <Button className="flex items-center space-x-2">
+            <Button
+              onClick={() => router.push('/servers/new')}
+              className="flex items-center space-x-2"
+            >
               <Plus className="h-4 w-4" />
               <span>Add Server</span>
             </Button>
@@ -134,7 +139,7 @@ export default function ServersPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ServerList 
+                <ServerList
                   className="border-0 shadow-none"
                 />
               </CardContent>
@@ -150,8 +155,8 @@ export default function ServersPage() {
                     <Settings className="h-5 w-5" />
                     <span>Server Details</span>
                   </CardTitle>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => setSelectedServer(null)}
                   >
@@ -159,7 +164,7 @@ export default function ServersPage() {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <ServerDetail 
+                  <ServerDetail
                     serverId={selectedServer}
                     className="border-0 shadow-none"
                   />

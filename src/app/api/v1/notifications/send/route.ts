@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth/auth-config';
+import { authConfig } from '@/lib/auth/auth-config';
 import { z } from 'zod';
 import { sendNotificationToUser, broadcastNotification } from '../sse/route';
 
@@ -17,7 +17,7 @@ const NotificationSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // 認証チェック
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authConfig);
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // 認証チェック
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authConfig);
     if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },

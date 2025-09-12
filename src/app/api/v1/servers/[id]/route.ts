@@ -226,7 +226,26 @@ export async function PATCH(
     if (status !== undefined) updateData.status = status;
 
     // データベースを更新
-    const updatedServer = await serverRepository.updateServer(serverId, updateData);
+    const updatedServer = await serverRepository.update(serverId, updateData);
+
+    if (!updatedServer) {
+      console.log(`[API_LOG] PATCH /api/v1/servers/${serverId} - ${requestId} - UPDATE_FAILED`);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'SERVER_005',
+            message: 'サーバーの更新に失敗しました'
+          },
+          metadata: {
+            requestId,
+            timestamp: new Date().toISOString()
+          }
+        },
+        { status: 500 }
+      );
+    }
 
     const duration = Date.now() - startTime;
 

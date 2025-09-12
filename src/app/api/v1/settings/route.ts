@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import {
-  requirePermissions,
+  checkPermissions,
   PERMISSIONS,
   validateRequest,
   createErrorResponse,
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // 認証・認可チェック
-    const authResult = await requirePermissions([PERMISSIONS.SETTINGS_READ], request);
+    const authResult = await checkPermissions([PERMISSIONS.SETTINGS_READ], request);
     if (!authResult.valid || !authResult.session) {
       logAPIRequest('GET', '/api/v1/settings', requestId, {
         statusCode: 401,
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
 
     // カテゴリ別フィルタリング
     const filteredSettings = query.category 
-      ? { [query.category]: allSettings[query.category] || {} }
+      ? { [query.category]: (allSettings as any)[query.category] || {} }
       : allSettings;
 
     // 機密データの処理
@@ -196,7 +196,7 @@ export async function PATCH(request: NextRequest) {
 
   try {
     // 認証・認可チェック（管理者のみ）
-    const authResult = await requirePermissions([PERMISSIONS.SETTINGS_MANAGE], request);
+    const authResult = await checkPermissions([PERMISSIONS.SETTINGS_WRITE], request);
     if (!authResult.valid || !authResult.session) {
       logAPIRequest('PATCH', '/api/v1/settings', requestId, {
         statusCode: 401,
@@ -265,7 +265,7 @@ export async function PATCH(request: NextRequest) {
       
       // 元の設定に戻す
       const rollbackPromises = Object.keys(encryptedUpdateData).map(category =>
-        settingsRepository.updateCategory(category, currentSettings[category] || {})
+        settingsRepository.updateCategory(category, (currentSettings as any)[category] || {})
       );
       await Promise.all(rollbackPromises);
 
@@ -332,7 +332,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // 認証・認可チェック（管理者のみ）
-    const authResult = await requirePermissions([PERMISSIONS.SETTINGS_MANAGE], request);
+    const authResult = await checkPermissions([PERMISSIONS.SETTINGS_WRITE], request);
     if (!authResult.valid || !authResult.session) {
       return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
     }
@@ -434,9 +434,12 @@ async function processSensitiveSettings(
   // Docker registry パスワードの復号化
   if (processed.docker?.registry?.password) {
     try {
-      processed.docker.registry.password = await decryptSensitiveData(
-        processed.docker.registry.password
-      );
+      const passwordValue = processed.docker.registry.password;
+      if (typeof passwordValue === 'string' && passwordValue.startsWith('encrypted:')) {
+        const encryptedDataStr = passwordValue.slice('encrypted:'.length);
+        const encryptedData = JSON.parse(encryptedDataStr);
+        processed.docker.registry.password = await decryptSensitiveData(encryptedData);
+      }
     } catch (error) {
       console.warn('Failed to decrypt docker registry password:', error);
       processed.docker.registry.password = '[DECRYPTION_FAILED]';
@@ -448,7 +451,15 @@ async function processSensitiveSettings(
     try {
       for (const [key, value] of Object.entries(processed.monitoring.backup.credentials)) {
         if (typeof value === 'string' && value.startsWith('encrypted:')) {
-          processed.monitoring.backup.credentials[key] = await decryptSensitiveData(value);
+          try {
+            // 暗号化データをJSONとしてパース
+            const encryptedDataStr = value.slice('encrypted:'.length);
+            const encryptedData = JSON.parse(encryptedDataStr);
+            processed.monitoring.backup.credentials[key] = await decryptSensitiveData(encryptedData);
+          } catch (parseError) {
+            console.warn(`Failed to parse encrypted data for ${key}:`, parseError);
+            processed.monitoring.backup.credentials[key] = '[PARSE_FAILED]';
+          }
         }
       }
     } catch (error) {

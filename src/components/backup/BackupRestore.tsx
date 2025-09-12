@@ -312,7 +312,7 @@ export function BackupRestore({ className }: BackupRestoreProps) {
 
   const getTypeIcon = (type: BackupData['type']) => {
     const typeConfig = backupTypes.find(t => t.type === type);
-    if (!typeConfig) return Database;
+    if (!typeConfig) return <Database className="h-4 w-4" />;
     
     const Icon = typeConfig.icon;
     return <Icon className={cn('h-4 w-4', typeConfig.color)} />;

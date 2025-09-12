@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ServerCard } from './server-card';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   Search,
   Filter,
   RefreshCw,
@@ -75,8 +76,9 @@ export function ServerList({
   onServerStop,
   className
 }: ServerListProps) {
+  const router = useRouter();
   const { hasPermission } = usePermissions();
-  
+
   // UI状態管理
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -84,7 +86,7 @@ export function ServerList({
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  
+
   // 権限チェック
   const canManageServers = hasPermission('SERVERS_MANAGE');
   const canCreateServers = hasPermission('SERVERS_CREATE');
@@ -197,7 +199,7 @@ export function ServerList({
             MCPサーバーの状態確認と管理を行います
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {onRefresh && (
             <Button
@@ -210,9 +212,12 @@ export function ServerList({
               更新
             </Button>
           )}
-          
+
           {canCreateServers && (
-            <Button size="sm">
+            <Button
+              size="sm"
+              onClick={() => router.push('/servers/new')}
+            >
               <Plus className="h-4 w-4 mr-2" />
               サーバー追加
             </Button>
@@ -239,7 +244,7 @@ export function ServerList({
                   総計: {servers.length}個のサーバー
                 </span>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Badge variant="success" className="text-xs">
                   実行中: {statusCounts.running || 0}
@@ -254,7 +259,7 @@ export function ServerList({
                 )}
               </div>
             </div>
-            
+
             <div className="text-sm text-gray-500">
               表示中: {filteredAndSortedServers.length}個
             </div>
@@ -276,7 +281,7 @@ export function ServerList({
                 className="pl-9"
               />
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
@@ -298,7 +303,7 @@ export function ServerList({
           {/* フィルターとソート */}
           <div className="flex flex-wrap items-center gap-2">
             <Filter className="h-4 w-4 text-gray-500" />
-            
+
             {/* ステータスフィルター */}
             <select
               value={statusFilter}
@@ -356,7 +361,7 @@ export function ServerList({
           {(searchQuery || statusFilter !== 'all' || selectedTags.length > 0) && (
             <div className="flex items-center gap-2 pt-2 border-t">
               <span className="text-xs text-gray-500">アクティブフィルター:</span>
-              
+
               {searchQuery && (
                 <Badge variant="outline" className="text-xs">
                   検索: "{searchQuery}"
@@ -368,7 +373,7 @@ export function ServerList({
                   </button>
                 </Badge>
               )}
-              
+
               {statusFilter !== 'all' && (
                 <Badge variant="outline" className="text-xs">
                   ステータス: {statusFilter}
@@ -380,7 +385,7 @@ export function ServerList({
                   </button>
                 </Badge>
               )}
-              
+
               {selectedTags.map(tag => (
                 <Badge key={tag} variant="outline" className="text-xs">
                   タグ: {tag}
@@ -392,7 +397,7 @@ export function ServerList({
                   </button>
                 </Badge>
               ))}
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -426,13 +431,15 @@ export function ServerList({
               {servers.length === 0 ? 'サーバーがありません' : '該当するサーバーがありません'}
             </h3>
             <p className="text-sm text-gray-500 mb-4">
-              {servers.length === 0 
+              {servers.length === 0
                 ? 'MCPサーバーを追加して管理を開始してください。'
                 : 'フィルター条件を変更してお試しください。'
               }
             </p>
             {servers.length === 0 && canCreateServers && (
-              <Button>
+              <Button
+                onClick={() => router.push('/servers/new')}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 最初のサーバーを追加
               </Button>
@@ -441,7 +448,7 @@ export function ServerList({
         </Card>
       ) : (
         <div className={
-          viewMode === 'grid' 
+          viewMode === 'grid'
             ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
             : 'space-y-4'
         }>

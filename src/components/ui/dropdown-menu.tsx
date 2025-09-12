@@ -37,9 +37,10 @@ const DropdownMenuTrigger = React.forwardRef<
   };
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, {
+    return React.cloneElement(children as React.ReactElement<any>, {
       ...props,
-      ref,
+      ...(typeof ref === 'function' && { ref }),
+      ...(typeof ref === 'object' && ref && { ref }),
       onClick: handleClick,
     });
   }
@@ -115,7 +116,7 @@ const DropdownMenuItem = React.forwardRef<
 >(({ className, inset, ...props }, ref) => {
   const { setOpen } = React.useContext(DropdownMenuContext);
   
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     props.onClick?.(e);
     setOpen(false);
   };

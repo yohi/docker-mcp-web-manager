@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   Activity,
   Cpu,
   MemoryStick,
@@ -179,7 +180,7 @@ function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  
+
   if (days > 0) return `${days}日 ${hours}時間 ${minutes}分`;
   if (hours > 0) return `${hours}時間 ${minutes}分`;
   return `${minutes}分`;
@@ -198,6 +199,7 @@ export function MonitoringDashboard({
   onResolveAlert,
   className
 }: MonitoringDashboardProps) {
+  const router = useRouter();
   const { hasPermission } = usePermissions();
   const [timeRange, setTimeRange] = useState<TimeRange>('1h');
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('cpu');
@@ -230,14 +232,14 @@ export function MonitoringDashboard({
     healthyServers: serverMetrics.filter(m => m.healthStatus === 'healthy').length,
     activeAlerts: alerts.filter(a => a.status === 'active').length,
     criticalAlerts: alerts.filter(a => a.severity === 'critical' && a.status === 'active').length,
-    avgCpuUsage: serverMetrics.length > 0 
-      ? serverMetrics.reduce((sum, m) => sum + m.cpu.current, 0) / serverMetrics.length 
+    avgCpuUsage: serverMetrics.length > 0
+      ? serverMetrics.reduce((sum, m) => sum + m.cpu.current, 0) / serverMetrics.length
       : 0,
-    avgMemoryUsage: serverMetrics.length > 0 
-      ? serverMetrics.reduce((sum, m) => sum + m.memory.percentage, 0) / serverMetrics.length 
+    avgMemoryUsage: serverMetrics.length > 0
+      ? serverMetrics.reduce((sum, m) => sum + m.memory.percentage, 0) / serverMetrics.length
       : 0,
-    avgResponseTime: serverMetrics.length > 0 
-      ? serverMetrics.reduce((sum, m) => sum + m.responseTime.current, 0) / serverMetrics.length 
+    avgResponseTime: serverMetrics.length > 0
+      ? serverMetrics.reduce((sum, m) => sum + m.responseTime.current, 0) / serverMetrics.length
       : 0
   };
 
@@ -262,19 +264,23 @@ export function MonitoringDashboard({
             サーバーの状態とパフォーマンスを監視します
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={onRefresh}
+            onClick={onRefresh || (() => window.location.reload())}
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             更新
           </Button>
-          
-          <Button variant="outline" size="sm">
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/monitoring/settings')}
+          >
             <Settings className="h-4 w-4 mr-2" />
             設定
           </Button>
@@ -357,8 +363,8 @@ export function MonitoringDashboard({
               </Badge>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-blue-500 h-2 rounded-full" 
+              <div
+                className="bg-blue-500 h-2 rounded-full"
                 style={{ width: `${Math.min(systemStats.avgCpuUsage, 100)}%` }}
               />
             </div>
@@ -380,8 +386,8 @@ export function MonitoringDashboard({
               </Badge>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-green-500 h-2 rounded-full" 
+              <div
+                className="bg-green-500 h-2 rounded-full"
                 style={{ width: `${Math.min(systemStats.avgMemoryUsage, 100)}%` }}
               />
             </div>
@@ -411,7 +417,7 @@ export function MonitoringDashboard({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>サーバー別メトリクス</CardTitle>
-            
+
             <div className="flex items-center space-x-2">
               <select
                 value={selectedMetric}
@@ -425,7 +431,7 @@ export function MonitoringDashboard({
                 <option value="responseTime">応答時間</option>
                 <option value="errorRate">エラー率</option>
               </select>
-              
+
               <select
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value as TimeRange)}
@@ -440,7 +446,7 @@ export function MonitoringDashboard({
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -457,24 +463,23 @@ export function MonitoringDashboard({
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <Activity className={`h-5 w-5 ${
-                          metrics.healthStatus === 'healthy' ? 'text-green-500' : 
-                          metrics.healthStatus === 'unhealthy' ? 'text-red-500' : 
-                          'text-gray-400'
-                        }`} />
+                        <Activity className={`h-5 w-5 ${metrics.healthStatus === 'healthy' ? 'text-green-500' :
+                            metrics.healthStatus === 'unhealthy' ? 'text-red-500' :
+                              'text-gray-400'
+                          }`} />
                         <h4 className="font-medium">{metrics.serverName}</h4>
                         <Badge variant={
                           metrics.status === 'running' ? 'success' :
-                          metrics.status === 'error' ? 'destructive' :
-                          'secondary'
+                            metrics.status === 'error' ? 'destructive' :
+                              'secondary'
                         }>
                           {metrics.status === 'running' ? '実行中' :
-                           metrics.status === 'error' ? 'エラー' :
-                           metrics.status === 'stopped' ? '停止' : 
-                           metrics.status}
+                            metrics.status === 'error' ? 'エラー' :
+                              metrics.status === 'stopped' ? '停止' :
+                                metrics.status}
                         </Badge>
                       </div>
-                      
+
                       <div className="text-sm text-gray-500 flex items-center space-x-2">
                         <Clock className="h-4 w-4" />
                         <span>アップタイム: {formatUptime(metrics.uptime)}</span>
@@ -486,17 +491,17 @@ export function MonitoringDashboard({
                         <Cpu className="h-4 w-4 text-blue-500" />
                         <span>CPU: {metrics.cpu.current.toFixed(1)}%</span>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <MemoryStick className="h-4 w-4 text-green-500" />
                         <span>メモリ: {metrics.memory.percentage.toFixed(1)}%</span>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <HardDrive className="h-4 w-4 text-purple-500" />
                         <span>ディスク: {metrics.disk.percentage.toFixed(1)}%</span>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <Network className="h-4 w-4 text-orange-500" />
                         <span>ネットワーク: {formatBytes(metrics.network.bytesIn + metrics.network.bytesOut)}</span>
@@ -520,10 +525,10 @@ export function MonitoringDashboard({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>アラート管理</CardTitle>
-            
+
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-500" />
-              
+
               <select
                 value={alertFilter}
                 onChange={(e) => setAlertFilter(e.target.value as any)}
@@ -553,7 +558,7 @@ export function MonitoringDashboard({
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {filteredAlerts.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -568,9 +573,8 @@ export function MonitoringDashboard({
                 return (
                   <div
                     key={alert.id}
-                    className={`p-4 rounded-lg border ${severityInfo.bgColor} ${
-                      alert.status === 'active' ? 'border-l-4' : ''
-                    }`}
+                    className={`p-4 rounded-lg border ${severityInfo.bgColor} ${alert.status === 'active' ? 'border-l-4' : ''
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-start space-x-3">
@@ -585,9 +589,9 @@ export function MonitoringDashboard({
                               {alert.serverName}
                             </Badge>
                           </div>
-                          
+
                           <p className="text-sm text-gray-600 mb-2">{alert.message}</p>
-                          
+
                           {alert.value !== undefined && alert.threshold !== undefined && (
                             <div className="text-sm">
                               <span className="text-gray-500">値: </span>
@@ -596,7 +600,7 @@ export function MonitoringDashboard({
                               <span className="font-mono">{alert.threshold}</span>
                             </div>
                           )}
-                          
+
                           <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
                             <span>作成: {formatTimeAgo(alert.createdAt)}</span>
                             {alert.resolvedAt && (
@@ -605,7 +609,7 @@ export function MonitoringDashboard({
                           </div>
                         </div>
                       </div>
-                      
+
                       {canManageAlerts && alert.status === 'active' && (
                         <div className="flex space-x-2">
                           <Button

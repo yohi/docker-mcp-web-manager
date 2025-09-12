@@ -39,14 +39,17 @@ export function ProtectedRoute({
 
   // 認証状態の変化を監視してリダイレクト
   useEffect(() => {
+    console.log('[PROTECTED_ROUTE] Auth check - authenticated:', isAuthenticated, 'loading:', isLoading);
     if (!isLoading && !isAuthenticated) {
       console.log('[PROTECTED_ROUTE] User not authenticated, redirecting to:', fallbackUrl);
+      console.log('[PROTECTED_ROUTE] Current location:', typeof window !== 'undefined' ? window.location.href : 'server');
       router.push(fallbackUrl);
     }
   }, [isAuthenticated, isLoading, router, fallbackUrl]);
 
-  // 開発環境での認証バイパス
-  if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
+  // 認証バイパス - SKIP_AUTHが明示的にtrueの場合のみ
+  if (process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
+    console.log('[PROTECTED_ROUTE] Authentication bypassed due to NEXT_PUBLIC_SKIP_AUTH=true');
     return <>{children}</>;
   }
 

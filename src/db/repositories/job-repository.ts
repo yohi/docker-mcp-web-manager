@@ -1,4 +1,4 @@
-import { eq, and, or, desc, asc, inArray } from 'drizzle-orm';
+import { eq, and, or, desc, asc, inArray, sql } from 'drizzle-orm';
 import { jobs, idempotencyKeys } from '../schema';
 import { BaseRepository } from './base-repository';
 import db from '../connection';
@@ -32,8 +32,8 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
         id: row.targetId,
       },
       progress: {
-        current: row.progressCurrent,
-        total: row.progressTotal,
+        current: row.progressCurrent ?? 0,
+        total: row.progressTotal ?? 100,
         message: row.progressMessage || '',
       },
       result: this.safeParseJson(row.result),
@@ -60,13 +60,13 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
       status: model.status,
       targetType: model.target?.type,
       targetId: model.target?.id,
-      progressCurrent: model.progress?.current,
-      progressTotal: model.progress?.total,
+      progressCurrent: model.progress?.current ?? 0,
+      progressTotal: model.progress?.total ?? 100,
       progressMessage: model.progress?.message,
-      result: this.safeStringifyJson(model.result),
+      result: this.safeStringifyJson(model.result) ?? undefined,
       errorCode: model.error?.code,
       errorMessage: model.error?.message,
-      errorDetails: this.safeStringifyJson(model.error?.details),
+      errorDetails: this.safeStringifyJson(model.error?.details) ?? undefined,
       completedAt: model.completedAt ? model.completedAt.toISOString() : undefined,
     };
   }
@@ -215,13 +215,13 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
       }
 
       if (result !== undefined) {
-        updateData.result = this.safeStringifyJson(result);
+        updateData.result = this.safeStringifyJson(result) ?? undefined;
       }
 
       if (error) {
         updateData.errorCode = error.code;
         updateData.errorMessage = error.message;
-        updateData.errorDetails = this.safeStringifyJson(error.details);
+        updateData.errorDetails = this.safeStringifyJson(error.details) ?? undefined;
       }
 
       if (status === 'completed' || status === 'failed' || status === 'cancelled') {
@@ -309,7 +309,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
       }
 
       const rows = await query.execute();
-      return rows.map((row) => this.mapRowToModel(row));
+      return rows.map((row) => this.mapRowToModel(row as JobRow));
     } catch (error) {
       console.error(`Error finding jobs by target ${targetType}:${targetId}:`, error);
       throw error;
@@ -328,7 +328,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
         .orderBy(asc(jobs.createdAt))
         .execute();
 
-      return rows.map((row) => this.mapRowToModel(row));
+      return rows.map((row) => this.mapRowToModel(row as JobRow));
     } catch (error) {
       console.error('Error finding in-progress jobs:', error);
       throw error;
@@ -356,7 +356,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
         .limit(1)
         .execute();
 
-      return row ? this.mapRowToModel(row) : null;
+      return row ? this.mapRowToModel(row as JobRow) : null;
     } catch (error) {
       console.error(`Error finding latest job for target ${targetType}:${targetId}:`, error);
       throw error;
@@ -396,7 +396,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
         .where(
           and(
             inArray(jobs.status, ['completed', 'failed', 'cancelled']),
-            db.sql`${jobs.createdAt} < ${cutoffDate.toISOString()}`
+            sql`${jobs.createdAt} < ${cutoffDate.toISOString()}`
           )
         )
         .execute();
@@ -417,7 +417,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
       const now = new Date();
       const result = await db
         .delete(idempotencyKeys)
-        .where(db.sql`${idempotencyKeys.expiresAt} < ${now.toISOString()}`)
+        .where(sql`${idempotencyKeys.expiresAt} < ${now.toISOString()}`)
         .execute();
 
       console.log(`Cleaned up ${result.changes} expired idempotency keys`);
@@ -440,7 +440,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
     try {
       // 総ジョブ数
       const [{ totalJobs }] = await db
-        .select({ totalJobs: db.sql<number>`count(*)` })
+        .select({ totalJobs: sql<number>`count(*)` })
         .from(jobs)
         .execute();
 
@@ -448,7 +448,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
       const statusCounts = await db
         .select({
           status: jobs.status,
-          count: db.sql<number>`count(*)`,
+          count: sql<number>`count(*)`,
         })
         .from(jobs)
         .groupBy(jobs.status)
@@ -470,7 +470,7 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
       const typeCounts = await db
         .select({
           type: jobs.type,
-          count: db.sql<number>`count(*)`,
+          count: sql<number>`count(*)`,
         })
         .from(jobs)
         .groupBy(jobs.type)
@@ -495,18 +495,18 @@ export class JobRepository extends BaseRepository<typeof jobs, JobRow, Job> {
       oneDayAgo.setHours(oneDayAgo.getHours() - 24);
 
       const [{ recentTotal }] = await db
-        .select({ recentTotal: db.sql<number>`count(*)` })
+        .select({ recentTotal: sql<number>`count(*)` })
         .from(jobs)
-        .where(db.sql`${jobs.createdAt} > ${oneDayAgo.toISOString()}`)
+        .where(sql`${jobs.createdAt} > ${oneDayAgo.toISOString()}`)
         .execute();
 
       const [{ recentCompleted }] = await db
-        .select({ recentCompleted: db.sql<number>`count(*)` })
+        .select({ recentCompleted: sql<number>`count(*)` })
         .from(jobs)
         .where(
           and(
             eq(jobs.status, 'completed'),
-            db.sql`${jobs.createdAt} > ${oneDayAgo.toISOString()}`
+            sql`${jobs.createdAt} > ${oneDayAgo.toISOString()}`
           )
         )
         .execute();

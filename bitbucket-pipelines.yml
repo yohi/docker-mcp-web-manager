@@ -220,3 +220,4 @@ pipelines:
 # DATABASE_URL: データベース接続URL
 # NEXTAUTH_SECRET: NextAuth.js認証シークレット
 # NEXTAUTH_URL: NextAuth.js認証URL
+

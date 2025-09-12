@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth/auth-config';
+import { authConfig } from '@/lib/auth/auth-config';
 
 // グローバルなSSE接続管理
 const connections = new Map<string, {
@@ -15,7 +15,7 @@ const CONNECTION_TIMEOUT = 60000; // 1分
 
 export async function GET(request: NextRequest) {
   // 認証チェック
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authConfig);
   if (!session?.user) {
     return new NextResponse('Unauthorized', { status: 401 });
   }

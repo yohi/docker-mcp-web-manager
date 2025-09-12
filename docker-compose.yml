@@ -14,8 +14,8 @@ services:
   #     - NODE_ENV=development
   #   command: >
   #     sh -c "
-  #       mkdir -p /app/data && 
-  #       chown -R 1000:1000 /app/data && 
+  #       mkdir -p /app/data &&
+  #       chown -R 1000:1000 /app/data &&
   #       chmod 750 /app/data &&
   #       npx drizzle-kit generate &&
   #       npx drizzle-kit migrate
@@ -56,13 +56,21 @@ services:
       - SERVER_LOG_ROTATION_INTERVAL=${SERVER_LOG_ROTATION_INTERVAL:-daily}
       - DEFAULT_ADMIN_EMAIL=admin@example.com
       - DEFAULT_ADMIN_PASSWORD=admin123
-      - SKIP_AUTH=${SKIP_AUTH:-true}
+      - SKIP_AUTH=${SKIP_AUTH:-false}
+      # Bitwarden設定
+      - BITWARDEN_SERVER_URL=${BITWARDEN_SERVER_URL:-https://vault.bitwarden.com}
+      - BITWARDEN_ADMIN_EMAILS=${BITWARDEN_ADMIN_EMAILS:-admin@example.com}
+      - BITWARDEN_CLIENT_ID=${BITWARDEN_CLIENT_ID}
+      - BITWARDEN_CLIENT_SECRET=${BITWARDEN_CLIENT_SECRET}
+      - ENABLE_BITWARDEN_AUTH=${ENABLE_BITWARDEN_AUTH:-true}
     volumes:
       - app-data:/app/data
       - ./src:/app/src:ro
       - ./public:/app/public:ro
+      - ./middleware.ts:/app/middleware.ts:ro
       - ./tailwind.config.js:/app/tailwind.config.js:ro
       - ./next.config.js:/app/next.config.js:ro
+      - ./postcss.config.js:/app/postcss.config.js:ro
       - ./postcss.config.mjs:/app/postcss.config.mjs:ro
       - ./package.json:/app/package.json:ro
       - ./tsconfig.json:/app/tsconfig.json:ro

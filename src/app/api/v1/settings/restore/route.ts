@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import {
-  requirePermissions,
+  checkPermissions,
   PERMISSIONS,
   validateRequest,
   createErrorResponse,
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // 認証・認可チェック（管理者のみ）
-    const authResult = await requirePermissions([PERMISSIONS.SETTINGS_MANAGE], request);
+    const authResult = await checkPermissions([PERMISSIONS.SETTINGS_WRITE], request);
     if (!authResult.valid || !authResult.session) {
       logAPIRequest('POST', '/api/v1/settings/restore', requestId, {
         statusCode: 401,
@@ -331,10 +331,10 @@ async function generateRestorePreview(
       continue;
     }
 
-    const currentCategoryData = currentSettings[category] || {};
+    const currentCategoryData = (currentSettings as any)[category] || {};
 
     for (const [setting, value] of Object.entries(categoryData)) {
-      const currentValue = currentCategoryData[setting];
+      const currentValue = (currentCategoryData as any)[setting];
       const hasCurrentValue = currentValue !== undefined;
 
       if (!hasCurrentValue) {
@@ -410,17 +410,17 @@ async function executeRestore(
       continue;
     }
 
-    const currentCategoryData = currentSettings[category] || {};
+    const currentCategoryData = (currentSettings as any)[category] || {};
     const updatedCategoryData = { ...currentCategoryData };
     let categoryChanged = false;
 
     for (const [setting, value] of Object.entries(categoryData)) {
-      const currentValue = currentCategoryData[setting];
+      const currentValue = (currentCategoryData as any)[setting];
       const hasCurrentValue = currentValue !== undefined;
 
       if (!hasCurrentValue || options.overwriteExisting) {
         if (JSON.stringify(currentValue) !== JSON.stringify(value)) {
-          updatedCategoryData[setting] = value;
+          (updatedCategoryData as any)[setting] = value;
           categoryChanged = true;
           changesCount++;
         }

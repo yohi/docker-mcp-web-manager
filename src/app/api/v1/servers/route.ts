@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     });
 
     const servers = result.data;
-    const total = result.total;
+    const total = result.pagination.total;
 
     return NextResponse.json({
       success: true,
@@ -118,27 +118,29 @@ export async function POST(request: NextRequest) {
       version: version || 'latest',
       port,
       status: 'stopped',
-      enabled: true,
       environment: environment || {},
       resourceLimits: {
         memory: resourceLimits?.memory || '512m',
-        cpu: resourceLimits?.cpu || '0.5',
+        cpus: resourceLimits?.cpus || '0.5',
         ...resourceLimits
       },
-      networkSettings: {
-        ports: {
-          [port]: port
+      tools: [],
+      resources: [],
+      prompts: [],
+      configuration: {
+        id: '',
+        serverId: '',
+        environment: environment || {},
+        enabledTools: [],
+        secrets: [],
+        resourceLimits: {
+          memory: resourceLimits?.memory || '512m',
+          cpus: resourceLimits?.cpus || '0.5',
+          ...resourceLimits
+        },
+        networkConfig: {
+          mode: 'bridge'
         }
-      },
-      healthStatus: 'unknown',
-      lastHealthCheck: null,
-      uptime: 0,
-      resourceUsage: {
-        cpu: 0,
-        memory: 0,
-        memoryLimit: 0,
-        networkIn: 0,
-        networkOut: 0
       }
     };
 

@@ -1,9 +1,7 @@
 // PostCSS設定 - 安定したTailwind CSS v3設定
-const config = {
+module.exports = {
   plugins: {
     tailwindcss: {},
     autoprefixer: {},
   },
 };
-
-export default config;

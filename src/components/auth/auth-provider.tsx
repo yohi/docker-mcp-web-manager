@@ -1,11 +1,11 @@
 'use client';
 
 import { createContext, useContext, ReactNode } from 'react';
-import { SessionProvider } from 'next-auth/react';
+import { SessionProvider, useSession } from 'next-auth/react';
 
 // =============================================================================
-// AuthProvider - モック認証プロバイダー（開発用）
-// 一時的に認証を無効化して、すべてのユーザーを管理者として扱う
+// AuthProvider - NextAuth.jsベースの認証プロバイダー
+// セッション管理とユーザー認証を提供
 // =============================================================================
 
 /**
@@ -38,26 +38,39 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * 内部認証プロバイダー（モック版）
+ * 内部認証プロバイダー（NextAuth.jsセッション連携版）
  */
 function InternalAuthProvider({ children }: { children: ReactNode }) {
-  // モックユーザー
-  const mockUser = {
-    id: 'mock-admin-id',
-    email: 'admin@example.com',
-    name: 'Administrator',
-    role: 'admin',
-    permissions: ['*'], // 全権限
-  };
+  const { data: session, status, update } = useSession();
+
+  console.log('[AUTH_PROVIDER] Session status:', status);
+  console.log('[AUTH_PROVIDER] Session data:', session);
+  console.log('[AUTH_PROVIDER] Window location:', typeof window !== 'undefined' ? window.location.href : 'server');
+
+  // セッション情報をもとにユーザーオブジェクトを構築
+  const user = session?.user ? {
+    id: session.user.id,
+    email: session.user.email,
+    name: session.user.email, // セッションにnameがない場合はemailを使用
+    role: session.user.role,
+    permissions: session.user.permissions,
+  } : null;
 
   const contextValue: AuthContextType = {
-    isAuthenticated: true,
-    isLoading: false,
-    user: mockUser,
-    refreshSession: async () => { },
-    hasPermission: () => true, // 全ての権限を許可
-    hasRole: () => true, // 全てのロールを許可
-    isAdmin: true,
+    isAuthenticated: !!session && status === 'authenticated',
+    isLoading: status === 'loading',
+    user,
+    refreshSession: async () => {
+      await update();
+    },
+    hasPermission: (permission: string) => {
+      if (!user?.permissions) return false;
+      return user.permissions.includes(permission) || user.permissions.includes('*');
+    },
+    hasRole: (role: string) => {
+      return user?.role === role;
+    },
+    isAdmin: user?.role === 'admin',
   };
 
   return (

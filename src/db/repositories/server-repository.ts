@@ -128,7 +128,7 @@ export class ServerRepository extends BaseRepository<
       const statusCounts = await db
         .select({
           status: servers.status,
-          count: db.sql<number>`count(*)`,
+          count: sql<number>`count(*)`,
         })
         .from(servers)
         .groupBy(servers.status)

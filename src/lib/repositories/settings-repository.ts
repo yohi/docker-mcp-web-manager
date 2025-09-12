@@ -19,6 +19,11 @@ export class SettingsRepository {
   async restore(data: any) {
     return true; // Placeholder implementation
   }
+
+  async updateCategory(category: string, data: any) {
+    // Placeholder implementation for category updates
+    return data;
+  }
 }
 
 export function getSettingsRepository() {

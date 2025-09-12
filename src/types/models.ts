@@ -122,6 +122,12 @@ export interface MCPServer {
   status: 'running' | 'stopped' | 'error';
   version: string;
   description: string;
+  port?: number; // オプショナルなポートプロパティを追加
+  environment?: Record<string, string>; // 環境変数
+  resourceLimits?: {
+    memory?: string;
+    cpus?: string;
+  }; // リソース制限
   tools: Tool[];
   resources: Resource[];
   prompts: Prompt[];
@@ -251,25 +257,25 @@ export type ServerRow = {
   name: string;
   image: string;
   status: 'running' | 'stopped' | 'error';
-  version?: string;
-  description?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  version?: string | null;
+  description?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type ConfigurationRow = {
   id: string;
   serverId: string;
-  environment?: string; // JSON string
-  enabledTools?: string; // JSON string
-  resourceLimits?: string; // JSON string
-  networkConfig?: string; // JSON string
-  nodeEnv?: string;
-  enabledToolsCount?: number;
-  memoryLimit?: string;
-  representativePort?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  environment?: string | null; // JSON string
+  enabledTools?: string | null; // JSON string
+  resourceLimits?: string | null; // JSON string
+  networkConfig?: string | null; // JSON string
+  nodeEnv?: string | null;
+  enabledToolsCount?: number | null;
+  memoryLimit?: string | null;
+  representativePort?: number | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type SecretRow = {
@@ -281,9 +287,9 @@ export type SecretRow = {
   tag: Buffer;
   alg: 'AES-256-GCM' | 'ChaCha20-Poly1305';
   keyId: string;
-  bitwardenItemId?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  bitwardenItemId?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type SecretReferenceRow = {
@@ -292,19 +298,19 @@ export type SecretReferenceRow = {
   secretId: string;
   environmentVariable: string;
   required: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type ToolRow = {
   id: string;
   serverId: string;
   name: string;
-  description?: string;
+  description?: string | null;
   inputSchema: string; // JSON string
   enabled: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type ResourceRow = {
@@ -312,34 +318,34 @@ export type ResourceRow = {
   serverId: string;
   uri: string;
   name: string;
-  description?: string;
-  mimeType?: string;
-  metadata?: string; // JSON string
-  createdAt?: string;
-  updatedAt?: string;
+  description?: string | null;
+  mimeType?: string | null;
+  metadata?: string | null; // JSON string
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type PromptRow = {
   id: string;
   serverId: string;
   name: string;
-  description?: string;
-  arguments?: string; // JSON string
-  metadata?: string; // JSON string
-  createdAt?: string;
-  updatedAt?: string;
+  description?: string | null;
+  arguments?: string | null; // JSON string
+  metadata?: string | null; // JSON string
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type TestResultRow = {
   id: string;
   serverId: string;
   toolName: string;
-  input?: string; // JSON string
-  output?: string; // JSON string
+  input?: string | null; // JSON string
+  output?: string | null; // JSON string
   success: boolean;
-  error?: string;
-  executionTime?: number;
-  timestamp?: string;
+  error?: string | null;
+  executionTime?: number | null;
+  timestamp?: string | null;
 };
 
 export type JobRow = {
@@ -348,16 +354,16 @@ export type JobRow = {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   targetType: 'server' | 'catalog' | 'gateway';
   targetId: string;
-  progressCurrent: number;
-  progressTotal: number;
-  progressMessage?: string;
-  result?: string; // JSON string
-  errorCode?: string;
-  errorMessage?: string;
-  errorDetails?: string; // JSON string
-  createdAt?: string;
-  updatedAt?: string;
-  completedAt?: string;
+  progressCurrent?: number | null;
+  progressTotal?: number | null;
+  progressMessage?: string | null;
+  result?: string | null; // JSON string
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  errorDetails?: string | null; // JSON string
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  completedAt?: string | null;
 };
 
 export type BitwardenItemRow = {
@@ -365,10 +371,10 @@ export type BitwardenItemRow = {
   itemId: string;
   name: string;
   type: 'login' | 'secure_note' | 'card' | 'identity';
-  folderId?: string;
-  organizationId?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  folderId?: string | null;
+  organizationId?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 };
 
 export type IdempotencyKeyRow = {
@@ -376,7 +382,7 @@ export type IdempotencyKeyRow = {
   scope: string;
   requestHash: string;
   jobId: string;
-  createdAt?: string;
+  createdAt?: string | null;
   expiresAt: string;
 };
 
