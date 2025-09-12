@@ -450,3 +450,4 @@ export default function MonitoringSettingsPage() {
         </ProtectedRoute>
     );
 }
+

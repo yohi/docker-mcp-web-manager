@@ -63,7 +63,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Bitwarden CLI のインストール（npm経由）
-RUN npm install -g @bitwarden/cli
+RUN npm install -g @bitwarden/cli || echo "Bitwarden CLI installation failed, but continuing..."
 
 # ビルダーからビルド済みのnode_modulesをコピー
 COPY --from=builder /usr/src/app/node_modules ./node_modules
@@ -86,17 +86,26 @@ RUN cp .env.example .env.local || echo "No .env.example found"
 RUN addgroup --gid 1001 --system nodejs && \
     adduser --system --uid 1001 --ingroup nodejs nextjs && \
     mkdir -p /usr/src/app/data && \
+    mkdir -p /home/nextjs/.config && \
     chown -R nextjs:nodejs /usr/src/app && \
-    chmod -R 755 /usr/src/app
+    chown -R nextjs:nodejs /home/nextjs && \
+    chmod -R 755 /usr/src/app && \
+    chmod -R 755 /home/nextjs
 
-# Bitwarden CLIへのアクセス権限設定
-RUN ln -s /usr/local/lib/node_modules/@bitwarden/cli/build/bw.js /usr/local/bin/bw && \
-    chmod +x /usr/local/bin/bw
+# Bitwarden CLIへのアクセス権限設定（既存ファイル対応）
+RUN rm -f /usr/local/bin/bw && \
+    if [ -f /usr/local/lib/node_modules/@bitwarden/cli/build/bw.js ]; then \
+        ln -s /usr/local/lib/node_modules/@bitwarden/cli/build/bw.js /usr/local/bin/bw && \
+        chmod +x /usr/local/bin/bw; \
+    else \
+        echo "Bitwarden CLI not found, skipping symlink creation"; \
+    fi
 
 USER nextjs
 EXPOSE 3000
 
 ENV NODE_ENV=development
+ENV HOME=/home/nextjs
 
 # 開発サーバー起動
 ENTRYPOINT ["dumb-init", "--"]

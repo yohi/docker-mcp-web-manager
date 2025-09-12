@@ -77,9 +77,10 @@ export function LoginForm({ callbackUrl = '/dashboard', error }: LoginFormProps)
         hasServerUrl: !!data.serverUrl 
       });
 
-      const result = await signIn('bitwarden', {
+      const result = await signIn('custom-auth', {
         email: data.email,
         password: data.password,
+        authMethod: 'bitwarden',
         serverUrl: data.serverUrl || undefined,
         redirect: false,
         callbackUrl,

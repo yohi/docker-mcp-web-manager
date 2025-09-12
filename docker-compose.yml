@@ -57,12 +57,9 @@ services:
       - DEFAULT_ADMIN_EMAIL=admin@example.com
       - DEFAULT_ADMIN_PASSWORD=admin123
       - SKIP_AUTH=${SKIP_AUTH:-false}
-      # Bitwarden設定
-      - BITWARDEN_SERVER_URL=${BITWARDEN_SERVER_URL:-https://vault.bitwarden.com}
-      - BITWARDEN_ADMIN_EMAILS=${BITWARDEN_ADMIN_EMAILS:-admin@example.com}
-      - BITWARDEN_CLIENT_ID=${BITWARDEN_CLIENT_ID}
-      - BITWARDEN_CLIENT_SECRET=${BITWARDEN_CLIENT_SECRET}
+      # Bitwarden設定（WebUIでのログイン認証のみ）
       - ENABLE_BITWARDEN_AUTH=${ENABLE_BITWARDEN_AUTH:-true}
+      # 注意: Bitwardenのメールアドレス・パスワードはWebUIで入力します
     volumes:
       - app-data:/app/data
       - ./src:/app/src:ro
