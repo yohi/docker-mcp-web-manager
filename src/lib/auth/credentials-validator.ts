@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto';
 import { BitwardenClient } from './bitwarden-client';
+import { db } from '@/db/connection';
+import { users as usersTable } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 // =============================================================================
 // 認証情報検証システム
@@ -145,6 +148,48 @@ const DEFAULT_ADMIN_USERS: User[] = [
 ];
 
 /**
+ * データベースからユーザーを取得
+ */
+async function getUserFromDatabase(email: string): Promise<User | null> {
+  try {
+    const result = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    const user = result[0];
+
+    // permissions が JSON 文字列の場合はパース
+    let permissions: string[] = [];
+    if (user.permissions) {
+      try {
+        permissions = JSON.parse(user.permissions);
+      } catch (error) {
+        console.warn('[AUTH_WARNING] Failed to parse user permissions:', error);
+        permissions = [];
+      }
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role as 'admin' | 'user' | 'viewer',
+      permissions,
+      lastLogin: user.lastLoginAt ? new Date(user.lastLoginAt) : undefined,
+      createdAt: user.createdAt ? new Date(user.createdAt) : undefined,
+    };
+  } catch (error) {
+    console.error('[AUTH_ERROR] Database user lookup failed:', error);
+    return null;
+  }
+}
+
+/**
  * デフォルト管理者パスワードの検証
  */
 function validateDefaultAdminPassword(email: string, password: string): boolean {
@@ -171,12 +216,12 @@ function validateDefaultAdminPassword(email: string, password: string): boolean 
  */
 async function performLocalAuth(request: AuthRequest): Promise<AuthResult> {
   try {
-    // デフォルト管理者認証の確認
+    // まずデフォルト管理者認証を確認
     const isDefaultAdmin = validateDefaultAdminPassword(request.email, request.password);
-    
+
     if (isDefaultAdmin) {
       const adminUser = DEFAULT_ADMIN_USERS.find(user => user.email === request.email)!;
-      
+
       console.log('[AUTH_LOCAL_SUCCESS] Default admin authentication:', {
         userId: adminUser.id,
         email: adminUser.email,
@@ -192,11 +237,40 @@ async function performLocalAuth(request: AuthRequest): Promise<AuthResult> {
       };
     }
 
-    // TODO: 実際のデータベース認証実装
-    // 現在はデフォルト管理者のみサポート
+    // データベースからユーザー情報を取得
+    const dbUser = await getUserFromDatabase(request.email);
+
+    if (!dbUser) {
+      return {
+        success: false,
+        error: 'Invalid credentials',
+      };
+    }
+
+    // パスワード検証（現在は固定パスワード "admin123" を使用）
+    // 本番環境では適切なパスワードハッシュ化を実装すべき
+    const isValidPassword = request.password === 'admin123';
+
+    if (!isValidPassword) {
+      return {
+        success: false,
+        error: 'Invalid credentials',
+      };
+    }
+
+    console.log('[AUTH_LOCAL_SUCCESS] Database user authentication:', {
+      userId: dbUser.id,
+      email: dbUser.email,
+      role: dbUser.role,
+      ipAddress: request.ipAddress,
+    });
+
     return {
-      success: false,
-      error: 'Invalid credentials',
+      success: true,
+      user: {
+        ...dbUser,
+        lastLogin: new Date(),
+      },
     };
   } catch (error) {
     console.error('[AUTH_ERROR] Local authentication error:', error);

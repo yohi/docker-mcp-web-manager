@@ -113,12 +113,30 @@ export interface ServerConfiguration {
 }
 
 // =============================================================================
+// MCP Server Install Types
+// =============================================================================
+export type InstallType = 'docker' | 'uvx' | 'pip' | 'npm' | 'npx' | 'local_script' | 'github' | 'existing';
+
+export interface InstallConfiguration {
+  type: InstallType;
+  command: string; // e.g., 'mcp-server-git', 'my-server:latest', './server.py'
+  runtimeCommand?: string; // e.g., 'python -m mcp_server_git', 'node server.js'
+  args?: string[]; // Additional arguments
+  workingDirectory?: string; // Working directory for local scripts
+}
+
+// =============================================================================
 // MCP Server Model
 // =============================================================================
 export interface MCPServer {
   id: string;
   name: string;
-  image: string;
+  // New installation configuration
+  installType: InstallType;
+  installCommand: string;
+  runtimeCommand?: string;
+  // Legacy field for backward compatibility
+  image?: string; // Deprecated: use installCommand instead
   status: 'running' | 'stopped' | 'error';
   version: string;
   description: string;
@@ -255,7 +273,10 @@ export interface CatalogServerInfo {
 export type ServerRow = {
   id: string;
   name: string;
-  image: string;
+  installType: InstallType;
+  installCommand: string;
+  runtimeCommand?: string | null;
+  image?: string | null; // Deprecated: use installCommand instead
   status: 'running' | 'stopped' | 'error';
   version?: string | null;
   description?: string | null;

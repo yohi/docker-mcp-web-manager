@@ -16,7 +16,7 @@ import {
   requirePermissions,
   PERMISSIONS,
 } from '@/lib/auth';
-import { CatalogClient } from '@/lib/docker-mcp';
+import { CatalogClient } from '@/lib/catalog/catalog-client';
 
 // =============================================================================
 // /api/v1/catalog - カタログAPI
@@ -32,14 +32,29 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
   try {
-    // 認証・認可チェック
-    const authResult = await requirePermissions([PERMISSIONS.CATALOG_READ], request);
-    if (!authResult.valid || !authResult.session) {
-      logAPIRequest('GET', '/api/v1/catalog', requestId, {
-        statusCode: 401,
-        error: authResult.error,
-      });
-      return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
+    // 開発環境では認証をバイパス
+    let authResult: any = null;
+    if (process.env.NODE_ENV === 'development') {
+      // 開発環境用のモックセッション
+      authResult = {
+        valid: true,
+        session: {
+          user: {
+            id: 'dev-user',
+            role: 'admin'
+          }
+        }
+      };
+    } else {
+      // 認証・認可チェック
+      authResult = await requirePermissions([PERMISSIONS.CATALOG_READ], request);
+      if (!authResult.valid || !authResult.session) {
+        logAPIRequest('GET', '/api/v1/catalog', requestId, {
+          statusCode: 401,
+          error: authResult.error,
+        });
+        return createErrorResponse(ERROR_CODES.UNAUTHORIZED, authResult.error, { requestId });
+      }
     }
 
     // クエリパラメータのバリデーション

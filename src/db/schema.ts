@@ -15,7 +15,14 @@ export const servers = sqliteTable(
   {
     id: text('id').primaryKey(),
     name: text('name').notNull().unique(),
-    image: text('image').notNull(),
+    // Installation method and command
+    installType: text('install_type', {
+      enum: ['docker', 'uvx', 'pip', 'npm', 'npx', 'local_script'],
+    }).notNull().default('docker'),
+    installCommand: text('install_command').notNull(), // e.g., 'mcp-server-git', 'my-server:latest', './server.py'
+    runtimeCommand: text('runtime_command'), // e.g., 'python -m mcp_server_git', 'node server.js'
+    // Legacy field for backward compatibility
+    image: text('image'), // Deprecated: use installCommand instead
     status: text('status', {
       enum: ['running', 'stopped', 'error'],
     }).notNull(),
@@ -27,6 +34,7 @@ export const servers = sqliteTable(
   (table) => ({
     nameIdx: index('idx_servers_name').on(table.name),
     statusIdx: index('idx_servers_status').on(table.status),
+    installTypeIdx: index('idx_servers_install_type').on(table.installType),
     updatedAtIdx: index('idx_servers_updated_at').on(table.updatedAt),
   })
 );
@@ -371,6 +379,88 @@ export const idempotencyKeys = sqliteTable(
 );
 
 // =============================================================================
+// Users Table (for passkey authentication)
+// =============================================================================
+export const users = sqliteTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    username: text('username').notNull().unique(),
+    role: text('role', {
+      enum: ['admin', 'user', 'viewer'],
+    }).notNull().default('user'),
+    permissions: text('permissions'), // JSON array of permission strings
+    isActive: integer('is_active', { mode: 'boolean' }).default(true),
+    lastLoginAt: text('last_login_at'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    emailIdx: index('idx_users_email').on(table.email),
+    usernameIdx: index('idx_users_username').on(table.username),
+    roleIdx: index('idx_users_role').on(table.role),
+    activeIdx: index('idx_users_active').on(table.isActive),
+  })
+);
+
+// =============================================================================
+// Passkeys Table (WebAuthn credentials)
+// =============================================================================
+export const passkeys = sqliteTable(
+  'passkeys',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    credentialId: text('credential_id').notNull().unique(), // Base64URL encoded
+    credentialPublicKey: blob('credential_public_key').notNull(), // Binary public key
+    counter: integer('counter').notNull().default(0),
+    credentialDeviceType: text('credential_device_type', {
+      enum: ['singleDevice', 'multiDevice'],
+    }).notNull(),
+    credentialBackedUp: integer('credential_backed_up', { mode: 'boolean' }).notNull(),
+    transports: text('transports'), // JSON array of transport strings
+    aaguid: text('aaguid'), // Authenticator Attestation GUID
+    name: text('name'), // User-friendly name for the passkey
+    lastUsedAt: text('last_used_at'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    userIdIdx: index('idx_passkeys_user_id').on(table.userId),
+    credentialIdIdx: index('idx_passkeys_credential_id').on(table.credentialId),
+    lastUsedIdx: index('idx_passkeys_last_used').on(table.lastUsedAt),
+  })
+);
+
+// =============================================================================
+// WebAuthn Challenges Table (for temporary challenge storage)
+// =============================================================================
+export const webauthnChallenges = sqliteTable(
+  'webauthn_challenges',
+  {
+    id: text('id').primaryKey(),
+    challenge: text('challenge').notNull().unique(), // Base64URL encoded challenge
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type', {
+      enum: ['registration', 'authentication'],
+    }).notNull(),
+    userAgent: text('user_agent'),
+    ipAddress: text('ip_address'),
+    expiresAt: text('expires_at').notNull(),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    challengeIdx: index('idx_webauthn_challenges_challenge').on(table.challenge),
+    userIdIdx: index('idx_webauthn_challenges_user_id').on(table.userId),
+    expiresAtIdx: index('idx_webauthn_challenges_expires_at').on(table.expiresAt),
+    typeIdx: index('idx_webauthn_challenges_type').on(table.type),
+  })
+);
+
+// =============================================================================
 // Export all tables for use in relations and queries
 // =============================================================================
 export {
@@ -385,4 +475,7 @@ export {
   testResults as testResultsTable,
   jobs as jobsTable,
   idempotencyKeys as idempotencyKeysTable,
+  users as usersTable,
+  passkeys as passkeysTable,
+  webauthnChallenges as webauthnChallengesTable,
 };

@@ -206,9 +206,9 @@ export function MonitoringDashboard({
   const [alertFilter, setAlertFilter] = useState<'all' | 'active' | 'resolved'>('all');
   const [severityFilter, setSeverityFilter] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
 
-  // 権限チェック
-  const canViewMetrics = hasPermission('MONITORING_READ');
-  const canManageAlerts = hasPermission('ALERTS_MANAGE');
+  // 権限チェック（開発環境では常に許可）
+  const canViewMetrics = process.env.NODE_ENV === 'development' ? true : hasPermission('MONITORING_READ');
+  const canManageAlerts = process.env.NODE_ENV === 'development' ? true : hasPermission('ALERTS_MANAGE');
 
   // 自動更新
   useEffect(() => {

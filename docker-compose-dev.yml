@@ -1,0 +1,133 @@
+# =================================================================
+# Docker MCP Web Manager v2 - 開発環境用 Docker Compose Override
+# Development Environment Configuration (Override)
+# Usage: docker-compose -f docker-compose.yml -f docker-compose-dev.yml up
+# =================================================================
+
+services:
+  # メインWebアプリケーション (開発環境オーバーライド)
+  web:
+    build:
+      context: .
+      target: development  # 開発用ターゲットに変更
+      args:
+        - NODE_ENV=development
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:/usr/src/app/data/app.db
+      # 開発用環境変数（セキュリティは緩く設定、本番環境変数をオーバーライド）
+      - NEXTAUTH_SECRET=dev-secret-change-in-production-32chars
+      - JWT_SECRET=dev-jwt-secret-key-change-in-production-with-strong-key
+      - NEXTAUTH_URL=http://localhost:3000
+      - CORS_ORIGIN=http://localhost:3000
+      - ENCRYPTION_MASTER_KEY=dev-master-key-32-chars-long-key
+      - DEFAULT_ADMIN_PASSWORD=admin123
+      # 開発用高頻度制限設定
+      - SERVER_RATE_USER_RPM=1000
+      - SERVER_SSE_HEARTBEAT_INTERVAL=30000
+      - SERVER_SSE_CLIENT_TIMEOUT=60000
+      - SERVER_SSE_MAX_CONNECTIONS=100
+      - SERVER_SSE_MAX_LINE_LENGTH=10240
+      - SERVER_SSE_RATE_LIMIT=100
+      - SERVER_SSE_MEMORY_CAP=52428800
+      - SERVER_SSE_PAGE_SIZE=1000
+      - SERVER_LOG_RETENTION_DAYS=30
+      - SERVER_LOG_ROTATION_SIZE=104857600
+      - SERVER_LOG_ROTATION_INTERVAL=daily
+      # 開発用認証設定
+      - DEFAULT_ADMIN_EMAIL=admin@example.com
+      - SKIP_AUTH=false
+      # Bitwarden設定（開発環境）
+      - ENABLE_BITWARDEN_AUTH=true
+      # 開発環境特有の設定
+      - NEXT_PUBLIC_SKIP_AUTH=true
+      - LOG_LEVEL=debug
+    volumes:
+      # 共有データボリューム（本番と同じデータを参照）
+      - app-data:/usr/src/app/data
+      # ホットリロード用ソースコードマウント（読み書き可能）
+      - ./src:/usr/src/app/src
+      - ./middleware.ts:/usr/src/app/middleware.ts
+      - ./public:/usr/src/app/public
+      # 設定ファイルマウント（ホットリロード対応）
+      - ./tailwind.config.js:/usr/src/app/tailwind.config.js
+      - ./next.config.js:/usr/src/app/next.config.js
+      - ./postcss.config.js:/usr/src/app/postcss.config.js
+      - ./postcss.config.mjs:/usr/src/app/postcss.config.mjs
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./drizzle.config.ts:/usr/src/app/drizzle.config.ts
+      # Node.js modules（コンテナ内でビルドされたものを使用するためコメントアウト）
+      # - ./node_modules:/usr/src/app/node_modules
+      # Next.jsキャッシュ（高速化のため）
+      - dev-nextjs-cache:/usr/src/app/.next
+    # 開発時のポート変更対応
+    ports:
+      - "${WEB_DEV_PORT:-3003}:3000"
+    # 開発環境ではリスタートポリシーを緩く
+    restart: "no"
+    # ヘルスチェックを緩く設定
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 60s
+      timeout: 30s
+      retries: 2
+      start_period: 60s
+
+  # Redis（開発環境ではより緩い設定）
+  redis:
+    ports:
+      - "${REDIS_DEV_PORT:-6381}:6379"
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    # 開発環境ではリスタートしない
+    restart: "no"
+    # ヘルスチェックを緩く設定
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 2
+      start_period: 20s
+
+  # Nginx（開発環境では無効化）
+  nginx:
+    profiles:
+      - disabled  # 開発環境ではNginxを無効化
+
+# 開発環境用追加ボリューム
+volumes:
+  # Next.jsキャッシュ用ボリューム（開発環境で高速化）
+  dev-nextjs-cache:
+    driver: local
+
+# 開発用の追加サービス（オプション）
+# プロファイルで制御可能
+# Usage: docker-compose -f docker-compose.yml -f docker-compose-dev.yml --profile dev-tools up
+x-dev-services:
+  # PostgreSQL（将来的にSQLiteから移行する場合）
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=mcp_web_manager
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    profiles:
+      - dev-tools
+    networks:
+      - app-network
+
+  # Adminer（データベース管理）
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    profiles:
+      - dev-tools
+    networks:
+      - app-network

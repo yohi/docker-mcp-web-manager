@@ -3,6 +3,23 @@
  * ユーザーの権限とロールベースアクセス制御を提供
  */
 
+export type Permission = string;
+
+export const PERMISSIONS = {
+  SERVER_VIEW: 'server.view',
+  SERVER_CREATE: 'server.create',
+  SERVER_EDIT: 'server.edit',
+  SERVER_DELETE: 'server.delete',
+  SERVER_START: 'server.start',
+  SERVER_STOP: 'server.stop',
+  CONFIGURATION_VIEW: 'configuration.view',
+  CONFIGURATION_EDIT: 'configuration.edit',
+  LOG_VIEW: 'log.view',
+  ADMIN_USERS: 'admin.users',
+  ADMIN_SYSTEM: 'admin.system',
+  MONITORING_CONFIGURE: 'monitoring.configure',
+} as const;
+
 export interface UserPermissions {
   servers: {
     view: boolean;

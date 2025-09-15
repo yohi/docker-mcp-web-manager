@@ -55,8 +55,8 @@ export const authConfig: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.sub;
-        session.user.role = token.role as string;
+        session.user.id = token.sub || '';
+        session.user.role = (token.role as string) || 'user';
         session.user.permissions = token.permissions as Permission[];
       }
       return session;
@@ -74,7 +74,7 @@ export function checkPermission(
   userPermissions: Permission[],
   requiredPermission: Permission
 ): boolean {
-  return hasPermission(userPermissions, requiredPermission);
+  return hasPermission(userPermissions, requiredPermission, '');
 }
 
 // Helper function to check multiple permissions

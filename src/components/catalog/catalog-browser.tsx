@@ -37,25 +37,38 @@ import { usePermissions } from '@/components/auth/auth-provider';
 interface CatalogEntry {
   id: string;
   name: string;
-  displayName: string;
+  displayName?: string;
   description: string;
   longDescription?: string;
   version: string;
-  author: string;
+  author?: string;
   authorUrl?: string;
-  category: string;
+  category?: string;
   tags: string[];
-  imageUrl: string;
+  imageUrl?: string;
+  homepage?: string;
+  repository?: string;
   sourceUrl?: string;
   documentationUrl?: string;
-  downloadCount: number;
-  rating: number;
-  ratingCount: number;
-  size: number; // bytes
-  lastUpdated: string;
-  createdAt: string;
-  verified: boolean;
-  featured: boolean;
+  downloadCount?: number;
+  rating?: number;
+  ratingCount?: number;
+  size?: number; // bytes
+  lastUpdated?: string;
+  createdAt?: string;
+  verified?: boolean;
+  featured?: boolean;
+  // MCP固有フィールド
+  installType?: 'docker' | 'npm' | 'github' | 'existing';
+  dockerImage?: string;
+  githubRepo?: string;
+  capabilities?: string[];
+  requirements?: {
+    memory?: string;
+    cpu?: string;
+    disk?: string;
+    network?: boolean;
+  };
   screenshots?: string[];
   dependencies?: Array<{
     name: string;
@@ -212,10 +225,10 @@ export function CatalogBrowser({
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(entry =>
         entry.name.toLowerCase().includes(query) ||
-        entry.displayName.toLowerCase().includes(query) ||
+        (entry.displayName || entry.name).toLowerCase().includes(query) ||
         entry.description.toLowerCase().includes(query) ||
-        entry.author.toLowerCase().includes(query) ||
-        entry.tags.some(tag => tag.toLowerCase().includes(query))
+        (entry.author || '').toLowerCase().includes(query) ||
+        (entry.tags || []).some(tag => tag.toLowerCase().includes(query))
       );
     }
 
@@ -248,28 +261,28 @@ export function CatalogBrowser({
 
       switch (sortField) {
         case 'name':
-          valueA = a.displayName.toLowerCase();
-          valueB = b.displayName.toLowerCase();
+          valueA = (a.displayName || a.name).toLowerCase();
+          valueB = (b.displayName || b.name).toLowerCase();
           break;
         case 'rating':
-          valueA = a.rating;
-          valueB = b.rating;
+          valueA = a.rating || 0;
+          valueB = b.rating || 0;
           break;
         case 'downloadCount':
-          valueA = a.downloadCount;
-          valueB = b.downloadCount;
+          valueA = a.downloadCount || 0;
+          valueB = b.downloadCount || 0;
           break;
         case 'lastUpdated':
-          valueA = new Date(a.lastUpdated);
-          valueB = new Date(b.lastUpdated);
+          valueA = new Date(a.lastUpdated || 0);
+          valueB = new Date(b.lastUpdated || 0);
           break;
         case 'size':
-          valueA = a.size;
-          valueB = b.size;
+          valueA = a.size || 0;
+          valueB = b.size || 0;
           break;
         default:
-          valueA = a.displayName.toLowerCase();
-          valueB = b.displayName.toLowerCase();
+          valueA = (a.displayName || a.name).toLowerCase();
+          valueB = (b.displayName || b.name).toLowerCase();
       }
 
       if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
@@ -680,7 +693,7 @@ export function CatalogBrowser({
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-500">作者:</span>
-                      <span className="ml-1">{entry.author}</span>
+                      <span className="ml-1">{entry.author || '不明'}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">バージョン:</span>
@@ -688,26 +701,26 @@ export function CatalogBrowser({
                     </div>
                     <div>
                       <span className="text-gray-500">サイズ:</span>
-                      <span className="ml-1">{formatFileSize(entry.size)}</span>
+                      <span className="ml-1">{entry.size ? formatFileSize(entry.size) : '不明'}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">ダウンロード:</span>
-                      <span className="ml-1">{entry.downloadCount.toLocaleString()}</span>
+                      <span className="ml-1">{(entry.downloadCount || 0).toLocaleString()}</span>
                     </div>
                   </div>
 
                   {/* 評価 */}
                   <div className="flex items-center justify-between">
-                    <StarRating rating={entry.rating} count={entry.ratingCount} />
+                    <StarRating rating={entry.rating || 0} count={entry.ratingCount || 0} />
                     <div className="text-xs text-gray-500">
-                      更新: {formatTimeAgo(entry.lastUpdated)}
+                      更新: {entry.lastUpdated ? formatTimeAgo(entry.lastUpdated) : '不明'}
                     </div>
                   </div>
 
                   {/* タグ */}
-                  {entry.tags.length > 0 && (
+                  {(entry.tags?.length || 0) > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {entry.tags.slice(0, 5).map(tag => (
+                      {(entry.tags || []).slice(0, 5).map(tag => (
                         <Badge key={tag} variant="outline" className="text-xs">
                           {tag}
                         </Badge>

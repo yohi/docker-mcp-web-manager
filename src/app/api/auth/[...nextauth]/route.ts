@@ -9,4 +9,4 @@ import { authOptions } from '@/lib/auth/config';
 const handler = NextAuth(authOptions);
 
 // HTTP メソッドのエクスポート
-export { handler as GET, handler as POST };
+export { handler as GET, handler as POST, authOptions };

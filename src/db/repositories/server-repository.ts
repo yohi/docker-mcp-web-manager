@@ -35,7 +35,7 @@ export class ServerRepository extends BaseRepository<
       image: row.image,
       status: row.status,
       version: row.version || '',
-      description: row.description || '',
+      description: row.description || undefined,
       tools: [], // 別途取得が必要
       resources: [], // 別途取得が必要
       prompts: [], // 別途取得が必要
@@ -206,8 +206,8 @@ export class ServerRepository extends BaseRepository<
       return toolRows.map((row) => ({
         name: row.name,
         description: row.description || '',
-        inputSchema: this.safeParseJson(row.inputSchema, {}),
-        enabled: row.enabled,
+        inputSchema: this.safeParseJson(row.inputSchema, {type: 'object', properties: {}}),
+        enabled: row.enabled || false,
       }));
     } catch (error) {
       console.error(`Error getting tools for server ${serverId}:`, error);
@@ -230,8 +230,8 @@ export class ServerRepository extends BaseRepository<
       return resourceRows.map((row) => ({
         uri: row.uri,
         name: row.name,
-        description: row.description,
-        mimeType: row.mimeType,
+        description: row.description || undefined,
+        mimeType: row.mimeType || undefined,
         metadata: this.safeParseJson(row.metadata, {}),
       }));
     } catch (error) {
@@ -254,7 +254,7 @@ export class ServerRepository extends BaseRepository<
 
       return promptRows.map((row) => ({
         name: row.name,
-        description: row.description,
+        description: row.description || undefined,
         arguments: this.safeParseJson(row.arguments),
         metadata: this.safeParseJson(row.metadata, {}),
       }));

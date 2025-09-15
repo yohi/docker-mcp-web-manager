@@ -56,6 +56,11 @@ function InternalAuthProvider({ children }: { children: ReactNode }) {
     permissions: session.user.permissions,
   } : null;
 
+  console.log('[AUTH_PROVIDER] User object:', user);
+  console.log('[AUTH_PROVIDER] User permissions:', user?.permissions);
+  console.log('[AUTH_PROVIDER] User role:', user?.role);
+  console.log('[AUTH_PROVIDER] Is admin:', user?.role === 'admin');
+
   const contextValue: AuthContextType = {
     isAuthenticated: !!session && status === 'authenticated',
     isLoading: status === 'loading',

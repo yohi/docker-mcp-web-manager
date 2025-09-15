@@ -40,6 +40,10 @@ export function ProtectedRoute({
   // 認証状態の変化を監視してリダイレクト
   useEffect(() => {
     console.log('[PROTECTED_ROUTE] Auth check - authenticated:', isAuthenticated, 'loading:', isLoading);
+    console.log('[PROTECTED_ROUTE] User:', user);
+    console.log('[PROTECTED_ROUTE] Required permissions:', requiredPermissions);
+    console.log('[PROTECTED_ROUTE] Required role:', requiredRole);
+    console.log('[PROTECTED_ROUTE] Allowed roles:', allowedRoles);
     if (!isLoading && !isAuthenticated) {
       console.log('[PROTECTED_ROUTE] User not authenticated, redirecting to:', fallbackUrl);
       console.log('[PROTECTED_ROUTE] Current location:', typeof window !== 'undefined' ? window.location.href : 'server');
@@ -47,9 +51,9 @@ export function ProtectedRoute({
     }
   }, [isAuthenticated, isLoading, router, fallbackUrl]);
 
-  // 認証バイパス - SKIP_AUTHが明示的にtrueの場合のみ
-  if (process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
-    console.log('[PROTECTED_ROUTE] Authentication bypassed due to NEXT_PUBLIC_SKIP_AUTH=true');
+  // 認証バイパス - 開発環境または SKIP_AUTHが明示的にtrueの場合のみ
+  if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') {
+    console.log('[PROTECTED_ROUTE] Authentication bypassed due to development environment or NEXT_PUBLIC_SKIP_AUTH=true');
     return <>{children}</>;
   }
 
@@ -91,6 +95,14 @@ export function ProtectedRoute({
   // アクセス許可の判定
   const hasAccess = hasAdminAccess ||
     (hasRequiredPermissions && hasRequiredRole && hasAllowedRole);
+
+  console.log('[PROTECTED_ROUTE] Permission check results:');
+  console.log('[PROTECTED_ROUTE] Has required permissions:', hasRequiredPermissions);
+  console.log('[PROTECTED_ROUTE] Has required role:', hasRequiredRole);
+  console.log('[PROTECTED_ROUTE] Has allowed role:', hasAllowedRole);
+  console.log('[PROTECTED_ROUTE] Is admin:', isAdmin);
+  console.log('[PROTECTED_ROUTE] Has admin access:', hasAdminAccess);
+  console.log('[PROTECTED_ROUTE] Final access decision:', hasAccess);
 
   // アクセス拒否の場合
   if (!hasAccess) {

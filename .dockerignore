@@ -1,41 +1,65 @@
+# Dependencies
 node_modules
+.npm
+.cache
+
+# Git files
 .git
 .gitignore
-README.md
+
+# Environment files
 .env
 .env.local
 .env.*.local
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.npm
-.cache
+*.log
+
+# Next.js build files
 .next
 dist
 build
-coverage
-data
-*.log
 
-# テストファイル
+# Test files
 tests/
 test-results/
 playwright-report/
 jest.config.js
 playwright.config.ts
+coverage
 
-# 開発用ファイル  
+# Development files
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# ドキュメント
+# Documentation (except essential ones)
 docs/
-*.md
-!package*.json
+README.md
+CHANGELOG.md
+LICENSE
 
-# その他の不要ファイル
+# Data directory (runtime only)
+data/
+*.db
+*.sqlite
+
+# Temporary files
 .DS_Store
 Thumbs.db
 .specs/
+.tmp/
+temp/
+
+# Docker files (avoid recursive copying)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Build caches
+.turbo/
+.swc/

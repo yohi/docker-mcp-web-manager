@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   console.log('[MAIN_MIDDLEWARE] Request URL:', request.url);
   
   // 認証スキップ環境変数をチェック
-  const skipAuth = process.env.SKIP_AUTH === 'true';
+  const skipAuth = process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_SKIP_AUTH === 'true';
   console.log('[MAIN_MIDDLEWARE] SKIP_AUTH setting:', skipAuth);
   
   if (skipAuth) {
@@ -22,6 +22,7 @@ export async function middleware(request: NextRequest) {
     '/auth',
     '/api/auth',
     '/api/health',
+    '/api/v1/catalog',
     '/_next',
     '/favicon.ico'
   ];

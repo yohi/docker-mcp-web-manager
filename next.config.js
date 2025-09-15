@@ -154,6 +154,18 @@ const nextConfig = {
 
   // Webpackカスタマイズ（バンドル最適化）
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Bitwarden SDK ネイティブバイナリの処理
+    config.externals.push({
+      '@bitwarden/sdk-napi': 'commonjs @bitwarden/sdk-napi'
+    });
+
+    // ネイティブモジュールの処理
+    if (isServer) {
+      config.module.rules.push({
+        test: /\.node$/,
+        use: 'node-loader',
+      });
+    }
     // バンドルサイズ最適化
     if (!dev && !isServer) {
       // Tree shakingの強化

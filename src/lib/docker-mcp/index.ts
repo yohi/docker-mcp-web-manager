@@ -5,7 +5,7 @@
 
 // Docker MCP クライアント
 export { DockerMCPClient } from './docker-mcp-client';
-export { CatalogClient } from './catalog-client';
+export { CatalogClient } from '../catalog/catalog-client';
 
 // セキュリティユーティリティ
 export {

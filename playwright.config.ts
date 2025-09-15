@@ -151,7 +151,6 @@ export default defineConfig({
 
   /* タイムアウト設定 */
   timeout: 30000,
-  testTimeout: 30000,
   expect: {
     timeout: 5000,
   },

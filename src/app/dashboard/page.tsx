@@ -17,7 +17,10 @@ import {
   Users,
   AlertTriangle,
   CheckCircle,
-  Loader2
+  Loader2,
+  FileJson,
+  Download,
+  Upload
 } from 'lucide-react';
 
 // コード分割：重いコンポーネントを遅延読み込み
@@ -38,6 +41,10 @@ const MonitoringDashboard = dynamic(() => import('@/components/monitoring/monito
       <span className="ml-2">監視ダッシュボードを読み込み中...</span>
     </div>
   ),
+  ssr: false
+});
+
+const ExportImportDialog = dynamic(() => import('@/components/import-export/export-import-dialog').then(mod => ({ default: mod.ExportImportDialog })), {
   ssr: false
 });
 
@@ -83,6 +90,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>(defaultStats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportImportDialogOpen, setExportImportDialogOpen] = useState(false);
 
   // 認証状態のチェック（簡素化 + 開発環境バイパス）
   useEffect(() => {
@@ -325,8 +333,8 @@ export default function DashboardPage() {
                   fontSize: '14px',
                   fontWeight: '500'
                 }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
+                onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#0056b3'}
+                onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#007bff'}
               >
                 <Plus className="h-4 w-4" />
                 <span>Add Server</span>
@@ -486,11 +494,13 @@ export default function DashboardPage() {
                   監視ダッシュボード
                 </a>
               </Button>
-              <Button variant="outline" className="justify-start" asChild>
-                <a href="/settings">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  システム設定
-                </a>
+              <Button
+                variant="outline"
+                className="justify-start"
+                onClick={() => setExportImportDialogOpen(true)}
+              >
+                <FileJson className="h-4 w-4 mr-2" />
+                設定の管理
               </Button>
             </div>
           </CardContent>
@@ -539,6 +549,16 @@ export default function DashboardPage() {
             </Suspense>
           </CardContent>
         </Card>
+
+        {/* エクスポート・インポートダイアログ */}
+        <ExportImportDialog
+          open={exportImportDialogOpen}
+          onOpenChange={setExportImportDialogOpen}
+          onImportSuccess={() => {
+            // インポート成功時は統計を再取得
+            fetchDashboardStats();
+          }}
+        />
       </div>
   );
 

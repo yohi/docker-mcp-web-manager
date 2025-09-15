@@ -27,6 +27,24 @@ const ALLOWED_DOCKER_MCP_COMMANDS = [
 export type DockerMcpCommand = typeof ALLOWED_DOCKER_MCP_COMMANDS[number];
 
 /**
+ * 許可されたBitwarden CLIサブコマンドの定義
+ */
+const ALLOWED_BITWARDEN_COMMANDS = [
+  '--version',
+  'status',
+  'login',
+  'unlock',
+  'lock',
+  'logout',
+  'sync',
+  'list',
+  'get',
+  'config',
+] as const;
+
+export type BitwardenCommand = typeof ALLOWED_BITWARDEN_COMMANDS[number];
+
+/**
  * コマンド実行結果の型定義
  */
 export interface CommandResult {
@@ -75,20 +93,36 @@ export function validateCommandArguments(
   args: string[]
 ): { valid: boolean; error?: string } {
   // docker mcp コマンドの検証
-  if (command !== 'docker') {
-    return { valid: false, error: 'Only docker command is allowed' };
-  }
+  if (command === 'docker') {
+    if (args.length < 2 || args[0] !== 'mcp') {
+      return { valid: false, error: 'Only docker mcp subcommands are allowed' };
+    }
 
-  if (args.length < 2 || args[0] !== 'mcp') {
-    return { valid: false, error: 'Only docker mcp subcommands are allowed' };
+    const subcommand = args[1];
+    if (!ALLOWED_DOCKER_MCP_COMMANDS.includes(subcommand as DockerMcpCommand)) {
+      return {
+        valid: false,
+        error: `Docker MCP subcommand '${subcommand}' is not in the allowlist`,
+      };
+    }
   }
+  // Bitwarden CLI コマンドの検証
+  else if (command === 'bw') {
+    if (args.length === 0) {
+      return { valid: false, error: 'Bitwarden CLI requires arguments' };
+    }
 
-  const subcommand = args[1];
-  if (!ALLOWED_DOCKER_MCP_COMMANDS.includes(subcommand as DockerMcpCommand)) {
-    return {
-      valid: false,
-      error: `Subcommand '${subcommand}' is not in the allowlist`,
-    };
+    const subcommand = args[0];
+    if (!ALLOWED_BITWARDEN_COMMANDS.includes(subcommand as BitwardenCommand)) {
+      return {
+        valid: false,
+        error: `Bitwarden CLI subcommand '${subcommand}' is not in the allowlist`,
+      };
+    }
+  }
+  // その他のコマンドは拒否
+  else {
+    return { valid: false, error: `Command '${command}' is not allowed. Only docker and bw commands are permitted.` };
   }
 
   // 危険な文字の検証
@@ -117,6 +151,15 @@ export function validateCommandArguments(
         error: `Argument too long (max 255 characters): ${arg}`,
       };
     }
+  }
+
+  // 引数の数制限（Bitwardenコマンドの方が多くの引数を使う場合がある）
+  const maxArgs = command === 'bw' ? 30 : 20;
+  if (args.length > maxArgs) {
+    return {
+      valid: false,
+      error: `Too many arguments (max ${maxArgs})`,
+    };
   }
 
   return { valid: true };
@@ -217,6 +260,15 @@ export async function safeExecuteCommand(
     cwd = process.cwd(),
   } = options;
 
+  // パスワードなど機密情報をマスクする関数
+  const sanitizeArgs = (args: string[]): string[] => {
+    if (command === 'bw' && args[0] === 'login' && args.length > 2) {
+      // bw login email password の場合、パスワードをマスク
+      return [args[0], args[1], '***MASKED***', ...args.slice(3)];
+    }
+    return args;
+  };
+
   // コマンド引数の検証
   const validation = validateCommandArguments(command, args);
   if (!validation.valid) {
@@ -251,7 +303,7 @@ export async function safeExecuteCommand(
           const error: CommandError = {
             code: 'COMMAND_ABORTED',
             message: 'Command was aborted before execution',
-            context: { command, args, timeout, timestamp },
+            context: { command, args: sanitizeArgs(args), timeout, timestamp },
           };
           return reject(error);
         }
@@ -262,7 +314,7 @@ export async function safeExecuteCommand(
           const error: CommandError = {
             code: 'COMMAND_ABORTED',
             message: 'Command was aborted',
-            context: { command, args, timeout, timestamp },
+            context: { command, args: sanitizeArgs(args), timeout, timestamp },
           };
           reject(error);
         };
@@ -300,7 +352,7 @@ export async function safeExecuteCommand(
             const error: CommandError = {
               code: 'COMMAND_TIMEOUT',
               message: `Command timed out after ${timeout}ms`,
-              context: { command, args, timeout, timestamp },
+              context: { command, args: sanitizeArgs(args), timeout, timestamp },
             };
             reject(error);
           }
@@ -336,7 +388,7 @@ export async function safeExecuteCommand(
           const commandError: CommandError = {
             code: 'COMMAND_EXECUTION_ERROR',
             message: `Failed to execute command: ${error.message}`,
-            context: { command, args, timeout, timestamp },
+            context: { command, args: sanitizeArgs(args), timeout, timestamp },
           };
           reject(commandError);
         });

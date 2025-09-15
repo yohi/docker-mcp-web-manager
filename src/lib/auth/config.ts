@@ -139,19 +139,65 @@ export const authOptions: AuthOptions = {
 
   // 認証プロバイダー設定
   providers: [
+    // パスキー認証プロバイダー
+    CredentialsProvider({
+      id: 'passkey',
+      name: 'Passkey Authentication',
+      credentials: {
+        token: {
+          label: 'Authentication Token',
+          type: 'text',
+        },
+      },
+      async authorize(credentials) {
+        try {
+          if (!credentials?.token) {
+            return null;
+          }
+
+          // JWTトークンを検証してユーザー情報を取得
+          const jwt = await import('jsonwebtoken');
+          const decoded = jwt.verify(
+            credentials.token,
+            process.env.NEXTAUTH_SECRET || 'fallback-secret'
+          ) as any;
+
+          if (!decoded.sub || !decoded.email) {
+            return null;
+          }
+
+          console.log('[AUTH_SUCCESS] Passkey authentication:', {
+            userId: decoded.sub,
+            email: decoded.email,
+            timestamp: new Date().toISOString(),
+          });
+
+          return {
+            id: decoded.sub,
+            email: decoded.email,
+            role: decoded.role || 'user',
+            permissions: decoded.permissions || [],
+          };
+        } catch (error) {
+          console.error('[AUTH_ERROR] Passkey authorization error:', error);
+          return null;
+        }
+      },
+    }),
+
     // カスタム認証プロバイダー（Bitwarden統合）
     CredentialsProvider({
       id: 'custom-auth',
       name: 'Custom Authentication',
       credentials: {
-        email: { 
-          label: 'Email', 
-          type: 'email', 
-          placeholder: 'user@example.com' 
+        email: {
+          label: 'Email',
+          type: 'email',
+          placeholder: 'user@example.com'
         },
-        password: { 
-          label: 'Password', 
-          type: 'password' 
+        password: {
+          label: 'Password',
+          type: 'password'
         },
         authMethod: {
           label: 'Authentication Method',
@@ -215,6 +261,8 @@ export const authOptions: AuthOptions = {
     BitwardenAuthProvider({
       id: 'bitwarden',
       name: 'Bitwarden',
+      serverUrl: process.env.BITWARDEN_SERVER_URL || 'https://vault.bitwarden.com',
+      timeout: 120000, // 2分のタイムアウト
     }),
   ],
 
@@ -234,7 +282,11 @@ export const authOptions: AuthOptions = {
 
         // アクティビティタイムアウトチェック
         const now = Date.now();
-        if (token.lastActivity && (now - token.lastActivity) > SESSION_CONFIG.activityTimeout) {
+        const lastActivity = typeof token.lastActivity === 'number' && token.lastActivity > 0
+          ? token.lastActivity
+          : now;
+
+        if (lastActivity && (now - lastActivity) > SESSION_CONFIG.activityTimeout) {
           console.log('[AUTH_TIMEOUT] Session expired due to inactivity:', token.email);
           return {}; // 空のトークンを返してセッションを終了
         }
@@ -257,8 +309,14 @@ export const authOptions: AuthOptions = {
           session.user.role = token.role;
           session.user.permissions = token.permissions;
           session.sessionId = token.sessionId;
-          session.lastActivity = token.lastActivity;
-          session.expiresAt = token.lastActivity + SESSION_CONFIG.activityTimeout;
+
+          // lastActivity の有効性をチェック
+          const lastActivity = typeof token.lastActivity === 'number' && token.lastActivity > 0
+            ? token.lastActivity
+            : Date.now();
+
+          session.lastActivity = lastActivity;
+          session.expiresAt = lastActivity + SESSION_CONFIG.activityTimeout;
         }
 
         return session;
@@ -324,7 +382,9 @@ export const authOptions: AuthOptions = {
       if (process.env.NODE_ENV === 'development') {
         console.debug('[AUTH_SESSION_ACTIVITY]', {
           userId: session.user.id,
-          lastActivity: new Date(session.lastActivity).toISOString(),
+          lastActivity: session.lastActivity && typeof session.lastActivity === 'number' && session.lastActivity > 0
+            ? new Date(session.lastActivity).toISOString()
+            : 'Invalid timestamp',
         });
       }
     },

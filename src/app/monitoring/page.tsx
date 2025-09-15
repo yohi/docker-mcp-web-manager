@@ -7,6 +7,7 @@ import { SystemHealthDashboard } from '@/components/health/SystemHealthDashboard
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/components/auth/auth-provider';
 import {
   Activity,
   Server,
@@ -14,7 +15,8 @@ import {
   RefreshCw,
   Settings,
   Download,
-  TrendingUp
+  TrendingUp,
+  Bug
 } from 'lucide-react';
 
 // =============================================================================
@@ -111,6 +113,9 @@ export default function MonitoringPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  
+  const { user, hasPermission, hasRole, isAdmin } = useAuth();
 
   // データ取得
   const loadMonitoringData = useCallback(async () => {
@@ -271,8 +276,31 @@ export default function MonitoringPage() {
     }
   };
 
+  // デバッグ用: セッション情報を取得
+  const loadDebugInfo = useCallback(async () => {
+    try {
+      const response = await fetch('/api/debug/session');
+      const result = await response.json();
+      setDebugInfo(result.success ? result.data : result);
+      console.log('[MONITORING_DEBUG] Debug info loaded:', result);
+    } catch (error) {
+      console.error('[MONITORING_DEBUG] Failed to load debug info:', error);
+      setDebugInfo({ error: 'Failed to load debug info' });
+    }
+  }, []);
+
+  // デバッグ用: 管理者権限チェックをスキップ（一時的）
+  const shouldSkipAuth = process.env.NODE_ENV === 'development';
+  
+  if (shouldSkipAuth) {
+    console.log('[MONITORING_PAGE] Development mode: skipping auth checks');
+  }
+
   return (
-    <ProtectedRoute requiredPermissions={['MONITORING_READ']}>
+    <ProtectedRoute 
+      allowedRoles={shouldSkipAuth ? [] : ['admin']} 
+      requiredPermissions={shouldSkipAuth ? [] : ['MONITORING_READ']}
+    >
       <div className="space-y-6">
         {/* ヘッダー */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -293,6 +321,10 @@ export default function MonitoringPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               更新
             </Button>
+            <Button variant="outline" size="sm" onClick={loadDebugInfo}>
+              <Bug className="h-4 w-4 mr-2" />
+              セッション確認
+            </Button>
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-2" />
               設定
@@ -310,6 +342,33 @@ export default function MonitoringPage() {
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
+        )}
+
+        {/* デバッグ情報表示 */}
+        {debugInfo && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center">
+                <Bug className="h-4 w-4 mr-2" />
+                セッション デバッグ情報
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div><strong>認証状態:</strong> {debugInfo.isAuthenticated ? '認証済み' : '未認証'}</div>
+                <div><strong>ユーザーID:</strong> {debugInfo.user?.id || 'なし'}</div>
+                <div><strong>メール:</strong> {debugInfo.user?.email || 'なし'}</div>
+                <div><strong>ロール:</strong> {debugInfo.user?.role || 'なし'}</div>
+                <div><strong>権限:</strong> {JSON.stringify(debugInfo.user?.permissions || [])}</div>
+                <div><strong>管理者権限:</strong> {isAdmin ? 'あり' : 'なし'}</div>
+                <div><strong>MONITORING_READ権限:</strong> {hasPermission('MONITORING_READ') ? 'あり' : 'なし'}</div>
+                <div><strong>adminロール:</strong> {hasRole('admin') ? 'あり' : 'なし'}</div>
+                {debugInfo.error && (
+                  <div className="text-red-600"><strong>エラー:</strong> {debugInfo.error}</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* クイック統計 */}

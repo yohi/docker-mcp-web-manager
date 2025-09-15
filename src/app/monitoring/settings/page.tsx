@@ -178,7 +178,7 @@ export default function MonitoringSettingsPage() {
     };
 
     return (
-        <ProtectedRoute requiredPermission="MONITORING_CONFIGURE">
+        <ProtectedRoute requiredPermissions={["MONITORING_CONFIGURE"]}>
             <div className="container mx-auto p-6 space-y-6">
                 {/* ヘッダー */}
                 <div className="flex items-center gap-4">
