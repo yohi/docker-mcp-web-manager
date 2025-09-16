@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,7 @@ interface CatalogEntry {
   createdAt?: string;
   verified?: boolean;
   featured?: boolean;
+  icon?: string;
   // MCP固有フィールド
   installType?: 'docker' | 'npm' | 'github' | 'existing';
   dockerImage?: string;
@@ -106,6 +107,18 @@ interface CatalogBrowserProps {
   onInstall?: (entryId: string) => Promise<void>;
   onUninstall?: (entryId: string) => Promise<void>;
   className?: string;
+  // ページネーション機能
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  onSearch?: (searchQuery: string, category?: string, sortBy?: string, sortOrder?: string) => void;
 }
 
 type SortField = 'name' | 'rating' | 'downloadCount' | 'lastUpdated' | 'size';
@@ -192,7 +205,11 @@ export function CatalogBrowser({
   onRefresh,
   onInstall,
   onUninstall,
-  className
+  className,
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  onSearch
 }: CatalogBrowserProps) {
   const { hasPermission } = usePermissions();
   
@@ -206,9 +223,40 @@ export function CatalogBrowser({
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(false);
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<CatalogEntry | null>(null);
+  const [pageSize, setPageSize] = useState(20);
+  
+  // 検索debounce用のref
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
   
   // 権限チェック
   const canInstallServers = hasPermission('SERVERS_CREATE');
+
+  // 検索入力のデバウンス処理
+  useEffect(() => {
+    // 既存のタイマーをクリア
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // 新しいタイマーを設定（500ms後に検索実行）
+    searchTimeoutRef.current = setTimeout(() => {
+      if (onSearch) {
+        onSearch(
+          searchQuery,
+          categoryFilter !== 'all' ? categoryFilter : undefined,
+          `${sortField}-${sortOrder}`.split('-')[0],
+          `${sortField}-${sortOrder}`.split('-')[1]
+        );
+      }
+    }, 500);
+
+    // クリーンアップ
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, categoryFilter, sortField, sortOrder, onSearch]);
 
   // 利用可能なタグの抽出
   const availableTags = useMemo(() => {
@@ -216,82 +264,8 @@ export function CatalogBrowser({
     return [...new Set(allTags)].sort();
   }, [catalogEntries]);
 
-  // フィルタリングとソート
-  const filteredAndSortedEntries = useMemo(() => {
-    let filtered = catalogEntries;
-
-    // 検索フィルター
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(entry =>
-        entry.name.toLowerCase().includes(query) ||
-        (entry.displayName || entry.name).toLowerCase().includes(query) ||
-        entry.description.toLowerCase().includes(query) ||
-        (entry.author || '').toLowerCase().includes(query) ||
-        (entry.tags || []).some(tag => tag.toLowerCase().includes(query))
-      );
-    }
-
-    // カテゴリフィルター
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(entry => entry.category === categoryFilter);
-    }
-
-    // タグフィルター
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(entry =>
-        selectedTags.some(tag => entry.tags.includes(tag))
-      );
-    }
-
-    // 検証済みフィルター
-    if (showVerifiedOnly) {
-      filtered = filtered.filter(entry => entry.verified);
-    }
-
-    // 注目フィルター
-    if (showFeaturedOnly) {
-      filtered = filtered.filter(entry => entry.featured);
-    }
-
-    // ソート
-    filtered.sort((a, b) => {
-      let valueA: any;
-      let valueB: any;
-
-      switch (sortField) {
-        case 'name':
-          valueA = (a.displayName || a.name).toLowerCase();
-          valueB = (b.displayName || b.name).toLowerCase();
-          break;
-        case 'rating':
-          valueA = a.rating || 0;
-          valueB = b.rating || 0;
-          break;
-        case 'downloadCount':
-          valueA = a.downloadCount || 0;
-          valueB = b.downloadCount || 0;
-          break;
-        case 'lastUpdated':
-          valueA = new Date(a.lastUpdated || 0);
-          valueB = new Date(b.lastUpdated || 0);
-          break;
-        case 'size':
-          valueA = a.size || 0;
-          valueB = b.size || 0;
-          break;
-        default:
-          valueA = (a.displayName || a.name).toLowerCase();
-          valueB = (b.displayName || b.name).toLowerCase();
-      }
-
-      if (valueA < valueB) return sortOrder === 'asc' ? -1 : 1;
-      if (valueA > valueB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return filtered;
-  }, [catalogEntries, searchQuery, categoryFilter, selectedTags, showVerifiedOnly, showFeaturedOnly, sortField, sortOrder]);
+  // サーバーサイドでフィルタリング・ソート済みのエントリをそのまま使用
+  const filteredAndSortedEntries = catalogEntries;
 
   // ソート切り替え
   const handleSort = (field: SortField) => {
@@ -334,6 +308,14 @@ export function CatalogBrowser({
     }
   };
 
+  // ページサイズ変更処理
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    if (onPageSizeChange) {
+      onPageSizeChange(newPageSize);
+    }
+  };
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* ヘッダー */}
@@ -342,6 +324,11 @@ export function CatalogBrowser({
           <h1 className="text-2xl font-semibold text-gray-900">サーバーカタログ</h1>
           <p className="text-sm text-gray-600">
             利用可能なMCPサーバーを検索・インストールできます
+            {pagination && (
+              <span className="ml-2 font-medium">
+                (全 {pagination.total} 件中 {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} 件を表示)
+              </span>
+            )}
           </p>
         </div>
         
@@ -375,7 +362,7 @@ export function CatalogBrowser({
             <div className="flex items-center space-x-2">
               <Package className="h-8 w-8 text-blue-500" />
               <div>
-                <p className="text-2xl font-semibold">{catalogEntries.length}</p>
+                <p className="text-2xl font-semibold">{pagination?.total || catalogEntries.length}</p>
                 <p className="text-sm text-gray-600">利用可能</p>
               </div>
             </div>
@@ -514,6 +501,21 @@ export function CatalogBrowser({
               />
               <span>注目のみ</span>
             </label>
+
+            {/* ページサイズ選択 */}
+            <div className="flex items-center space-x-2 text-sm">
+              <span>表示件数:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="text-sm border rounded px-2 py-1"
+              >
+                <option value={10}>10件</option>
+                <option value={20}>20件</option>
+                <option value={50}>50件</option>
+                <option value={100}>100件</option>
+              </select>
+            </div>
           </div>
 
           {/* タグフィルター */}
@@ -653,16 +655,43 @@ export function CatalogBrowser({
             const StatusIcon = statusInfo.icon;
 
             return (
-              <Card key={entry.id} className="hover:shadow-md transition-shadow">
+              <Card key={entry.id} className="hover:shadow-md transition-shadow h-full flex flex-col">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-                        <Package className="h-5 w-5 text-white" />
-                      </div>
+                      {(entry.icon || entry.imageUrl) ? (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white border border-gray-200 overflow-hidden">
+                          <img 
+                            src={entry.icon || entry.imageUrl} 
+                            alt={`${entry.displayName || entry.name} icon`}
+                            className="h-8 w-8 object-contain"
+                            onError={(e) => {
+                              // アイコン読み込み失敗時のフォールバック
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.className = "flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600";
+                                const packageIcon = document.createElement('div');
+                                packageIcon.innerHTML = '<svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>';
+                                parent.appendChild(packageIcon);
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+                          <Package className="h-5 w-5 text-white" />
+                        </div>
+                      )}
                       <div className="flex-1">
                         <CardTitle className="text-lg flex items-center space-x-2">
-                          <span>{entry.displayName}</span>
+                          <button
+                            onClick={() => window.open(`/catalog/${encodeURIComponent(entry.id)}`, '_blank')}
+                            className="truncate hover:text-blue-600 transition-colors text-left"
+                          >
+                            {entry.displayName || entry.name}
+                          </button>
                           {entry.verified && (
                             <CheckCircle className="h-4 w-4 text-blue-500" />
                           )}
@@ -683,12 +712,12 @@ export function CatalogBrowser({
                     </div>
                   </div>
 
-                  <CardDescription className="mt-2">
+                  <CardDescription className="mt-2 line-clamp-3 text-sm">
                     {entry.description}
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 flex-1">
                   {/* 基本情報 */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
@@ -698,10 +727,6 @@ export function CatalogBrowser({
                     <div>
                       <span className="text-gray-500">バージョン:</span>
                       <span className="ml-1 font-mono">{entry.version}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">サイズ:</span>
-                      <span className="ml-1">{entry.size ? formatFileSize(entry.size) : '不明'}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">ダウンロード:</span>
@@ -734,9 +759,16 @@ export function CatalogBrowser({
                   )}
                 </CardContent>
 
-                <CardFooter className="pt-0">
+                <CardFooter className="pt-0 mt-auto">
                   <div className="flex items-center justify-between w-full">
                     <div className="flex space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => window.open(`/catalog/${encodeURIComponent(entry.id)}`, '_blank')}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       {entry.sourceUrl && (
                         <Button variant="ghost" size="sm" asChild>
                           <a href={entry.sourceUrl} target="_blank" rel="noopener noreferrer">
@@ -786,6 +818,85 @@ export function CatalogBrowser({
             );
           })}
         </div>
+      )}
+
+      {/* ページネーション */}
+      {pagination && pagination.totalPages > 1 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  ページ {pagination.page} / {pagination.totalPages} 
+                  (全 {pagination.total} 件)
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange && onPageChange(1)}
+                  disabled={!pagination.hasPrev}
+                >
+                  最初
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange && onPageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrev}
+                >
+                  前へ
+                </Button>
+                
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (pagination.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (pagination.page >= pagination.totalPages - 2) {
+                      pageNum = pagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = pagination.page - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === pagination.page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => onPageChange && onPageChange(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange && onPageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNext}
+                >
+                  次へ
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange && onPageChange(pagination.totalPages)}
+                  disabled={!pagination.hasNext}
+                >
+                  最後
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

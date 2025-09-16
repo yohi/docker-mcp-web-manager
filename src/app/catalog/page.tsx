@@ -40,6 +40,7 @@ interface CatalogEntry {
   createdAt: string;
   verified: boolean;
   featured: boolean;
+  icon?: string;
   screenshots?: string[];
   dependencies?: Array<{
     name: string;
@@ -74,19 +75,59 @@ export default function CatalogPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [installationJobs, setInstallationJobs] = useState<Record<string, string>>({});
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [pageSize, setPageSize] = useState(20);
 
   // データ取得
-  const loadCatalog = async () => {
+  const loadCatalog = async (
+    page: number = pagination.page, 
+    limit: number = pageSize,
+    searchQuery?: string,
+    category?: string,
+    sortBy?: string,
+    sortOrder?: string
+  ) => {
     try {
       setIsLoading(true);
       setError(null);
       
+      // クエリパラメータを構築
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+      
+      if (searchQuery && searchQuery.trim()) {
+        params.append('query', searchQuery);
+      }
+      if (category && category !== 'all') {
+        params.append('category', category);
+      }
+      if (sortBy) {
+        params.append('sortBy', sortBy);
+      }
+      if (sortOrder) {
+        params.append('sortOrder', sortOrder);
+      }
+      
       // カタログエントリの取得
-      const catalogRes = await fetch('/api/v1/catalog');
+      const catalogRes = await fetch(`/api/v1/catalog?${params.toString()}`);
       if (!catalogRes.ok) throw new Error('カタログの取得に失敗しました');
       
       const catalogData = await catalogRes.json();
       const entries = catalogData.success ? catalogData.data : [];
+      
+      // ページネーション情報を更新
+      if (catalogData.pagination) {
+        setPagination(catalogData.pagination);
+      }
       
       // インストールされているサーバーの情報も取得して統合
       const serversRes = await fetch('/api/v1/servers');
@@ -120,6 +161,22 @@ export default function CatalogPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ページ変更処理
+  const handlePageChange = (page: number) => {
+    loadCatalog(page, pageSize);
+  };
+
+  // ページサイズ変更処理
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    loadCatalog(1, newPageSize); // ページサイズ変更時は1ページ目に戻る
+  };
+
+  // 検索・フィルター変更処理
+  const handleSearch = (searchQuery: string, category?: string, sortBy?: string, sortOrder?: string) => {
+    loadCatalog(1, pageSize, searchQuery, category, sortBy, sortOrder);
   };
 
   useEffect(() => {
@@ -266,9 +323,13 @@ export default function CatalogPage() {
           categories={categories}
           isLoading={isLoading}
           error={error}
-          onRefresh={loadCatalog}
+          onRefresh={() => loadCatalog(pagination.page, pageSize)}
           onInstall={handleInstall}
           onUninstall={handleUninstall}
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          onSearch={handleSearch}
         />
       </div>
     </ProtectedRoute>

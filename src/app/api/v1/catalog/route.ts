@@ -77,6 +77,8 @@ export async function GET(request: NextRequest) {
       ['name', 'popularity', 'lastUpdated', 'verified'],
       { sortBy: 'popularity', sortOrder: 'desc' }
     );
+    
+    console.log(`[API_DEBUG] Pagination params: page=${page}, limit=${limit}`);
 
     const searchParams = validation.data.query;
 

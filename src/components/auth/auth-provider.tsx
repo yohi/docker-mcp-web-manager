@@ -69,13 +69,15 @@ function InternalAuthProvider({ children }: { children: ReactNode }) {
       await update();
     },
     hasPermission: (permission: string) => {
+      // SKIP_AUTH環境では全ての権限を許可
+      if (process.env.NEXT_PUBLIC_SKIP_AUTH === 'true') return true;
       if (!user?.permissions) return false;
       return user.permissions.includes(permission) || user.permissions.includes('*');
     },
     hasRole: (role: string) => {
       return user?.role === role;
     },
-    isAdmin: user?.role === 'admin',
+    isAdmin: process.env.NEXT_PUBLIC_SKIP_AUTH === 'true' ? true : user?.role === 'admin',
   };
 
   return (

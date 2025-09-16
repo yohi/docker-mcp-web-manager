@@ -190,6 +190,14 @@ export class CatalogClient {
   private readonly dockerHubApiUrl: string;
   private readonly mcpRegistryRepo: string;
 
+  // キャッシュ機能
+  private static mcpRegistryCache: { 
+    data: CatalogEntry[]; 
+    timestamp: number; 
+    ttl: number; 
+  } | null = null;
+  private static readonly CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ
+
   constructor(options: {
     timeout?: number;
     maxRetries?: number;
@@ -217,15 +225,17 @@ export class CatalogClient {
     sortOrder?: 'asc' | 'desc';
   }): Promise<CatalogSearchResult> {
     try {
-      // 両方のソースから並行してデータを取得
+      // 両方のソースから並行してデータを取得（動的発見をデフォルトで使用）
       const [dockerHubEntries, mcpRegistryEntries] = await Promise.all([
         this.searchDockerHub(query.search || ''),
-        this.getMCPRegistryServers()
+        this.getMCPRegistryServersDynamic()
       ]);
 
       // 結果をマージして重複を除去
       let allEntries = [...dockerHubEntries, ...mcpRegistryEntries];
+      console.log(`[CATALOG_DEBUG] Before deduplication: ${allEntries.length} entries (Docker Hub: ${dockerHubEntries.length}, MCP Registry: ${mcpRegistryEntries.length})`);
       allEntries = this.deduplicateEntries(allEntries);
+      console.log(`[CATALOG_DEBUG] After deduplication: ${allEntries.length} entries`);
 
       // フィルタリング
       if (query.search) {
@@ -273,7 +283,9 @@ export class CatalogClient {
       const page = query.page || 1;
       const pageSize = Math.min(query.pageSize || 20, 100);
       const startIndex = (page - 1) * pageSize;
+      console.log(`[CATALOG_DEBUG] Before pagination: ${allEntries.length} entries, page=${page}, pageSize=${pageSize}, startIndex=${startIndex}`);
       const paginatedEntries = allEntries.slice(startIndex, startIndex + pageSize);
+      console.log(`[CATALOG_DEBUG] After pagination: ${paginatedEntries.length} entries`);
 
       const searchResult: CatalogSearchResult = {
         entries: paginatedEntries,
@@ -326,7 +338,43 @@ export class CatalogClient {
    */
   async getServerDetails(serverId: string): Promise<CatalogEntry> {
     try {
-      // まずMCPレジストリから詳細を取得試行
+      // まず全カタログから一致するエントリを検索
+      const searchResult = await this.searchServers({ search: serverId });
+      
+      // 完全一致またはIDが一致するエントリを探す
+      let matchingEntry = searchResult.entries.find(entry => 
+        entry.id === serverId || 
+        entry.name === serverId ||
+        entry.id.endsWith(serverId) ||
+        entry.name.toLowerCase() === serverId.toLowerCase()
+      );
+      
+      if (matchingEntry) {
+        // より詳細な情報を取得するため、MCPレジストリまたはDocker Hubから追加情報を取得
+        try {
+          const additionalDetails = await this.getMCPServerDetails(serverId) || 
+                                   await this.getDockerHubDetails(serverId);
+          
+          if (additionalDetails) {
+            // 基本情報とマージ
+            matchingEntry = {
+              ...matchingEntry,
+              ...additionalDetails,
+              // 重要な情報は元のエントリを優先
+              id: matchingEntry.id,
+              downloadCount: matchingEntry.downloadCount,
+              rating: matchingEntry.rating,
+            };
+          }
+        } catch (detailError) {
+          // 詳細取得に失敗しても基本情報は返す
+          console.warn('Failed to get additional details:', detailError);
+        }
+        
+        return CatalogEntrySchema.parse(matchingEntry);
+      }
+
+      // 直接的なマッチがない場合は、MCPレジストリから詳細を取得試行
       const mcpDetails = await this.getMCPServerDetails(serverId);
       if (mcpDetails) {
         return CatalogEntrySchema.parse(mcpDetails);
@@ -492,7 +540,7 @@ export class CatalogClient {
       try {
         const [dockerHubEntries, mcpRegistryEntries] = await Promise.all([
           this.searchDockerHub(''),
-          this.getMCPRegistryServers()
+          this.getMCPRegistryServersDynamic()
         ]);
 
         const allEntries = this.deduplicateEntries([...dockerHubEntries, ...mcpRegistryEntries]);
@@ -535,44 +583,82 @@ export class CatalogClient {
    */
   private async searchDockerHub(query: string): Promise<CatalogEntry[]> {
     try {
-      // Docker Hubには現在専用のMCPサーバーコンテナが少ないため、
-      // より一般的な検索語を使用してAI/ツール関連のコンテナを検索
-      const searchQuery = query ? `${query}` : 'ai-tools';
       const allResults: DockerHubRepository[] = [];
+      
+      // 複数の検索戦略を使用してより包括的な結果を得る
+      const searchStrategies = [
+        // MCPオーガニゼーションの公式コンテナ
+        'mcp/',
+        // クエリベースの検索（ユーザー指定またはデフォルト）
+        query ? query : 'mcp server',
+        // AI・ツール関連の検索
+        'ai-tools mcp',
+        'model context protocol'
+      ];
 
-      // 複数ページを取得して、より多くの結果を取得
       const PAGE_SIZE = 50; // Docker Hub APIの最大サイズ
-      const MAX_PAGES = 5; // 最大5ページ（250個のリポジトリ）
+      const MAX_PAGES_PER_STRATEGY = 3; // 戦略ごとの最大ページ数
 
-      for (let page = 1; page <= MAX_PAGES; page++) {
-        const result = await this.httpRequest<{
-          count: number;
-          results: DockerHubRepository[];
-        }>(`${this.dockerHubApiUrl}/search/repositories/?q=${encodeURIComponent(searchQuery)}&page=${page}&page_size=${PAGE_SIZE}`);
+      for (const searchTerm of searchStrategies) {
+        console.log(`Searching Docker Hub with term: "${searchTerm}"`);
+        
+        for (let page = 1; page <= MAX_PAGES_PER_STRATEGY; page++) {
+          try {
+            const result = await this.httpRequest<{
+              count: number;
+              results: DockerHubRepository[];
+            }>(`${this.dockerHubApiUrl}/search/repositories/?q=${encodeURIComponent(searchTerm)}&page=${page}&page_size=${PAGE_SIZE}`);
 
-        if (!result.success || !result.data) {
-          if (page === 1) {
-            console.warn('Docker Hub search failed:', result.error);
+            if (!result.success || !result.data) {
+              if (page === 1) {
+                console.warn(`Docker Hub search failed for "${searchTerm}":`, result.error);
+              }
+              break;
+            }
+
+            // 重複を避けるため、既存の結果と名前が重複しないもののみ追加
+            const newRepos = result.data.results.filter(newRepo => 
+              !allResults.some(existingRepo => existingRepo.name === newRepo.name)
+            );
+            
+            allResults.push(...newRepos);
+            console.log(`Docker Hub "${searchTerm}" page ${page}: ${newRepos.length} new repositories (total: ${allResults.length})`);
+
+            // これ以上結果がない場合は終了
+            if (result.data.results.length < PAGE_SIZE) {
+              break;
+            }
+
+            // API制限を避けるため少し待機
+            if (page < MAX_PAGES_PER_STRATEGY) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          } catch (error) {
+            console.warn(`Error searching Docker Hub for "${searchTerm}" page ${page}:`, error);
+            break;
           }
-          break;
         }
 
-        allResults.push(...result.data.results);
-        console.log(`Docker Hub page ${page}: ${result.data.results.length} repositories fetched (total: ${allResults.length})`);
-
-        // これ以上結果がない場合は終了
-        if (result.data.results.length < PAGE_SIZE) {
-          break;
-        }
-
-        // API制限を避けるため少し待機
-        if (page < MAX_PAGES) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
+        // 戦略間の待機時間
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      console.log(`Docker Hub search completed: ${allResults.length} repositories found`);
-      return allResults.map(repo => this.convertDockerHubToCatalogEntry(repo));
+      // MCP関連のリポジトリを優先してフィルタリング
+      const mcpRelatedResults = allResults.filter(repo => {
+        const nameWords = repo.name.toLowerCase();
+        const descWords = (repo.description || '').toLowerCase();
+        
+        return nameWords.includes('mcp') || 
+               nameWords.includes('model-context-protocol') ||
+               nameWords.includes('server') ||
+               descWords.includes('mcp') ||
+               descWords.includes('model context protocol') ||
+               descWords.includes('claude') ||
+               repo.namespace === 'mcp'; // MCPオーガニゼーションのコンテナを含める
+      });
+
+      console.log(`Docker Hub search completed: ${mcpRelatedResults.length} MCP-related repositories found (from ${allResults.length} total)`);
+      return mcpRelatedResults.map(repo => this.convertDockerHubToCatalogEntry(repo));
     } catch (error) {
       console.error('Failed to search Docker Hub:', error);
       return [];
@@ -589,47 +675,95 @@ export class CatalogClient {
       // GitHub API の代わりに、既知のサーバーリストを使用してレート制限を回避
       const rawUrl = 'https://raw.githubusercontent.com/docker/mcp-registry/main';
 
-      // より包括的なMCPサーバーリスト (Docker MCP Registry調査に基づく)
+      // Docker MCP Registry で利用可能なすべてのMCPサーバー（2024年調査に基づく）
       const knownServers = [
-        // Anthropic 公式
-        'anthropic-fetch',
-        'anthropic-postgres',
-        // 検索・AI関連
-        'brave-search',
-        'brave-search-python',
-        // 開発ツール
+        // データベース・ストレージ
+        'SQLite',
+        'airtable-mcp-server',
+        'postgres',
+        'sqlite',
+        'memory',
+        'neo4j-memory',
+        
+        // AWS・クラウド関連
+        'aks',
+        'aws-cdk-mcp-server',
+        'aws-core-mcp-server',
+        'aws-kb-retrieval-server',
+        'cloud-run-mcp',
+        
+        // 開発ツール・API
+        'apify-mcp-server',
+        'apify',
+        'apollo-mcp-server',
         'docker',
         'git',
         'github',
         'gitlab',
-        // ファイルシステム・ストレージ
-        'filesystem',
-        'gdrive',
-        'memory',
-        'postgres',
-        'sqlite',
-        // 生産性ツール
+        'kubectl-mcp-server',
+        'maven-tools-mcp',
+        'playwright-mcp-server',
+        
+        // AI・ML・検索
+        'arxiv-mcp-server',
+        'brave-search',
+        'brave-search-python',
+        'kgrag-mcp-server',
+        'mcp-code-interpreter',
+        'mcp-meta-analysis-r',
+        'mcp-python-refactoring',
+        'needle-mcp',
+        
+        // 生産性・コミュニケーション
+        'linkedin-mcp-server',
+        'mcp-discord',
         'notion',
         'obsidian',
         'linear',
         'slack',
         'todoist',
-        // ブラウザ・スクレイピング
+        'teamwork',
+        
+        // セキュリティ・監視
+        'dynatrace-mcp-server',
+        'firewalla-mcp-server',
+        'hoverfly-mcp-server',
+        'okta-mcp-fctr',
+        'vuln-nist-mcp-server',
+        'securenote-link-mcp-server',
+        
+        // ヘルスケア・業界特化
+        'charmhealth-mcp-server',
+        'hostinger-mcp-server',
+        'keboola-mcp',
+        
+        // データ・分析
+        'mcp-hackernews',
+        'mcp-github-pr-issue-analyser',
+        'kafka-schema-reg-mcp',
+        'hummingbot-mcp',
+        'wikipedia-mcp',
+        
+        // 統合・プロキシ
+        'mcp-api-gateway',
+        'pluggedin-mcp-proxy',
+        'remote-mcp',
+        'effect-mcp',
+        
+        // 特殊用途
+        'unreal-engine-mcp-server',
+        'opine-mcp-server',
+        
+        // ファイルシステム・その他
+        'filesystem',
+        'gdrive',
         'puppeteer',
-        // ユーティリティ
         'time',
         'everart',
-        // 実際に存在することが確認されたサーバー（404エラーを避けるため）
-        // 'azure-rest-api',
-        // 'discord-helper',
-        // 'google-maps',
-        // 'minio',
-        // 'resource-usage',
-        // 'search1api',
-        // 'sequential-thinking',
-        // 'tree-sitter',
-        // 'twitter',
-        // 'youtube-transcript'
+        
+        // 従来サーバー（互換性維持）
+        'anthropic-fetch',
+        'anthropic-postgres'
       ];
 
       console.log(`Processing ${knownServers.length} known MCP servers...`);
@@ -677,6 +811,159 @@ export class CatalogClient {
     } catch (error) {
       console.error('Failed to get MCP registry servers:', error);
       return [];
+    }
+  }
+
+  /**
+   * GitHub APIを使用してMCP registryから動的にサーバーリストを取得
+   * レート制限に注意して使用する（キャッシュ機能付き）
+   */
+  private async getMCPRegistryServersDynamic(): Promise<CatalogEntry[]> {
+    try {
+      // キャッシュチェック
+      if (CatalogClient.mcpRegistryCache) {
+        const now = Date.now();
+        const cacheAge = now - CatalogClient.mcpRegistryCache.timestamp;
+        if (cacheAge < CatalogClient.CACHE_TTL) {
+          console.log(`[CATALOG_CACHE] Using cached MCP registry data (${Math.round(cacheAge / 1000)}s old)`);
+          return CatalogClient.mcpRegistryCache.data;
+        } else {
+          console.log(`[CATALOG_CACHE] Cache expired (${Math.round(cacheAge / 1000)}s old), fetching fresh data`);
+          CatalogClient.mcpRegistryCache = null;
+        }
+      }
+
+      console.log('[CATALOG_HTTP] Attempting dynamic MCP Registry discovery...');
+
+      // GitHub API経由でサーバーディレクトリ一覧を取得
+      const result = await this.httpRequest<Array<{
+        name: string;
+        type: string;
+      }>>(`${this.githubApiUrl}/repos/docker/mcp-registry/contents/servers`);
+
+      if (!result.success || !result.data) {
+        console.warn('Failed to fetch MCP registry directory listing:', result.error);
+        // フォールバックとして既知のサーバーリストを使用
+        return this.getMCPRegistryServers();
+      }
+
+      // ディレクトリのみをフィルタリング
+      const serverDirectories = result.data
+        .filter(item => item.type === 'dir')
+        .map(item => item.name);
+
+      console.log(`Found ${serverDirectories.length} server directories in MCP registry`);
+
+      const allServers: CatalogEntry[] = [];
+      const rawUrl = 'https://raw.githubusercontent.com/docker/mcp-registry/main';
+
+      // バッチ処理でサーバー情報を取得
+      const BATCH_SIZE = 5;
+      const DELAY_BETWEEN_BATCHES = 1000; // GitHub APIのため長めの遅延
+
+      for (let i = 0; i < serverDirectories.length; i += BATCH_SIZE) {
+        const batch = serverDirectories.slice(i, i + BATCH_SIZE);
+        console.log(`Processing dynamic batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(serverDirectories.length / BATCH_SIZE)}`);
+
+        const batchPromises = batch.map(async (serverName) => {
+          try {
+            const yamlUrl = `${rawUrl}/servers/${serverName}/server.yaml`;
+            const result = await this.httpRequest<string>(yamlUrl, { expectJson: false });
+
+            if (!result.success || !result.data) {
+              console.warn(`Failed to load YAML for ${serverName}: ${result.error || 'No data'}`);
+              return null;
+            }
+
+            return this.parseServerYaml(result.data, serverName);
+          } catch (error) {
+            console.error(`Error processing server ${serverName}:`, error);
+            return null;
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        const validServers = batchResults.filter(server => server !== null) as CatalogEntry[];
+        allServers.push(...validServers);
+
+        console.log(`Dynamic batch completed: ${validServers.length}/${batch.length} servers processed`);
+
+        // 次のバッチまで遅延（GitHub API制限対策）
+        if (i + BATCH_SIZE < serverDirectories.length) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+        }
+      }
+
+      console.log(`Dynamic MCP Registry processing completed: ${allServers.length}/${serverDirectories.length} servers loaded`);
+      
+      // キャッシュに保存
+      CatalogClient.mcpRegistryCache = {
+        data: allServers,
+        timestamp: Date.now(),
+        ttl: CatalogClient.CACHE_TTL
+      };
+      console.log(`[CATALOG_CACHE] Cached ${allServers.length} MCP registry entries for ${CatalogClient.CACHE_TTL / 1000}s`);
+      
+      return allServers;
+    } catch (error) {
+      console.error('Failed to get MCP registry servers dynamically:', error);
+      
+      // エラー時は古いキャッシュがあれば使用
+      if (CatalogClient.mcpRegistryCache) {
+        console.log(`[CATALOG_CACHE] Using stale cache due to error (${Math.round((Date.now() - CatalogClient.mcpRegistryCache.timestamp) / 1000)}s old)`);
+        return CatalogClient.mcpRegistryCache.data;
+      }
+      
+      // キャッシュもない場合は既知のサーバーリストにフォールバック
+      console.log('Falling back to known server list...');
+      return this.getMCPRegistryServers();
+    }
+  }
+
+  /**
+   * カタログ更新機能 - 動的および静的検索を組み合わせて最新のカタログを取得
+   */
+  async refreshCatalog(options: {
+    useDynamicDiscovery?: boolean;
+    forceUpdate?: boolean;
+  } = {}): Promise<{
+    totalEntries: number;
+    dockerHubEntries: number;
+    mcpRegistryEntries: number;
+    updateTime: string;
+  }> {
+    try {
+      console.log('[CATALOG_REFRESH] Starting catalog refresh...');
+      
+      const startTime = Date.now();
+      const { useDynamicDiscovery = true, forceUpdate = false } = options;
+
+      // 並行して両方のソースからデータを取得
+      const [dockerHubEntries, mcpRegistryEntries] = await Promise.all([
+        this.searchDockerHub(''), // 空文字で全体検索
+        useDynamicDiscovery ? this.getMCPRegistryServersDynamic() : this.getMCPRegistryServers()
+      ]);
+
+      // 重複を除去
+      const allEntries = this.deduplicateEntries([...dockerHubEntries, ...mcpRegistryEntries]);
+      
+      const updateStats = {
+        totalEntries: allEntries.length,
+        dockerHubEntries: dockerHubEntries.length,
+        mcpRegistryEntries: mcpRegistryEntries.length,
+        updateTime: new Date().toISOString(),
+        processingTime: Date.now() - startTime
+      };
+
+      console.log('[CATALOG_REFRESH] Catalog refresh completed:', updateStats);
+      return updateStats;
+    } catch (error) {
+      console.error('[CATALOG_REFRESH] Failed to refresh catalog:', error);
+      throw new CatalogClientError(
+        `Catalog refresh failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CATALOG_REFRESH_ERROR',
+        { originalError: error }
+      );
     }
   }
 
@@ -895,7 +1182,8 @@ export class CatalogClient {
       installType: 'docker',
       dockerImage: `${repo.namespace}/${repo.name}`,
       category: this.inferCategory(repo.categories?.map(cat => cat.name) || [], repo.description || ''),
-      verified: repo.repository_type === 'image'
+      verified: repo.repository_type === 'image',
+      icon: `https://hub.docker.com/v2/repositories/${repo.namespace}/${repo.name}/logo/`
     };
   }
 
