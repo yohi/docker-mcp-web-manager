@@ -104,7 +104,7 @@ interface ServerDetails {
 export default function ServerDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const serverId = params.serverId as string;
+  const serverId = params.id as string;
   const { hasPermission } = usePermissions();
   
   const [serverDetails, setServerDetails] = useState<ServerDetails | null>(null);
