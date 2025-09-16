@@ -24,7 +24,8 @@ import {
   List,
   SortAsc,
   SortDesc,
-  RefreshCw
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 import { formatTimeAgo } from '@/lib/utils';
 import { usePermissions } from '@/components/auth/auth-provider';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { CatalogBrowser } from '@/components/catalog/catalog-browser';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -84,6 +84,9 @@ export default function CatalogPage() {
     hasPrev: false
   });
   const [pageSize, setPageSize] = useState(20);
+  
+  // リクエスト重複防止用ref
+  const loadingRef = useRef(false);
 
   // データ取得
   const loadCatalog = async (
@@ -94,7 +97,13 @@ export default function CatalogPage() {
     sortBy?: string,
     sortOrder?: string
   ) => {
+    // 重複リクエスト防止
+    if (loadingRef.current) {
+      return;
+    }
+    
     try {
+      loadingRef.current = true;
       setIsLoading(true);
       setError(null);
       
@@ -117,49 +126,57 @@ export default function CatalogPage() {
         params.append('sortOrder', sortOrder);
       }
       
-      // カタログエントリの取得
-      const catalogRes = await fetch(`/api/v1/catalog?${params.toString()}`);
-      if (!catalogRes.ok) throw new Error('カタログの取得に失敗しました');
+      // 並列実行でパフォーマンス向上
+      const [catalogRes, serversRes] = await Promise.allSettled([
+        fetch(`/api/v1/catalog?${params.toString()}`),
+        fetch('/api/v1/servers')
+      ]);
       
-      const catalogData = await catalogRes.json();
+      // カタログレスポンス処理
+      if (catalogRes.status === 'rejected' || !catalogRes.value.ok) {
+        throw new Error('カタログの取得に失敗しました');
+      }
+      
+      const catalogData = await catalogRes.value.json();
       const entries = catalogData.success ? catalogData.data : [];
       
-      // ページネーション情報を更新
+      // サーバーレスポンス処理
+      let installedServers: any[] = [];
+      if (serversRes.status === 'fulfilled' && serversRes.value.ok) {
+        const serversData = await serversRes.value.json();
+        installedServers = serversData.success ? serversData.data : [];
+      }
+      
+      // インストール状態をカタログエントリに反映
+      const entriesWithStatus = entries.map((entry: CatalogEntry) => {
+        const installed = installedServers.find((server: any) => 
+          server.image === entry.imageUrl || server.name === entry.name
+        );
+        return {
+          ...entry,
+          installationStatus: installed ? 'installed' : 'not_installed'
+        };
+      });
+      
+      // カテゴリの抽出
+      const allCategories = Array.from(new Set(entries.map((e: CatalogEntry) => e.category).filter(Boolean))) as string[];
+      
+      // 状態を一括更新（競合状態を避けるため）
+      setCatalogEntries(entriesWithStatus);
+      setCategories(allCategories);
       if (catalogData.pagination) {
         setPagination(catalogData.pagination);
       }
       
-      // インストールされているサーバーの情報も取得して統合
-      const serversRes = await fetch('/api/v1/servers');
-      if (serversRes.ok) {
-        const serversData = await serversRes.json();
-        const installedServers = serversData.success ? serversData.data : [];
-        
-        // インストール状態をカタログエントリに反映
-        const entriesWithStatus = entries.map((entry: CatalogEntry) => {
-          const installed = installedServers.find((server: any) => 
-            server.image === entry.imageUrl || server.name === entry.name
-          );
-          return {
-            ...entry,
-            installationStatus: installed ? 'installed' : 'not_installed'
-          };
-        });
-        
-        setCatalogEntries(entriesWithStatus);
-      } else {
-        setCatalogEntries(entries);
-      }
-      
-      // カテゴリの抽出
-      const allCategories = Array.from(new Set(entries.map((e: CatalogEntry) => e.category).filter(Boolean))) as string[];
-      setCategories(allCategories);
-      
     } catch (error) {
       console.error('Failed to load catalog:', error);
       setError(error instanceof Error ? error.message : 'カタログ読み込みエラー');
+      // エラー時は空の状態に設定
+      setCatalogEntries([]);
+      setCategories([]);
     } finally {
       setIsLoading(false);
+      loadingRef.current = false;
     }
   };
 
