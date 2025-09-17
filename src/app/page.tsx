@@ -13,7 +13,7 @@ export default function HomePage() {
       if (isAuthenticated) {
         router.replace('/dashboard');
       } else {
-        router.replace('/auth/signin');
+        router.replace('/login');
       }
     }
   }, [isAuthenticated, isLoading, router]);

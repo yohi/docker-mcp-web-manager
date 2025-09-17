@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, memo, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import {
   Eye
 } from 'lucide-react';
 import { formatTimeAgo } from '@/lib/utils';
-import { usePermissions } from '@/components/auth/auth-provider';
+import { useAuth } from '@/components/auth/auth-provider';
 
 // =============================================================================
 // CatalogBrowser - MCPサーバーカタログブラウザーコンポーネント
@@ -212,8 +212,10 @@ export function CatalogBrowser({
   onPageSizeChange,
   onSearch
 }: CatalogBrowserProps) {
-  const { hasPermission } = usePermissions();
-  
+  // 権限チェック
+  const { hasPermission } = useAuth();
+  const canInstallServers = hasPermission('SERVERS_CREATE');
+
   // UI状態管理
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
@@ -225,12 +227,9 @@ export function CatalogBrowser({
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<CatalogEntry | null>(null);
   const [pageSize, setPageSize] = useState(20);
-  
+
   // 検索debounce用のref
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
-  
-  // 権限チェック
-  const canInstallServers = hasPermission('SERVERS_CREATE');
 
   // 検索入力のデバウンス処理
   useEffect(() => {
@@ -667,15 +666,22 @@ export function CatalogBrowser({
                             alt={`${entry.displayName || entry.name} icon`}
                             className="h-8 w-8 object-contain"
                             onError={(e) => {
-                              // アイコン読み込み失敗時のフォールバック
+                              // アイコン読み込み失敗時のフォールバック（セキュア版）
                               const target = e.target as HTMLImageElement;
                               target.style.display = 'none';
                               const parent = target.parentElement;
                               if (parent) {
-                                parent.className = "flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600";
-                                const packageIcon = document.createElement('div');
-                                packageIcon.innerHTML = '<svg class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>';
-                                parent.appendChild(packageIcon);
+                                // セキュアなパッケージアイコン作成
+                                import('@/lib/security/dom-sanitizer').then(({ createPackageIcon }) => {
+                                  createPackageIcon(parent, 'h-5 w-5 text-white');
+                                }).catch(() => {
+                                  // フォールバック: Reactコンポーネントを使用
+                                  parent.className = "flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600";
+                                  parent.innerHTML = ''; // 安全にクリア
+                                  const iconDiv = document.createElement('div');
+                                  iconDiv.textContent = '📦'; // 絵文字フォールバック
+                                  parent.appendChild(iconDiv);
+                                });
                               }
                             }}
                           />

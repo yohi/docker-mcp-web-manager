@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -115,26 +115,26 @@ function formatMemoryUsage(usage: number, limit: number): string {
 /**
  * サーバーカードコンポーネント
  */
-export function ServerCard({ server, onStart, onStop, className }: ServerCardProps) {
+function ServerCardComponent({ server, onStart, onStop, className }: ServerCardProps) {
   const { hasPermission } = usePermissions();
   const [isOperating, setIsOperating] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
 
-  // 権限チェック
-  const canManageServers = hasPermission('SERVERS_MANAGE');
-  const canConfigureServers = hasPermission('SERVERS_CONFIGURE');
+  // 権限チェック（メモ化）
+  const canManageServers = useMemo(() => hasPermission('SERVERS_MANAGE'), [hasPermission]);
+  const canConfigureServers = useMemo(() => hasPermission('SERVERS_CONFIGURE'), [hasPermission]);
 
-  // 状態情報の取得
-  const statusInfo = getStatusInfo(server.status, server.healthStatus);
+  // 状態情報の取得（メモ化）
+  const statusInfo = useMemo(() => getStatusInfo(server.status, server.healthStatus), [server.status, server.healthStatus]);
   const StatusIcon = statusInfo.icon;
 
-  // サーバー操作関数
-  const handleStart = async () => {
+  // サーバー操作関数（メモ化）
+  const handleStart = useCallback(async () => {
     if (!onStart || !canManageServers || isOperating) return;
-    
+
     setIsOperating(true);
     setOperationError(null);
-    
+
     try {
       await onStart(server.id);
     } catch (error) {
@@ -144,14 +144,14 @@ export function ServerCard({ server, onStart, onStop, className }: ServerCardPro
     } finally {
       setIsOperating(false);
     }
-  };
+  }, [onStart, canManageServers, isOperating, server.id]);
 
-  const handleStop = async () => {
+  const handleStop = useCallback(async () => {
     if (!onStop || !canManageServers || isOperating) return;
-    
+
     setIsOperating(true);
     setOperationError(null);
-    
+
     try {
       await onStop(server.id);
     } catch (error) {
@@ -161,7 +161,7 @@ export function ServerCard({ server, onStart, onStop, className }: ServerCardPro
     } finally {
       setIsOperating(false);
     }
-  };
+  }, [onStop, canManageServers, isOperating, server.id]);
 
   return (
     <Card className={`transition-shadow hover:shadow-md ${className}`}>
@@ -345,3 +345,6 @@ export function ServerCard({ server, onStart, onStop, className }: ServerCardPro
     </Card>
   );
 }
+
+// メモ化されたServerCardコンポーネントをエクスポート
+export const ServerCard = memo(ServerCardComponent);

@@ -23,7 +23,7 @@ import {
   Upload
 } from 'lucide-react';
 
-// コード分割：重いコンポーネントを遅延読み込み
+// ServerListを実際のコンポーネントに変更（名前付きエクスポート対応）
 const ServerList = dynamic(() => import('@/components/servers/server-list').then(mod => ({ default: mod.ServerList })), {
   loading: () => (
     <div className="flex items-center justify-center p-8">
@@ -34,19 +34,9 @@ const ServerList = dynamic(() => import('@/components/servers/server-list').then
   ssr: false
 });
 
-const MonitoringDashboard = dynamic(() => import('@/components/monitoring/monitoring-dashboard').then(mod => ({ default: mod.MonitoringDashboard })), {
-  loading: () => (
-    <div className="flex items-center justify-center p-8">
-      <Loader2 className="h-8 w-8 animate-spin" />
-      <span className="ml-2">監視ダッシュボードを読み込み中...</span>
-    </div>
-  ),
-  ssr: false
-});
+import { MonitoringDashboard } from '@/components/monitoring/monitoring-dashboard';
 
-const ExportImportDialog = dynamic(() => import('@/components/import-export/export-import-dialog').then(mod => ({ default: mod.ExportImportDialog })), {
-  ssr: false
-});
+import { ExportImportDialog } from '@/components/import-export/export-import-dialog';
 
 // =============================================================================
 // ダッシュボードページ - 新しいコンポーネントベース実装
@@ -110,8 +100,8 @@ export default function DashboardPage() {
     }
     
     if (sessionStatus === 'unauthenticated' || !session) {
-      console.log('[DASHBOARD] Not authenticated, redirecting to signin');
-      router.push('/auth/signin');
+      console.log('[DASHBOARD] Not authenticated, redirecting to login');
+      router.push('/login');
       return;
     }
     
